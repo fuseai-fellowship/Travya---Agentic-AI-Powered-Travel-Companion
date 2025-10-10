@@ -1,11 +1,11 @@
-import { Container, Flex, Image, Input, Text } from "@chakra-ui/react"
+import { Container, Flex, Image, Input, Text,Heading,Box,VStack } from "@chakra-ui/react"
 import {
   Link as RouterLink,
   createFileRoute,
   redirect,
 } from "@tanstack/react-router"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { FiLock, FiUser } from "react-icons/fi"
+import { FiLock, FiUser,FiMail } from "react-icons/fi"
 
 import type { UserRegister } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -54,82 +54,139 @@ function SignUp() {
   }
 
   return (
-    <>
-      <Flex flexDir={{ base: "column", md: "row" }} justify="center" h="100vh">
-        <Container
-          as="form"
-          onSubmit={handleSubmit(onSubmit)}
-          h="100vh"
-          maxW="sm"
-          alignItems="stretch"
-          justifyContent="center"
-          gap={4}
-          centerContent
-        >
+    <Flex 
+      flexDir={{ base: "column", md: "row" }} 
+      justify="center" 
+      align="center"
+      minH="100vh"
+      bg="gray.50"
+      p={4}
+    >
+      <Container
+        as="form"
+        onSubmit={handleSubmit(onSubmit)}
+        maxW="md"
+        w="100%"
+        alignItems="stretch"
+        justifyContent="center"
+        gap={6}
+        centerContent
+        bg="white"
+        p={8}
+        borderRadius="xl"
+        boxShadow="lg"
+      >
+        {/* Header Section */}
+        <Box textAlign="center" mb={2}>
           <Image
             src={Logo}
             alt="FastAPI logo"
             height="auto"
-            maxW="2xs"
-            alignSelf="center"
+            maxW="180px"
+            mx="auto"
             mb={4}
           />
+          <Heading as="h1" size="lg" color="gray.800" mb={2}>
+            Create Your Account
+          </Heading>
+          <Text color="gray.600" fontSize="sm">
+            Join us today and get started
+          </Text>
+        </Box>
+  
+        {/* Form Fields */}
+        <VStack w="100%" gap={4}>
+          {/* Full Name Field */}
           <Field
             invalid={!!errors.full_name}
             errorText={errors.full_name?.message}
           >
-            <InputGroup w="100%" startElement={<FiUser />}>
+            <InputGroup w="100%" startElement={<FiUser color="gray.500" />}>
               <Input
                 id="full_name"
                 minLength={3}
                 {...register("full_name", {
                   required: "Full Name is required",
                 })}
-                placeholder="Full Name"
+                placeholder="Enter your full name"
                 type="text"
+                size="lg"
+                focusRingColor="blue.500"
               />
             </InputGroup>
           </Field>
-
+  
+          {/* Email Field */}
           <Field invalid={!!errors.email} errorText={errors.email?.message}>
-            <InputGroup w="100%" startElement={<FiUser />}>
+            <InputGroup w="100%" startElement={<FiMail color="gray.500" />}>
               <Input
                 id="email"
                 {...register("email", {
                   required: "Email is required",
                   pattern: emailPattern,
                 })}
-                placeholder="Email"
+                placeholder="Enter your email"
                 type="email"
+                size="lg"
+                focusRingColor="blue.500"
               />
             </InputGroup>
           </Field>
+  
+          {/* Password Field */}
           <PasswordInput
             type="password"
-            startElement={<FiLock />}
+            startElement={<FiLock color="gray.500" />}
             {...register("password", passwordRules())}
-            placeholder="Password"
+            placeholder="Create a password"
             errors={errors}
+            size="lg"
+            focusRingColor="blue.500"
           />
+  
+          {/* Confirm Password Field */}
           <PasswordInput
-            type="confirm_password"
-            startElement={<FiLock />}
+            type="password"
+            startElement={<FiLock color="gray.500" />}
             {...register("confirm_password", confirmPasswordRules(getValues))}
-            placeholder="Confirm Password"
+            placeholder="Confirm your password"
             errors={errors}
+            size="lg"
+            focusRingColor="blue.500"
           />
-          <Button variant="solid" type="submit" loading={isSubmitting}>
-            Sign Up
+  
+          {/* Submit Button */}
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isSubmitting}
+            size="lg"
+            w="100%"
+            colorScheme="blue"
+            fontSize="md"
+            fontWeight="semibold"
+            py={3}
+            mt={2}
+          >
+            {isSubmitting ? "Creating Account..." : "Create Account"}
           </Button>
-          <Text>
+        </VStack>
+  
+        {/* Login Redirect */}
+        <Box textAlign="center" mt={2}>
+          <Text color="gray.600" fontSize="sm">
             Already have an account?{" "}
-            <RouterLink to="/login" className="main-link">
-              Log In
+            <RouterLink 
+              to="/login" 
+              className="main-link"
+              style={{ fontWeight: '600' }}
+            >
+              Sign in here
             </RouterLink>
           </Text>
-        </Container>
-      </Flex>
-    </>
+        </Box>
+      </Container>
+    </Flex>
   )
 }
 

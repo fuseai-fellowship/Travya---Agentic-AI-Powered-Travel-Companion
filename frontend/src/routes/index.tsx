@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -103,7 +103,7 @@ function TravelPlannerLanding() {
                 boxShadow: "0 0 40px rgba(6, 182, 212, 0.5)",
               }}
               transition="all 0.3s"
-              onClick={() => navigate({ to: "/chat" })}
+              onClick={() => navigate({ to: "/dashboard" })}
             >
               <Flex align="center" gap={2} justify="center">
                 <MessageCircle size={20} />

@@ -1,17 +1,17 @@
-import { Flex, Image, useBreakpointValue } from "@chakra-ui/react"
-import { Link } from "@tanstack/react-router"
+import { Flex, Image, useBreakpointValue } from "@chakra-ui/react";
+import { Link } from "@tanstack/react-router";
 
-import Logo from "/assets/images/fastapi-logo.svg"
-import UserMenu from "./UserMenu"
+import Logo from "/assets/images/fastapi-logo.svg";
+import UserMenu from "./UserMenu";
 
 function Navbar() {
-  const display = useBreakpointValue({ base: "none", md: "flex" })
+  const display = useBreakpointValue({ base: "none", md: "flex" });
 
   return (
     <Flex
       display={display}
       justify="space-between"
-      position="sticky"
+      // position="sticky"
       color="white"
       align="center"
       bg="bg.muted"
@@ -26,7 +26,7 @@ function Navbar() {
         <UserMenu />
       </Flex>
     </Flex>
-  )
+  );
 }
 
-export default Navbar
+export default Navbar;
