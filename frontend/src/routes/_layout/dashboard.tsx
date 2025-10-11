@@ -2,7 +2,7 @@ import { Box, Container, Text } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 
 import useAuth from "@/hooks/useAuth";
-import TravyaChatInterface from "../chat";
+import TravyaChatInterfaces from "../../components/Chat/mainChat";
 
 export const Route = createFileRoute("/_layout/dashboard")({
   component: Dashboard,
@@ -14,7 +14,7 @@ function Dashboard() {
   return (
     <>
       <Box h="full" overflow="hidden">
-        <TravyaChatInterface />
+        <TravyaChatInterfaces />
       </Box>
     </>
   );

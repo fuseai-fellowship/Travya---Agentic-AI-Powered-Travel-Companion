@@ -31,7 +31,7 @@ interface FileData {
 }
 
 export const Route = createFileRoute("/chat")({
-  component: TravyaChatInterface,
+  component: TravyaChatInterfaces,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/chat")({
   },
 });
 
-export default function TravyaChatInterface() {
+export default function TravyaChatInterfaces() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
