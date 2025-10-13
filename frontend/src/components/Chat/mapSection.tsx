@@ -1,15 +1,30 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Box, Flex, Text, IconButton } from "@chakra-ui/react";
 import { MapPin, X } from "lucide-react";
+import { MapContainer, Marker, TileLayer, Popup, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface MapSectionProps {
   isMobile?: boolean;
   onClose?: () => void;
 }
+//if not used the map does not load properly
+function MapResizer() {
+  const map = useMap();
 
-export const MapSection: React.FC<MapSectionProps> = ({ 
-  isMobile = false, 
-  onClose 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [map]);
+
+  return null;
+}
+export const MapSection: React.FC<MapSectionProps> = ({
+  isMobile = false,
+  onClose,
 }) => {
   if (isMobile) {
     return (
@@ -22,6 +37,14 @@ export const MapSection: React.FC<MapSectionProps> = ({
         zIndex="9999"
         bg="white"
       >
+        <style>
+          {`
+            .map-container .leaflet-container {
+              height: 100%;
+              width: 100%;
+            }
+          `}
+        </style>
         {/* Header */}
         <Flex
           p={4}
@@ -51,14 +74,29 @@ export const MapSection: React.FC<MapSectionProps> = ({
         </Flex>
 
         {/* Map */}
-        <Box h="calc(100vh - 65px)">
-          <iframe
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            loading="lazy"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.2412648750455!2d-73.98823492346688!3d40.748817!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c259a9b3117469%3A0xd134e199a405a163!2sEmpire%20State%20Building!5e0!3m2!1sen!2sus!4v1234567890"
-          ></iframe>
+        <Box h="calc(100vh - 65px)" className="map-container">
+          <MapContainer
+            center={[27.696, 85.376]}
+            zoom={11}
+            scrollWheelZoom={true}
+            style={{ height: "100%", width: "100%" }}
+          >
+            <MapResizer />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={[27.7172, 85.324]}>
+              <Popup>
+                Kathmandu, Nepal <br /> Your destination
+              </Popup>
+            </Marker>
+            <Marker position={[27.6748, 85.4274]}>
+              <Popup>
+                Bhaktapur, Nepal <br /> Your destination
+              </Popup>
+            </Marker>
+          </MapContainer>
         </Box>
       </Box>
     );
@@ -74,22 +112,45 @@ export const MapSection: React.FC<MapSectionProps> = ({
       borderLeft="1px"
       borderColor="gray.200"
     >
+      <style>
+        {`
+          .map-container .leaflet-container {
+            height: 100%;
+            width: 100%;
+          }
+        `}
+      </style>
       <Box p={4} borderBottom="1px" borderColor="gray.200" bg="white">
         <Flex align="center" gap={2}>
           <MapPin size={18} color="#06b6d4" />
           <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-            Destination Map
+            Destinations
           </Text>
         </Flex>
       </Box>
-      <Box h="calc(100% - 57px)" position="relative">
-        <iframe
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          loading="lazy"
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.2412648750455!2d-73.98823492346688!3d40.748817!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c259a9b3117469%3A0xd134e199a405a163!2sEmpire%20State%20Building!5e0!3m2!1sen!2sus!4v1234567890"
-        ></iframe>
+      <Box h="calc(100% - 57px)" position="relative" className="map-container">
+        <MapContainer
+          center={[27.696, 85.376]}
+          zoom={11}
+          scrollWheelZoom={true}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <MapResizer />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={[27.7172, 85.324]}>
+            <Popup>
+              Kathmandu, Nepal <br /> Your destination
+            </Popup>
+          </Marker>
+          <Marker position={[27.6748, 85.4274]}>
+            <Popup>
+              Bhaktapur, Nepal <br /> Your destination
+            </Popup>
+          </Marker>
+        </MapContainer>
       </Box>
     </Box>
   );
