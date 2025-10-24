@@ -11,6 +11,10 @@ import { routeTree } from "./routeTree.gen"
 
 import { ApiError, OpenAPI } from "./client"
 import { CustomProvider } from "./components/ui/provider"
+import { AuthProvider } from "./contexts/AuthContext"
+import { TravelProvider } from "./contexts/TravelContext"
+import "./styles/globals.css"
+import "./styles/components.css"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL
 OpenAPI.TOKEN = async () => {
@@ -32,7 +36,14 @@ const queryClient = new QueryClient({
   }),
 })
 
-const router = createRouter({ routeTree })
+const router = createRouter({ 
+  routeTree,
+  defaultPreload: 'intent',
+  defaultPreloadStaleTime: 0,
+  context: {
+    queryClient: undefined!,
+  },
+})
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router
@@ -41,10 +52,10 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <CustomProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </CustomProvider>
+    <QueryClientProvider client={queryClient}>
+      <CustomProvider>
+        <RouterProvider router={router} context={{ queryClient }} />
+      </CustomProvider>
+    </QueryClientProvider>
   </StrictMode>,
 )

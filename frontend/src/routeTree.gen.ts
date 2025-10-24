@@ -11,17 +11,28 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as TestImport } from './routes/test'
 import { Route as SignupImport } from './routes/signup'
 import { Route as ResetPasswordImport } from './routes/reset-password'
 import { Route as RecoverPasswordImport } from './routes/recover-password'
 import { Route as LoginImport } from './routes/login'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
+import { Route as LayoutTripsImport } from './routes/_layout/trips'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
+import { Route as LayoutPlanTripImport } from './routes/_layout/plan-trip'
+import { Route as LayoutItinerariesImport } from './routes/_layout/itineraries'
 import { Route as LayoutItemsImport } from './routes/_layout/items'
+import { Route as LayoutChatImport } from './routes/_layout/chat'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
+import { Route as LayoutTripsTripIdImport } from './routes/_layout/trips.$tripId'
 
 // Create/Update Routes
+
+const TestRoute = TestImport.update({
+  path: '/test',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const SignupRoute = SignupImport.update({
   path: '/signup',
@@ -53,8 +64,23 @@ const LayoutIndexRoute = LayoutIndexImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutTripsRoute = LayoutTripsImport.update({
+  path: '/trips',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutSettingsRoute = LayoutSettingsImport.update({
   path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutPlanTripRoute = LayoutPlanTripImport.update({
+  path: '/plan-trip',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutItinerariesRoute = LayoutItinerariesImport.update({
+  path: '/itineraries',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -63,9 +89,19 @@ const LayoutItemsRoute = LayoutItemsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutChatRoute = LayoutChatImport.update({
+  path: '/chat',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutAdminRoute = LayoutAdminImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutTripsTripIdRoute = LayoutTripsTripIdImport.update({
+  path: '/$tripId',
+  getParentRoute: () => LayoutTripsRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -92,21 +128,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
     }
+    '/test': {
+      preLoaderRoute: typeof TestImport
+      parentRoute: typeof rootRoute
+    }
     '/_layout/admin': {
       preLoaderRoute: typeof LayoutAdminImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/chat': {
+      preLoaderRoute: typeof LayoutChatImport
       parentRoute: typeof LayoutImport
     }
     '/_layout/items': {
       preLoaderRoute: typeof LayoutItemsImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/itineraries': {
+      preLoaderRoute: typeof LayoutItinerariesImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/plan-trip': {
+      preLoaderRoute: typeof LayoutPlanTripImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/settings': {
       preLoaderRoute: typeof LayoutSettingsImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/trips': {
+      preLoaderRoute: typeof LayoutTripsImport
       parentRoute: typeof LayoutImport
     }
     '/_layout/': {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
+    }
+    '/_layout/trips/$tripId': {
+      preLoaderRoute: typeof LayoutTripsTripIdImport
+      parentRoute: typeof LayoutTripsImport
     }
   }
 }
@@ -116,14 +176,19 @@ declare module '@tanstack/react-router' {
 export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([
     LayoutAdminRoute,
+    LayoutChatRoute,
     LayoutItemsRoute,
+    LayoutItinerariesRoute,
+    LayoutPlanTripRoute,
     LayoutSettingsRoute,
+    LayoutTripsRoute.addChildren([LayoutTripsTripIdRoute]),
     LayoutIndexRoute,
   ]),
   LoginRoute,
   RecoverPasswordRoute,
   ResetPasswordRoute,
   SignupRoute,
+  TestRoute,
 ])
 
 /* prettier-ignore-end */

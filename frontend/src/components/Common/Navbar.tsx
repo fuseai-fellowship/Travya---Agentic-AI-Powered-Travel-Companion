@@ -1,31 +1,64 @@
-import { Flex, Image, useBreakpointValue } from "@chakra-ui/react"
 import { Link } from "@tanstack/react-router"
+import { useState } from "react"
+import { FaBars } from "react-icons/fa"
+import { FiLogOut } from "react-icons/fi"
 
 import Logo from "/assets/images/fastapi-logo.svg"
 import UserMenu from "./UserMenu"
+import SidebarItems from "./SidebarItems"
+import useAuth from "@/hooks/useAuth"
 
 function Navbar() {
-  const display = useBreakpointValue({ base: "none", md: "flex" })
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { logout } = useAuth()
 
   return (
-    <Flex
-      display={display}
-      justify="space-between"
-      position="sticky"
-      color="white"
-      align="center"
-      bg="bg.muted"
-      w="100%"
-      top={0}
-      p={4}
-    >
-      <Link to="/">
-        <Image src={Logo} alt="Logo" maxW="3xs" p={2} />
-      </Link>
-      <Flex gap={2} alignItems="center">
-        <UserMenu />
-      </Flex>
-    </Flex>
+    <>
+      <nav className="navbar">
+        <div className="navbar-left">
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Open Menu"
+          >
+            <FaBars />
+          </button>
+          <Link to="/" className="navbar-logo">
+            <img src={Logo} alt="Travya Logo" className="navbar-logo-img" />
+          </Link>
+        </div>
+        <div className="navbar-actions">
+          <UserMenu />
+        </div>
+      </nav>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-drawer">
+          <div className="mobile-drawer-content">
+            <button
+              className="mobile-drawer-close"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              ×
+            </button>
+            <div className="mobile-drawer-body">
+              <SidebarItems onClose={() => setMobileMenuOpen(false)} />
+              <button
+                className="logout-btn"
+                onClick={() => {
+                  logout()
+                  setMobileMenuOpen(false)
+                }}
+              >
+                <FiLogOut />
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

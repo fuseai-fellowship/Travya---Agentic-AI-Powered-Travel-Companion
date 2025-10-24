@@ -1,3 +1,4 @@
+# backend/app/api/deps.py
 from collections.abc import Generator
 from typing import Annotated
 

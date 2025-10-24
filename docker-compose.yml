@@ -19,6 +19,15 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - traefik-public
+      - default
+
   adminer:
     image: adminer
     restart: always
@@ -31,7 +40,8 @@ services:
       - ADMINER_DESIGN=pepa-linha-dark
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik-public
+      # - traefik.docker.network=traefik-public
+      - traefik.docker.network=travya_traefik-public
       - traefik.constraint-label=traefik-public
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.rule=Host(`adminer.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
@@ -85,8 +95,8 @@ services:
       db:
         condition: service_healthy
         restart: true
-      prestart:
-        condition: service_completed_successfully
+      # prestart:
+      #   condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -106,6 +116,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - REDIS_URL=redis://redis:6379/0
       - SENTRY_DSN=${SENTRY_DSN}
 
     healthcheck:
@@ -118,7 +129,8 @@ services:
       context: ./backend
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik-public
+      # - traefik.docker.network=traefik-public
+      - traefik.docker.network=travya_traefik-public
       - traefik.constraint-label=traefik-public
 
       - traefik.http.services.${STACK_NAME?Variable not set}-backend.loadbalancer.server.port=8000
@@ -143,11 +155,12 @@ services:
     build:
       context: ./frontend
       args:
-        - VITE_API_URL=https://api.${DOMAIN?Variable not set}
+        - VITE_API_URL=http://localhost:8000
         - NODE_ENV=production
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik-public
+      # - traefik.docker.network=traefik-public
+      - traefik.docker.network=travya_traefik-public
       - traefik.constraint-label=traefik-public
 
       - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
@@ -165,7 +178,14 @@ services:
 volumes:
   app-db-data:
 
+# networks:
+#   traefik-public:
+#     # Allow setting it to false for testing
+#     external: true
+
 networks:
+  default:
+    name: travya_default
   traefik-public:
-    # Allow setting it to false for testing
+    name: travya_traefik-public
     external: true

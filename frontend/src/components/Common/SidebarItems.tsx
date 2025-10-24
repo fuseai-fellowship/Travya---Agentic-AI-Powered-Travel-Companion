@@ -1,13 +1,16 @@
-import { Box, Flex, Icon, Text } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link as RouterLink } from "@tanstack/react-router"
-import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
+import { FiBriefcase, FiHome, FiSettings, FiUsers, FiMapPin, FiCalendar, FiMessageCircle, FiPlus } from "react-icons/fi"
 import type { IconType } from "react-icons/lib"
 
 import type { UserPublic } from "@/client"
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
+  { icon: FiMapPin, title: "My Trips", path: "/trips" },
+  { icon: FiPlus, title: "Plan Trip", path: "/plan-trip" },
+  { icon: FiMessageCircle, title: "AI Chat", path: "/chat" },
+  { icon: FiCalendar, title: "Itineraries", path: "/itineraries" },
   { icon: FiBriefcase, title: "Items", path: "/items" },
   { icon: FiSettings, title: "User Settings", path: "/settings" },
 ]
@@ -30,31 +33,20 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
     ? [...items, { icon: FiUsers, title: "Admin", path: "/admin" }]
     : items
 
-  const listItems = finalItems.map(({ icon, title, path }) => (
-    <RouterLink key={title} to={path} onClick={onClose}>
-      <Flex
-        gap={4}
-        px={4}
-        py={2}
-        _hover={{
-          background: "gray.subtle",
-        }}
-        alignItems="center"
-        fontSize="sm"
-      >
-        <Icon as={icon} alignSelf="center" />
-        <Text ml={2}>{title}</Text>
-      </Flex>
+  const listItems = finalItems.map(({ icon: IconComponent, title, path }) => (
+    <RouterLink key={title} to={path} onClick={onClose} className="sidebar-link">
+      <div className="sidebar-item">
+        <IconComponent className="sidebar-icon" />
+        <span className="sidebar-text">{title}</span>
+      </div>
     </RouterLink>
   ))
 
   return (
-    <>
-      <Text fontSize="xs" px={4} py={2} fontWeight="bold">
-        Menu
-      </Text>
-      <Box>{listItems}</Box>
-    </>
+    <div className="sidebar-items">
+      <div className="sidebar-section-title">Menu</div>
+      <div className="sidebar-list">{listItems}</div>
+    </div>
   )
 }
 

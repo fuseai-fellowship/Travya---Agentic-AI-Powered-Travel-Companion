@@ -1,4 +1,4 @@
-import { Container, Image, Input, Text } from "@chakra-ui/react"
+import { Container, Flex, Image, Input, Text } from "@chakra-ui/react"
 import {
   Link as RouterLink,
   createFileRoute,
@@ -56,60 +56,69 @@ function Login() {
 
   return (
     <>
-      <Container
-        as="form"
-        onSubmit={handleSubmit(onSubmit)}
-        h="100vh"
-        maxW="sm"
-        alignItems="stretch"
-        justifyContent="center"
-        gap={4}
-        centerContent
+      <Flex 
+        flexDir={{ base: "column", md: "row" }} 
+        justify="center" 
+        align="center"
+        h="100vh" 
+        w="100%"
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        <Image
-          src={Logo}
-          alt="FastAPI logo"
-          height="auto"
-          maxW="2xs"
-          alignSelf="center"
-          mb={4}
-        />
-        <Field
-          invalid={!!errors.username}
-          errorText={errors.username?.message || !!error}
+        <Container
+          as="form"
+          onSubmit={handleSubmit(onSubmit)}
+          h="auto"
+          maxW="sm"
+          alignItems="stretch"
+          justifyContent="center"
+          gap={4}
+          centerContent
         >
-          <InputGroup w="100%" startElement={<FiMail />}>
-            <Input
-              id="username"
-              {...register("username", {
-                required: "Username is required",
-                pattern: emailPattern,
-              })}
-              placeholder="Email"
-              type="email"
-            />
-          </InputGroup>
-        </Field>
-        <PasswordInput
-          type="password"
-          startElement={<FiLock />}
-          {...register("password", passwordRules())}
-          placeholder="Password"
-          errors={errors}
-        />
-        <RouterLink to="/recover-password" className="main-link">
-          Forgot Password?
-        </RouterLink>
-        <Button variant="solid" type="submit" loading={isSubmitting} size="md">
-          Log In
-        </Button>
-        <Text>
-          Don't have an account?{" "}
-          <RouterLink to="/signup" className="main-link">
-            Sign Up
+          <Image
+            src={Logo}
+            alt="FastAPI logo"
+            height="auto"
+            maxW="2xs"
+            alignSelf="center"
+            mb={4}
+          />
+          <Field
+            invalid={!!errors.username}
+            errorText={errors.username?.message || !!error}
+          >
+            <InputGroup w="100%" startElement={<FiMail />}>
+              <Input
+                id="username"
+                {...register("username", {
+                  required: "Username is required",
+                  pattern: emailPattern,
+                })}
+                placeholder="Email"
+                type="email"
+              />
+            </InputGroup>
+          </Field>
+          <PasswordInput
+            type="password"
+            startElement={<FiLock />}
+            {...register("password", passwordRules())}
+            placeholder="Password"
+            errors={errors}
+          />
+          <RouterLink to="/recover-password" className="main-link">
+            Forgot Password?
           </RouterLink>
-        </Text>
-      </Container>
+          <Button variant="solid" type="submit" loading={isSubmitting} size="md">
+            Log In
+          </Button>
+          <Text>
+            Don't have an account?{" "}
+            <RouterLink to="/signup" className="main-link">
+              Sign Up
+            </RouterLink>
+          </Text>
+        </Container>
+      </Flex>
     </>
   )
 }

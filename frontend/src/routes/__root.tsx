@@ -2,6 +2,8 @@ import { Outlet, createRootRoute } from "@tanstack/react-router"
 import React, { Suspense } from "react"
 
 import NotFound from "@/components/Common/NotFound"
+import { AuthProvider } from "@/contexts/AuthContext"
+import { TravelProvider } from "@/contexts/TravelContext"
 
 const loadDevtools = () =>
   Promise.all([
@@ -23,12 +25,14 @@ const TanStackDevtools =
 
 export const Route = createRootRoute({
   component: () => (
-    <>
-      <Outlet />
-      <Suspense>
-        <TanStackDevtools />
-      </Suspense>
-    </>
+    <AuthProvider>
+      <TravelProvider>
+        <Outlet />
+        <Suspense>
+          <TanStackDevtools />
+        </Suspense>
+      </TravelProvider>
+    </AuthProvider>
   ),
   notFoundComponent: () => <NotFound />,
 })
