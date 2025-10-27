@@ -1,154 +1,462 @@
-# FastAPI Project - Frontend
+# Frontend Module - Component Flow
 
-The frontend is built with [Vite](https://vitejs.dev/), [React](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router) and [Chakra UI](https://chakra-ui.com/).
+This document describes how React components and routes work together in the Travya frontend.
 
-## Frontend development
+## Frontend Architecture
 
-Before you begin, ensure that you have either the Node Version Manager (nvm) or Fast Node Manager (fnm) installed on your system.
-
-* To install fnm follow the [official fnm guide](https://github.com/Schniz/fnm#installation). If you prefer nvm, you can install it using the [official nvm guide](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-* After installing either nvm or fnm, proceed to the `frontend` directory:
-
-```bash
-cd frontend
 ```
-* If the Node.js version specified in the `.nvmrc` file isn't installed on your system, you can install it using the appropriate command:
-
-```bash
-# If using fnm
-fnm install
-
-# If using nvm
-nvm install
+┌─────────────────────────────────────────────────────┐
+│                  Main Entry Point                    │
+│                   main.tsx                            │
+│  • QueryClient setup                                │
+│  • Router initialization                            │
+│  • Provider wrapping                                │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│               Router System                         │
+│            TanStack Router                          │
+│  • Route matching                                  │
+│  • Preloading                                      │
+│  • Context injection                               │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│               Route Components                      │
+│  • _layout.tsx (Main Layout)                       │
+│  • login.tsx, signup.tsx (Auth)                    │
+│  • _layout/index.tsx (Dashboard)                   │
+│  • _layout/plan-trip.tsx (Trip Planning)           │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│             Business Components                     │
+│  • MapParserComponent.tsx                          │
+│  • PhotoGallery.tsx                                │
+│  • AddItem.tsx, EditItem.tsx                       │
+└──────────────────┬──────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────┐
+│              UI Components                       │
+│  • Navbar.tsx, Sidebar.tsx                        │
+│  • Buttons, Inputs, Modals                        │
+└─────────────────────────────────────────────────────┘
 ```
 
-* Once the installation is complete, switch to the installed version:
+## Code Flow: Trip Planning Feature
 
-```bash
-# If using fnm
-fnm use
+### Complete User Journey
 
-# If using nvm
-nvm use
+**1. User Navigates to Plan Trip Page**
+
+```typescript
+// frontend/src/routes/_layout/plan-trip.tsx
+export const Route = createFileRoute("/_layout/plan-trip")({
+  component: PlanTripPage,
+})
+
+function PlanTripPage() {
+  // 2. Component mounts, fetches data
+  const { data: trips } = useQuery({
+    queryKey: ["trips"],
+    queryFn: () => TravelService.readTrips({ skip: 0, limit: 100 })
+  })
+  
+  // 3. Initialize form state
+  const [formData, setFormData] = useState({
+    destination: "",
+    startDate: "",
+    endDate: "",
+    budget: 0,
+    tripType: "leisure",
+    interests: []
+  })
+  
+  // 4. Handle form submission
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    
+    // 5. Create trip plan via API
+    const response = await TravelService.planTrip({
+      destination: formData.destination,
+      start_date: formData.startDate,
+      end_date: formData.endDate,
+      budget: formData.budget,
+      trip_type: formData.tripType,
+      interests: formData.interests
+    })
+    
+    // 6. Navigate to trip details
+    router.navigate({ 
+      to: "/trips/$tripId", 
+      params: { tripId: response.trip_id } 
+    })
+  }
+  
+  return (
+    <div className="plan-trip-page">
+      <form onSubmit={handleSubmit}>
+        {/* Form fields */}
+        <button type="submit">Plan Trip</button>
+      </form>
+    </div>
+  )
+}
 ```
 
-* Within the `frontend` directory, install the necessary NPM packages:
+**2. API Client Generation** (`frontend/src/client/sdk.gen.ts`)
 
-```bash
-npm install
+```typescript
+// Auto-generated from OpenAPI schema
+export class TravelService {
+  static async planTrip(requestBody: TripPlanningRequest): Promise<TripPlanningResponse> {
+    return await fetch(`${OpenAPI.BASE}/api/v1/ai-travel/plan-trip`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify(requestBody)
+    }).then(response => response.json())
+  }
+}
 ```
 
-* And start the live server with the following `npm` script:
+**3. Authentication Flow**
+
+```typescript
+// frontend/src/contexts/AuthContext.tsx
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<UserPublic | null>(null)
+  
+  // Check auth on mount
+  useEffect(() => {
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      // Fetch current user
+      UsersService.readUserMe().then(setUser)
+    }
+  }, [])
+  
+  const login = async (email: string, password: string) => {
+    // 1. Call login endpoint
+    const response = await LoginService.loginAccessToken({
+      username: email,
+      password: password
+    })
+    
+    // 2. Store token
+    localStorage.setItem("access_token", response.access_token)
+    
+    // 3. Fetch user data
+    const user = await UsersService.readUserMe()
+    setUser(user)
+  }
+  
+  const logout = () => {
+    localStorage.removeItem("access_token")
+    setUser(null)
+    router.navigate({ to: "/login" })
+  }
+  
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+```
+
+## Component Patterns
+
+### 1. Travel Notes (Items)
+
+**Component Hierarchy:**
+```
+items.tsx (Main Page)
+  └─ NoteCard.tsx (Individual Note)
+       ├─ EditItem.tsx (Modal)
+       └─ DeleteItem.tsx (Modal with confirmation)
+```
+
+**Code Flow:**
+
+```typescript
+// items.tsx
+function Items() {
+  // 1. Fetch notes from API
+  const { data, isLoading } = useQuery({
+    queryFn: () => ItemsService.readItems({ skip: 0, limit: 100 }),
+    queryKey: ["items"]
+  })
+  
+  // 2. Render notes in grid
+  return (
+    <div className="notes-grid">
+      {data?.data.map(item => (
+        <NoteCard key={item.id} item={item} />
+      ))}
+    </div>
+  )
+}
+
+// NoteCard.tsx
+function NoteCard({ item }: { item: ItemPublic }) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  
+  return (
+    <div 
+      className="note-card"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <h3>{item.title}</h3>
+      <p>{item.description}</p>
+      
+      {isHovered && (
+        <div className="note-actions">
+          <button onClick={() => setIsEditing(true)}>Edit</button>
+          <DeleteItem id={item.id} />
+        </div>
+      )}
+      
+      {isEditing && (
+        <EditItem item={item} onClose={() => setIsEditing(false)} />
+      )}
+    </div>
+  )
+}
+```
+
+### 2. AI Chat Interface
+
+**Component Flow:**
+
+```typescript
+// chat.tsx
+function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const { user } = useAuth()
+  
+  const sendMessage = async () => {
+    if (!input.trim()) return
+    
+    // 1. Add user message to UI
+    const userMsg: Message = {
+      sender: "user",
+      message: input,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMsg])
+    
+    // 2. Send to backend
+    const response = await ConversationsService.sendMessage({
+      message: input,
+      conversation_id: conversationId
+    })
+    
+    // 3. Add AI response to UI
+    const aiMsg: Message = {
+      sender: "assistant",
+      message: response.message,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, aiMsg])
+    
+    // 4. Clear input
+    setInput("")
+  }
+  
+  return (
+    <div className="chat-container">
+      <div className="messages">
+        {messages.map((msg, idx) => (
+          <ChatMessage key={idx} message={msg} />
+        ))}
+      </div>
+      
+      <form onSubmit={sendMessage}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about your trip..."
+        />
+      </form>
+    </div>
+  )
+}
+```
+
+### 3. Map Parser Integration
+
+```typescript
+// MapParserComponent.tsx
+function MapParserComponent() {
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [locations, setLocations] = useState<Location[]>([])
+  
+  const handleUpload = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!imageFile) return
+    
+    // 1. Create FormData
+    const formData = new FormData()
+    formData.append("file", imageFile)
+    
+    // 2. Upload to backend
+    const response = await fetch("/api/v1/map-parser/parse", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("access_token")}`
+      },
+      body: formData
+    })
+    
+    const data = await response.json()
+    setLocations(data.locations)
+  }
+  
+  return (
+    <div>
+      <form onSubmit={handleUpload}>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+        />
+        <button type="submit">Parse Map</button>
+      </form>
+      
+      {locations.length > 0 && (
+        <GoogleMap locations={locations} />
+      )}
+    </div>
+  )
+}
+```
+
+## State Management
+
+### TanStack Query for Server State
+
+```typescript
+// Configure in main.tsx
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (error instanceof ApiError && [401, 403].includes(error.status)) {
+        localStorage.removeItem("access_token")
+        window.location.href = "/login"
+      }
+    }
+  })
+})
+
+// Usage in components
+function Dashboard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["trips"],
+    queryFn: () => TravelService.readTrips()
+  })
+  
+  const { mutate } = useMutation({
+    mutationFn: (trip: TripCreate) => TravelService.createTrip(trip),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] })
+    }
+  })
+  
+  return <div>...</div>
+}
+```
+
+### React Context for Global State
+
+```typescript
+// AuthContext for user authentication
+// TravelContext for travel data
+// SidebarContext for UI state
+```
+
+## Styling System
+
+### Global Styles
+
+```css
+/* globals.css */
+:root {
+  --primary-color: #007aff;
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --text-primary: #ffffff;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+```
+
+### Component Styles
+
+```typescript
+// Inline styles for component-specific styling
+<style>{`
+  .note-card {
+    background: var(--note-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+`}</style>
+```
+
+## Type Safety
+
+```typescript
+// Auto-generated types from OpenAPI schema
+import type { TripPublic, TripCreate } from "@/client"
+
+// Usage
+const trip: TripPublic = await TravelService.readTrip({ tripId })
+const newTrip: TripCreate = {
+  destination: "Paris",
+  start_date: "2024-06-01",
+  // ...
+}
+```
+
+## Testing
+
+```typescript
+// Component test with Playwright
+import { test, expect } from '@playwright/test'
+
+test('user can create trip', async ({ page }) => {
+  await page.goto('/plan-trip')
+  await page.fill('[name="destination"]', 'Paris')
+  await page.fill('[name="start_date"]', '2024-06-01')
+  await page.click('button[type="submit"]')
+  
+  await expect(page.locator('.success-message')).toBeVisible()
+})
+```
+
+## Build & Deployment
 
 ```bash
+# Development
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Docker build
+docker-compose build frontend
 ```
-
-* Then open your browser at http://localhost:5173/.
-
-Notice that this live server is not running inside Docker, it's for local development, and that is the recommended workflow. Once you are happy with your frontend, you can build the frontend Docker image and start it, to test it in a production-like environment. But building the image at every change will not be as productive as running the local development server with live reload.
-
-Check the file `package.json` to see other available options.
-
-### Removing the frontend
-
-If you are developing an API-only app and want to remove the frontend, you can do it easily:
-
-* Remove the `./frontend` directory.
-
-* In the `docker-compose.yml` file, remove the whole service / section `frontend`.
-
-* In the `docker-compose.override.yml` file, remove the whole service / section `frontend` and `playwright`.
-
-Done, you have a frontend-less (api-only) app. 🤓
-
----
-
-If you want, you can also remove the `FRONTEND` environment variables from:
-
-* `.env`
-* `./scripts/*.sh`
-
-But it would be only to clean them up, leaving them won't really have any effect either way.
-
-## Generate Client
-
-### Automatically
-
-* Activate the backend virtual environment.
-* From the top level project directory, run the script:
-
-```bash
-./scripts/generate-client.sh
-```
-
-* Commit the changes.
-
-### Manually
-
-* Start the Docker Compose stack.
-
-* Download the OpenAPI JSON file from `http://localhost/api/v1/openapi.json` and copy it to a new file `openapi.json` at the root of the `frontend` directory.
-
-* To generate the frontend client, run:
-
-```bash
-npm run generate-client
-```
-
-* Commit the changes.
-
-Notice that everytime the backend changes (changing the OpenAPI schema), you should follow these steps again to update the frontend client.
-
-## Using a Remote API
-
-If you want to use a remote API, you can set the environment variable `VITE_API_URL` to the URL of the remote API. For example, you can set it in the `frontend/.env` file:
-
-```env
-VITE_API_URL=https://api.my-domain.example.com
-```
-
-Then, when you run the frontend, it will use that URL as the base URL for the API.
-
-## Code Structure
-
-The frontend code is structured as follows:
-
-* `frontend/src` - The main frontend code.
-* `frontend/src/assets` - Static assets.
-* `frontend/src/client` - The generated OpenAPI client.
-* `frontend/src/components` -  The different components of the frontend.
-* `frontend/src/hooks` - Custom hooks.
-* `frontend/src/routes` - The different routes of the frontend which include the pages.
-* `theme.tsx` - The Chakra UI custom theme.
-
-## End-to-End Testing with Playwright
-
-The frontend includes initial end-to-end tests using Playwright. To run the tests, you need to have the Docker Compose stack running. Start the stack with the following command:
-
-```bash
-docker compose up -d --wait backend
-```
-
-Then, you can run the tests with the following command:
-
-```bash
-npx playwright test
-```
-
-You can also run your tests in UI mode to see the browser and interact with it running:
-
-```bash
-npx playwright test --ui
-```
-
-To stop and remove the Docker Compose stack and clean the data created in tests, use the following command:
-
-```bash
-docker compose down -v
-```
-
-To update the tests, navigate to the tests directory and modify the existing test files or add new ones as needed.
-
-For more information on writing and running Playwright tests, refer to the official [Playwright documentation](https://playwright.dev/docs/intro).

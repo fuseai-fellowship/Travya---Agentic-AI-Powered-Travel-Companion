@@ -4,6 +4,7 @@ import Navbar from "@/components/Common/Navbar"
 import Sidebar from "@/components/Common/Sidebar"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { TravelProvider } from "@/contexts/TravelContext"
+import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
 
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
@@ -20,19 +21,34 @@ export const Route = createFileRoute("/_layout")({
   },
 })
 
+function LayoutContent() {
+  const { isCollapsed } = useSidebar()
+  
+  return (
+    <div className="layout-container">
+      <Navbar />
+      <div className="layout-content">
+        <Sidebar />
+        <div 
+          className="layout-main"
+          style={{
+            marginLeft: isCollapsed ? '56px' : '280px'
+          }}
+        >
+          <Outlet />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Layout() {
   return (
     <AuthProvider>
       <TravelProvider>
-        <div className="layout-container">
-          <Navbar />
-          <div className="layout-content">
-            <Sidebar />
-            <div className="layout-main">
-              <Outlet />
-            </div>
-          </div>
-        </div>
+        <SidebarProvider>
+          <LayoutContent />
+        </SidebarProvider>
       </TravelProvider>
     </AuthProvider>
   )

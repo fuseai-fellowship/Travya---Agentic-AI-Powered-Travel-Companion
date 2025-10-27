@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTravel } from '@/contexts/TravelContext';
 import { Link } from '@tanstack/react-router';
 import { FiPlus, FiMapPin, FiCalendar, FiMessageCircle, FiTrendingUp, FiDollarSign, FiUsers } from 'react-icons/fi';
+import Typewriter from '@/components/Typewriter';
 
 export const Route = createFileRoute('/_layout/')({
   component: Index,
@@ -11,6 +12,14 @@ export const Route = createFileRoute('/_layout/')({
 function Index() {
   const { user } = useAuth();
   const { trips, isLoadingTrips, conversations, isLoadingConversations } = useTravel();
+
+  // Get user's first name only
+  const getFirstName = () => {
+    if (user?.full_name) {
+      return user.full_name.split(' ')[0];
+    }
+    return user?.email?.split('@')[0] || 'Traveler';
+  };
 
   // Safely handle data with proper checks
   const recentTrips = Array.isArray(trips) ? trips.slice(0, 3) : [];
@@ -112,12 +121,19 @@ function Index() {
     <div className="dashboard">
       <div className="dashboard-header">
         <div>
-          <h1>Welcome back, {user?.email?.split('@')[0] || 'Traveler'}! 👋</h1>
-          <p>Ready to plan your next adventure? Let's make it amazing!</p>
+          <h1 className="text-4xl font-light tracking-tight text-white mb-3">
+            Welcome back, <span className="font-normal">{getFirstName()}</span> 👋
+          </h1>
+          <p className="text-slate-400 text-lg font-light">
+            <Typewriter 
+              text="Ready to plan your next adventure? Let's make it amazing!" 
+              speed={40} 
+            />
+          </p>
         </div>
-        <Link to="/plan-trip" className="btn btn-primary">
-          <FiPlus className="icon" />
-          Plan New Trip
+        <Link to="/plan-trip" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-200 hover:scale-105">
+          <FiPlus size={20} />
+          <span>Plan New Trip</span>
         </Link>
       </div>
 

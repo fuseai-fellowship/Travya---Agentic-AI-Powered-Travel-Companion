@@ -18,6 +18,8 @@ import {
   FiLoader
 } from "react-icons/fi"
 import ItineraryDisplay from "@/components/ItineraryDisplay"
+import PhotoGalleryComponent from "@/components/PhotoGallery"
+import MapParserComponent from "@/components/MapParserComponent"
 
 export const Route = createFileRoute("/_layout/trips/$tripId")({
   component: TripDetailsPage,
@@ -244,7 +246,7 @@ function TripDetailsPage() {
   const totalSpent = mockBookings.reduce((sum, booking) => sum + booking.cost, 0)
   const budgetProgress = trip.budget ? (totalSpent / trip.budget) * 100 : 0
 
-  const tabs = ["Itinerary", "Bookings", "Collaborators", "Documents"]
+  const tabs = ["Itinerary", "Photo Gallery", "Map Parser", "Bookings", "Collaborators", "Documents"]
 
   return (
     <div style={{ backgroundColor: "#0B1220", minHeight: "100vh", color: "#E5E7EB" }}>
@@ -607,6 +609,26 @@ function TripDetailsPage() {
             )}
 
             {activeTab === 1 && (
+              <PhotoGalleryComponent tripId={tripId} />
+            )}
+
+            {activeTab === 2 && (
+              <>
+                {console.log('🗺️ Trip data for MapParser:', {
+                  tripId,
+                  hasItineraryData: !!(trip as any).ai_itinerary_data,
+                  hasMapData: !!(trip as any).map_data,
+                  mapDataLength: (trip as any).map_data ? (trip as any).map_data.length : 0
+                })}
+                <MapParserComponent 
+                  tripId={tripId} 
+                  itineraryData={(trip as any).ai_itinerary_data ? (trip as any).ai_itinerary_data : null}
+                  existingMapData={(trip as any).map_data || null}
+                />
+              </>
+            )}
+
+            {activeTab === 4 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {mockBookings.map((booking) => (
                   <div key={booking.id} style={{ backgroundColor: "white", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "16px" }}>
@@ -666,7 +688,7 @@ function TripDetailsPage() {
               </div>
             )}
 
-            {activeTab === 2 && (
+            {activeTab === 5 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h3 style={{ fontSize: "18px", fontWeight: "600", color: "#1F2937" }}>Trip Collaborators</h3>
@@ -763,7 +785,7 @@ function TripDetailsPage() {
               </div>
             )}
 
-            {activeTab === 3 && (
+            {activeTab === 6 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h3 style={{ fontSize: "18px", fontWeight: "600", color: "#1F2937" }}>Trip Documents</h3>

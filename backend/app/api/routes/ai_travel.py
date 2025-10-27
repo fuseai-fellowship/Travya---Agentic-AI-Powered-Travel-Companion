@@ -774,13 +774,16 @@ async def stream_agent_events(session_id: str) -> StreamingResponse:
 async def chat_with_ai(
     *, session: SessionDep, current_user: CurrentUser, request: ChatRequest
 ) -> Any:
-    """Chat with AI about travel planning."""
+    """Enhanced chat with AI using RAG and image support."""
     logger.error("="*50)
-    logger.error("CHAT ENDPOINT CALLED")
+    logger.error("ENHANCED CHAT ENDPOINT CALLED")
     logger.error("="*50)
     
     try:
+        from app.services.vector_rag import VectorTravelRAGService, TravelContext
+        
         logger.error(f"DEBUG: Chat request received - message: {request.message}, conversation_id: {request.conversation_id}, user_id: {current_user.id}")
+        
         # Create or get conversation
         conversation = None
         if request.conversation_id:
@@ -793,8 +796,10 @@ async def chat_with_ai(
         # Create new conversation if none exists
         if not conversation:
             logger.error("DEBUG: Creating new conversation")
+            # Generate a better title based on the question
+            title = request.message[:50] + "..." if len(request.message) > 50 else request.message
             conversation_data = ConversationCreate(
-                title=request.message[:50] + "..." if len(request.message) > 50 else request.message,
+                title=title,
                 trip_id=request.trip_id
             )
             logger.error(f"DEBUG: Conversation data: {conversation_data}")
@@ -815,64 +820,181 @@ async def chat_with_ai(
         crud.create_conversation_message(session=session, message_in=user_message_data)
         logger.error("DEBUG: User message created")
         
-        # Generate AI response using LLM
-        logger.error("DEBUG: Calling LLM")
-        prompt = f"User asks: {request.message}. Provide a concise, plain-text response with helpful travel advice, avoiding JSON or structured output."
-        ai_response = call_llm(prompt)
-        logger.info(f"yo actual response ho llm dekhi : {ai_response}")
-        logger.error(f"DEBUG: LLM response length: {len(ai_response) if ai_response else 0}")
+        # Use enhanced vector RAG system
+        from app.services.vector_rag import VectorTravelRAGService, TravelContext
+        logger.error("DEBUG: Using vector RAG system")
+        travel_context = TravelContext(
+            user_id=str(current_user.id),
+            trip_id=str(request.trip_id) if request.trip_id else None,
+            conversation_id=str(conversation.id)
+        )
         
-        # Check if response is JSON and convert to text if needed
-        try:
-            parsed_response = json.loads(ai_response)
-            # If JSON, extract a summary
-            destination = parsed_response.get("destination", "the destination")
-            duration = parsed_response.get("duration_days", "a few days")
-            ai_response = f"Consider visiting {destination} for {duration} days. Check local attractions and book accommodations early for the best deals."
-            logger.error("DEBUG: Converted JSON response to plain text")
-        except json.JSONDecodeError:
-            # Response is already plain text
-            pass
+        async with VectorTravelRAGService() as rag_service:
+            rag_result = await rag_service.query_with_context(
+                request.message, travel_context, session
+            )
         
-        # Save AI message
-        logger.error("DEBUG: Creating AI message")
+        ai_response = rag_result.response
+        suggestions = rag_result.suggestions or []
+        
+        # Save AI message with metadata (truncate if too long)
+        logger.error("DEBUG: Creating AI message with metadata")
+        metadata = {
+            "sources": rag_result.sources[:5] if rag_result.sources else [],  # Limit to 5 sources
+            "confidence": rag_result.confidence,
+            "has_images": len(rag_result.images or []) > 0
+        }
+        metadata_json = json.dumps(metadata)
+        if len(metadata_json) > 2000:
+            # Truncate sources if metadata is too long
+            metadata["sources"] = rag_result.sources[:2] if rag_result.sources else []
+            metadata_json = json.dumps(metadata)
+        
         ai_message_data = ConversationMessageCreate(
             conversation_id=conversation.id,
             content=ai_response,
-            sender="ai"
+            sender="ai",
+            message_type="text",
+            message_metadata=metadata_json
         )
         crud.create_conversation_message(session=session, message_in=ai_message_data)
         logger.error("DEBUG: AI message created")
         
-        # Update conversation with last message
+        # Update conversation with enhanced metadata
         logger.error("DEBUG: Updating conversation")
         conversation.last_message = ai_response[:100]
         conversation.updated_at = datetime.utcnow()
+        conversation.context = json.dumps(travel_context.__dict__)
         session.add(conversation)
         session.commit()
         logger.error("DEBUG: Conversation updated")
         
-        suggestions = [
-            {"type": "destination", "text": "Find destinations", "action": "search_destinations"},
-            {"type": "itinerary", "text": "Plan itinerary", "action": "plan_itinerary"},
-            {"type": "booking", "text": "Find bookings", "action": "search_bookings"}
+        # Format suggestions
+        formatted_suggestions = [
+            {"type": "suggestion", "text": suggestion, "action": f"suggest_{i}"}
+            for i, suggestion in enumerate(suggestions)
         ]
         
-        logger.error("DEBUG: Creating response")
+        logger.error("DEBUG: Creating enhanced response")
         response = ChatResponse(
             response=ai_response,
             conversation_id=conversation.id,
-            suggestions=suggestions
+            suggestions=formatted_suggestions
         )
-        logger.error(f"DEBUG: Response created - conversation_id: {response.conversation_id}")
+        logger.error(f"DEBUG: Enhanced response created - conversation_id: {response.conversation_id}")
         return response
         
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        logger.error(f"DEBUG: Chat error: {str(e)}")
+        logger.error(f"DEBUG: Enhanced chat error: {str(e)}")
         logger.error(f"DEBUG: Full traceback: {error_details}")
-        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Enhanced chat failed: {str(e)}")
+
+@router.post("/scrape-images")
+async def scrape_images(
+    *, session: SessionDep, current_user: CurrentUser, request: dict
+) -> Any:
+    """Scrape images for a conversation"""
+    try:
+        from app.services.image_scraping import ImageScrapingService
+        
+        query = request.get("query", "")
+        conversation_id = request.get("conversation_id")
+        limit = request.get("limit", 5)
+        
+        if not query:
+            raise HTTPException(status_code=400, detail="Query is required")
+        
+        async with ImageScrapingService() as image_service:
+            images = await image_service.scrape_images(query, limit=limit)
+            
+            # Download and store images if conversation_id provided
+            if conversation_id:
+                stored_images = []
+                for image in images:
+                    stored_image = await image_service.download_and_store_image(
+                        image, conversation_id
+                    )
+                    from pathlib import Path
+                    stored_images.append({
+                        "id": stored_image.id,
+                        "url": f"/api/v1/images/{conversation_id}/{Path(stored_image.local_path).name}",
+                        "title": stored_image.title,
+                        "description": stored_image.description,
+                        "source": stored_image.source
+                    })
+                return {"images": stored_images}
+            else:
+                return {"images": [{"id": img.id, "url": img.url, "title": img.title} for img in images]}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image scraping failed: {str(e)}")
+
+
+# ===== CACHE MANAGEMENT ENDPOINTS =====
+
+@router.post("/cache/invalidate")
+async def invalidate_user_cache(
+    *, session: SessionDep, current_user: CurrentUser
+) -> Any:
+    """Invalidate all cache for the current user"""
+    try:
+        from app.services.vector_rag import VectorTravelRAGService
+        
+        async with VectorTravelRAGService() as rag_service:
+            await rag_service.invalidate_user_cache(str(current_user.id))
+        
+        return {"message": "User cache invalidated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache invalidation failed: {str(e)}")
+
+
+@router.get("/cache/stats")
+async def get_cache_stats(
+    *, session: SessionDep, current_user: CurrentUser
+) -> Any:
+    """Get cache statistics for the current user"""
+    try:
+        from app.services.vector_rag import VectorTravelRAGService
+        
+        async with VectorTravelRAGService() as rag_service:
+            stats = await rag_service.get_cache_stats(str(current_user.id))
+        
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache stats: {str(e)}")
+
+
+@router.post("/cache/clear")
+async def clear_all_cache(
+    *, session: SessionDep, current_user: CurrentUser
+) -> Any:
+    """Clear all cache (admin only)"""
+    try:
+        from app.services.redis_cache import RedisCacheService
+        
+        cache_service = RedisCacheService()
+        await cache_service.clear_all_cache()
+        
+        return {"message": "All cache cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache clear failed: {str(e)}")
+
+@router.get("/images/{conversation_id}")
+async def get_conversation_images(
+    conversation_id: str, current_user: CurrentUser
+) -> Any:
+    """Get all images for a conversation"""
+    try:
+        from app.services.image_scraping import ImageScrapingService
+        
+        async with ImageScrapingService() as image_service:
+            images = await image_service.get_conversation_images(conversation_id)
+            return {"images": images}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get images: {str(e)}")
 
 @router.get("/suggestions/{trip_id}")
 async def get_ai_suggestions(

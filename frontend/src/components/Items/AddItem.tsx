@@ -10,7 +10,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useState } from "react"
-import { FaPlus } from "react-icons/fa"
+import { FiPlus } from "react-icons/fi"
 
 import { type ItemCreate, ItemsService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
@@ -49,7 +49,7 @@ const AddItem = () => {
     mutationFn: (data: ItemCreate) =>
       ItemsService.createItem({ requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Item created successfully.")
+      showSuccessToast("Travel note created successfully.")
       reset()
       setIsOpen(false)
     },
@@ -66,6 +66,7 @@ const AddItem = () => {
   }
 
   return (
+    <>
     <DialogRoot
       size={{ base: "xs", md: "md" }}
       placement="center"
@@ -73,18 +74,18 @@ const AddItem = () => {
       onOpenChange={({ open }) => setIsOpen(open)}
     >
       <DialogTrigger asChild>
-        <Button value="add-item" my={4}>
-          <FaPlus fontSize="16px" />
-          Add Item
-        </Button>
+        <button className="add-note-btn">
+          <FiPlus size={18} />
+          Add Note
+        </button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>Add Item</DialogTitle>
+            <DialogTitle>Add Travel Note</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4}>Fill in the details to add a new item.</Text>
+            <Text mb={4}>Capture a new travel thought, reminder, or idea.</Text>
             <VStack gap={4}>
               <Field
                 required
@@ -107,11 +108,11 @@ const AddItem = () => {
                 errorText={errors.description?.message}
                 label="Description"
               >
-                <Input
+                <textarea
                   id="description"
                   {...register("description")}
-                  placeholder="Description"
-                  type="text"
+                  placeholder="Write your note here..."
+                  className="description-textarea"
                 />
               </Field>
             </VStack>
@@ -140,6 +141,47 @@ const AddItem = () => {
         <DialogCloseTrigger />
       </DialogContent>
     </DialogRoot>
+    <style>{`
+      .add-note-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: #007aff;
+        border: none;
+        border-radius: 10px;
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .add-note-btn:hover {
+        background: #0051d5;
+        transform: translateY(-1px);
+      }
+      .description-textarea {
+        width: 100%;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #ffffff;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        outline: none;
+        min-height: 120px;
+      }
+      .description-textarea:focus {
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      }
+      .description-textarea::placeholder {
+        color: #86868b;
+      }
+    `}</style>
+  </>
   )
 }
 

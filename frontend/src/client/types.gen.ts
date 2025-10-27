@@ -117,17 +117,30 @@ export type ChatResponse = {
 export type ConversationCreate = {
     title?: (string | null);
     trip_id?: (string | null);
+    context?: (string | null);
+    summary?: (string | null);
+    tags?: (string | null);
+    is_archived?: boolean;
+    is_favorite?: boolean;
 };
 
 export type ConversationMessageCreate = {
     content: string;
-    sender: string;
+    role?: string;
+    message_type?: string;
+    message_metadata?: (string | null);
+    attachments?: (string | null);
+    images?: (string | null);
     conversation_id: string;
 };
 
 export type ConversationMessagePublic = {
     content: string;
-    sender: string;
+    role?: string;
+    message_type?: string;
+    message_metadata?: (string | null);
+    attachments?: (string | null);
+    images?: (string | null);
     id: string;
     conversation_id: string;
     created_at: string;
@@ -141,6 +154,11 @@ export type ConversationMessagesPublic = {
 export type ConversationPublic = {
     title?: (string | null);
     trip_id?: (string | null);
+    context?: (string | null);
+    summary?: (string | null);
+    tags?: (string | null);
+    is_archived?: boolean;
+    is_favorite?: boolean;
     id: string;
     user_id: string;
     last_message: (string | null);
@@ -156,6 +174,11 @@ export type ConversationsPublic = {
 export type ConversationUpdate = {
     title?: (string | null);
     trip_id?: (string | null);
+    context?: (string | null);
+    summary?: (string | null);
+    tags?: (string | null);
+    is_archived?: (boolean | null);
+    is_favorite?: (boolean | null);
 };
 
 export type CostSummaryResponse = {
@@ -224,6 +247,42 @@ export type EvaluationResponse = {
     metadata: {
         [key: string]: unknown;
     };
+};
+
+export type GalleryPhotoPublic = {
+    place_id: string;
+    url: string;
+    thumbnail_url: string;
+    photographer_name: string;
+    photographer_url: string;
+    source: string;
+    width: number;
+    height: number;
+    description?: (string | null);
+    download_tracked?: boolean;
+    id: string;
+    created_at: string;
+};
+
+export type GalleryPhotosPublic = {
+    data: Array<GalleryPhotoPublic>;
+    count: number;
+};
+
+export type GalleryPlacePublic = {
+    gallery_id: string;
+    name: string;
+    place_type: string;
+    caption: string;
+    search_query: string;
+    priority?: number;
+    id: string;
+    created_at: string;
+};
+
+export type GalleryPlacesPublic = {
+    data: Array<GalleryPlacePublic>;
+    count: number;
 };
 
 export type HealthStatusResponse = {
@@ -348,6 +407,14 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type ParseItineraryRequest = {
+    itinerary_data: {
+        [key: string]: unknown;
+    };
+    chat_id: string;
+    trip_id?: (string | null);
+};
+
 export type PerformanceResponse = {
     agent_name: string;
     total_requests: number;
@@ -370,6 +437,23 @@ export type PerformanceSummaryResponse = {
     recent_evaluations: Array<{
         [key: string]: unknown;
     }>;
+};
+
+export type PhotoGalleriesPublic = {
+    data: Array<PhotoGalleryPublic>;
+    count: number;
+};
+
+export type PhotoGalleryPublic = {
+    trip_id: string;
+    title: string;
+    description?: (string | null);
+    status?: string;
+    total_places?: number;
+    total_photos?: number;
+    id: string;
+    created_at: string;
+    updated_at: string;
 };
 
 export type PrivateUserCreate = {
@@ -434,6 +518,8 @@ export type TripCreate = {
     status?: TripStatus;
     is_public?: boolean;
     cover_image_url?: (string | null);
+    ai_itinerary_data?: (string | null);
+    map_data?: (string | null);
 };
 
 export type TripPlanningRequest = {
@@ -477,6 +563,8 @@ export type TripPublic = {
     status?: TripStatus;
     is_public?: boolean;
     cover_image_url?: (string | null);
+    ai_itinerary_data?: (string | null);
+    map_data?: (string | null);
     id: string;
     owner_id: string;
     created_at: string;
@@ -503,6 +591,7 @@ export type TripUpdate = {
     status?: (TripStatus | null);
     is_public?: (boolean | null);
     cover_image_url?: (string | null);
+    ai_itinerary_data?: (string | null);
 };
 
 export type UpdatePassword = {
@@ -623,6 +712,26 @@ export type AiTravelChatWithAiData = {
 
 export type AiTravelChatWithAiResponse = (ChatResponse);
 
+export type AiTravelScrapeImagesData = {
+    requestBody: {
+        [key: string]: unknown;
+    };
+};
+
+export type AiTravelScrapeImagesResponse = (unknown);
+
+export type AiTravelInvalidateUserCacheResponse = (unknown);
+
+export type AiTravelGetCacheStatsResponse = (unknown);
+
+export type AiTravelClearAllCacheResponse = (unknown);
+
+export type AiTravelGetConversationImagesData = {
+    conversationId: string;
+};
+
+export type AiTravelGetConversationImagesResponse = (unknown);
+
 export type AiTravelGetAiSuggestionsData = {
     tripId: string;
 };
@@ -696,7 +805,19 @@ export type AiTravelSearchHotelsData = {
 export type AiTravelSearchHotelsResponse = (unknown);
 
 export type ConversationsReadConversationsData = {
+    /**
+     * Filter by archived status
+     */
+    isArchived?: (boolean | null);
+    /**
+     * Filter by favorite status
+     */
+    isFavorite?: (boolean | null);
     limit?: number;
+    /**
+     * Search in conversation titles and content
+     */
+    search?: (string | null);
     skip?: number;
 };
 
@@ -942,6 +1063,16 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
+export type MapParserParseItineraryData = {
+    requestBody: ParseItineraryRequest;
+};
+
+export type MapParserParseItineraryResponse = ({
+    [key: string]: unknown;
+});
+
+export type MapParserHealthCheckResponse = (unknown);
+
 export type MonitoringGetAllAgentsPerformanceResponse = (Array<PerformanceResponse>);
 
 export type MonitoringGetAgentPerformanceData = {
@@ -1013,6 +1144,50 @@ export type MonitoringTrackCostResponse = ({
 export type MonitoringGetAlertsResponse = (Array<{
     [key: string]: unknown;
 }>);
+
+export type PhotoGalleryGeneratePhotoGalleryData = {
+    tripId: string;
+};
+
+export type PhotoGalleryGeneratePhotoGalleryResponse = (PhotoGalleryPublic);
+
+export type PhotoGalleryGetTripGalleriesData = {
+    tripId: string;
+};
+
+export type PhotoGalleryGetTripGalleriesResponse = (PhotoGalleriesPublic);
+
+export type PhotoGalleryGetGalleryData = {
+    galleryId: string;
+};
+
+export type PhotoGalleryGetGalleryResponse = (PhotoGalleryPublic);
+
+export type PhotoGalleryDeleteGalleryData = {
+    galleryId: string;
+};
+
+export type PhotoGalleryDeleteGalleryResponse = (unknown);
+
+export type PhotoGalleryGetGalleryPlacesData = {
+    galleryId: string;
+};
+
+export type PhotoGalleryGetGalleryPlacesResponse = (GalleryPlacesPublic);
+
+export type PhotoGalleryGetPlacePhotosData = {
+    galleryId: string;
+    placeId: string;
+};
+
+export type PhotoGalleryGetPlacePhotosResponse = (GalleryPhotosPublic);
+
+export type PhotoGalleryTrackPhotoDownloadData = {
+    galleryId: string;
+    photoId: string;
+};
+
+export type PhotoGalleryTrackPhotoDownloadResponse = (unknown);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

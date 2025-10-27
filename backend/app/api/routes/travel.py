@@ -78,14 +78,142 @@ def read_trip(session: SessionDep, current_user: CurrentUser, trip_id: uuid.UUID
 
 
 @router.post("/trips", response_model=TripPublic)
-def create_trip(*, session: SessionDep, current_user: CurrentUser, trip_in: TripCreate) -> Any:
+async def create_trip(*, session: SessionDep, current_user: CurrentUser, trip_in: TripCreate) -> Any:
     """Create a new trip."""
     
     trip = Trip.model_validate(trip_in, update={"owner_id": current_user.id})
     session.add(trip)
     session.commit()
     session.refresh(trip)
+    
+    # Invalidate user cache when new trip is added
+    try:
+        from app.services.vector_rag import VectorTravelRAGService
+        async with VectorTravelRAGService() as rag_service:
+            await rag_service.invalidate_user_cache(str(current_user.id))
+    except Exception as e:
+        print(f"Warning: Could not invalidate cache for user {current_user.id}: {e}")
+    
+    # Automatically generate photo gallery if itinerary data is available
+    if trip.ai_itinerary_data:
+        try:
+            from app.services.photo_gallery import photo_gallery_service
+            from app.services.itinerary_parser import itinerary_parser_service
+            from app.models import PhotoGallery, PhotoGalleryCreate, GalleryPlace, GalleryPlaceCreate, GalleryPhoto, GalleryPhotoCreate
+            from datetime import datetime
+            
+            # Create initial gallery record
+            gallery_data = PhotoGalleryCreate(
+                trip_id=trip.id,
+                title=f"Photo Gallery - {trip.title}",
+                description=f"Automatically generated photo gallery for {trip.destination}",
+                status="processing"
+            )
+            
+            gallery = PhotoGallery.model_validate(gallery_data)
+            session.add(gallery)
+            session.commit()
+            session.refresh(gallery)
+            
+            # Start background task to generate gallery
+            import asyncio
+            asyncio.create_task(_generate_gallery_background(session, gallery.id, trip.ai_itinerary_data))
+            
+        except Exception as e:
+            print(f"Warning: Could not start photo gallery generation for trip {trip.id}: {e}")
+    
     return trip
+
+
+async def _generate_gallery_background(session, gallery_id: uuid.UUID, itinerary_data: str):
+    """Background task to generate photo gallery"""
+    try:
+        from app.services.photo_gallery import photo_gallery_service
+        from app.services.itinerary_parser import itinerary_parser_service
+        from app.models import PhotoGallery, GalleryPlace, GalleryPlaceCreate, GalleryPhoto, GalleryPhotoCreate
+        from datetime import datetime
+        
+        # Update gallery status
+        gallery = session.get(PhotoGallery, gallery_id)
+        if not gallery:
+            return
+        
+        # Parse itinerary to extract places
+        extracted_places = await itinerary_parser_service.extract_places_from_itinerary(itinerary_data)
+        
+        if not extracted_places:
+            gallery.status = "failed"
+            session.add(gallery)
+            session.commit()
+            return
+        
+        # Convert to dict format for photo service
+        places_data = [
+            {
+                "name": place.name,
+                "type": place.type,
+                "caption": place.caption,
+                "search_query": place.search_query
+            }
+            for place in extracted_places
+        ]
+        
+        # Fetch photos for places
+        place_photos = await photo_gallery_service.fetch_photos_for_places(places_data, max_photos_per_place=6)
+        
+        total_places = len(place_photos)
+        total_photos = sum(len(place.photos) for place in place_photos)
+        
+        # Save places and photos to database
+        for i, place_photo in enumerate(place_photos):
+            # Create place
+            place_data = GalleryPlaceCreate(
+                gallery_id=gallery_id,
+                name=place_photo.name,
+                place_type=place_photo.type,
+                caption=place_photo.caption,
+                search_query=place_photo.search_query,
+                priority=total_places - i  # Higher priority for earlier places
+            )
+            
+            place = GalleryPlace.model_validate(place_data)
+            session.add(place)
+            session.commit()
+            session.refresh(place)
+            
+            # Create photos for this place
+            for photo_source in place_photo.photos:
+                photo_data = GalleryPhotoCreate(
+                    place_id=place.id,
+                    url=photo_source.url,
+                    thumbnail_url=photo_source.thumbnail_url,
+                    photographer_name=photo_source.photographer_name,
+                    photographer_url=photo_source.photographer_url,
+                    source=photo_source.source,
+                    width=photo_source.width,
+                    height=photo_source.height,
+                    description=photo_source.description
+                )
+                
+                photo = GalleryPhoto.model_validate(photo_data)
+                session.add(photo)
+        
+        # Update gallery with final stats
+        gallery.status = "completed"
+        gallery.total_places = total_places
+        gallery.total_photos = total_photos
+        gallery.updated_at = datetime.utcnow()
+        session.add(gallery)
+        session.commit()
+        
+    except Exception as e:
+        # Update gallery status to failed
+        gallery = session.get(PhotoGallery, gallery_id)
+        if gallery:
+            gallery.status = "failed"
+            session.add(gallery)
+            session.commit()
+        print(f"Error generating gallery {gallery_id}: {e}")
 
 
 @router.put("/trips/{trip_id}", response_model=TripPublic)

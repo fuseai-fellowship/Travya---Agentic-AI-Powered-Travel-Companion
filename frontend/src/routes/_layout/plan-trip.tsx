@@ -4,6 +4,7 @@ import { FiMapPin, FiCalendar, FiDollarSign, FiUsers, FiLoader, FiCheck, FiArrow
 import { useTravel } from '@/contexts/TravelContext';
 import ItineraryDisplay from '@/components/ItineraryDisplay';
 import AgentActivityFeed from '@/components/AgentActivityFeed';
+import Typewriter from '@/components/Typewriter';
 
 export const Route = createFileRoute('/_layout/plan-trip')({
   component: PlanTripPage,
@@ -124,6 +125,61 @@ function PlanTripPage() {
     }
   };
 
+  // Helper function to trigger photo gallery generation
+  const triggerPhotoGallery = async (tripId: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/generate/${tripId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        console.log('✅ Photo gallery generation triggered successfully');
+      } else {
+        const error = await response.json();
+        console.log('⚠️ Photo gallery already exists or error:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error triggering photo gallery:', error);
+    }
+  };
+
+  // Helper function to trigger map parsing
+  const triggerMapParsing = async (tripId: string, response: any) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const chatId = `trip_${tripId}_${Date.now()}`;
+      
+      // Get itinerary data from the response
+      const itineraryData = response.itinerary?.itinerary || response.itinerary || response;
+      
+      const mapResponse = await fetch(`http://localhost:8000/api/v1/map-parser/parse-itinerary`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itinerary_data: itineraryData,
+          chat_id: chatId,
+          trip_id: tripId
+        })
+      });
+
+      if (mapResponse.ok) {
+        console.log('✅ Map parsing triggered successfully');
+      } else {
+        console.log('⚠️ Map parsing error:', await mapResponse.text());
+      }
+    } catch (error) {
+      console.error('❌ Error triggering map parsing:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -181,6 +237,17 @@ function PlanTripPage() {
       console.log('✅ Received AI response:', response);
       console.log('Response structure:', JSON.stringify(response, null, 2));
       setAiResponse(response);
+      
+      // Auto-trigger photo gallery and map parsing after trip is created
+      if (response.trip_id) {
+        console.log('🎯 Auto-triggering photo gallery and map parsing for trip:', response.trip_id);
+        
+        // Generate photo gallery in background
+        triggerPhotoGallery(response.trip_id);
+        
+        // Parse map data in background  
+        triggerMapParsing(response.trip_id, response);
+      }
     } catch (error) {
       console.error('Failed to plan trip:', error);
       setErrors({ submit: 'Failed to generate trip plan. Please try again.' });
@@ -480,8 +547,14 @@ function PlanTripPage() {
   return (
     <div className="plan-trip-page">
       <div className="page-header">
-        <h1>Plan Your Perfect Trip</h1>
-        <p>Let our AI create a personalized itinerary just for you</p>
+        <h1>
+          <Typewriter 
+            text="Create Your Perfect Travel Itinerary" 
+            speed={80} 
+            loop={true}
+            loopDelay={3000}
+          />
+        </h1>
       </div>
 
       {/* Agent Activity Feed - Show during planning */}

@@ -31,6 +31,7 @@ dependencies = [
     "stripe>=10.0",
     "numpy>=1.26.0",
     "faiss-cpu>=1.8.0",
+    "sentence-transformers>=2.2.0",
     "redis>=5.0.0",
     "aiofiles>=23.0.0",
     "psutil>=5.9.0",

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute, useNavigate, Link, Outlet } from '@tanstack/react-router';
 import { FiMapPin, FiCalendar, FiDollarSign, FiPlus, FiEdit, FiTrash2, FiEye, FiUsers } from 'react-icons/fi';
 import { useTravel } from '@/contexts/TravelContext';
+import Typewriter from '@/components/Typewriter';
 
 export const Route = createFileRoute('/_layout/trips')({
   component: TripsPage,
@@ -11,6 +12,72 @@ function TripsPage() {
   const { trips, isLoadingTrips, deleteTrip } = useTravel();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'planning' | 'confirmed' | 'completed' | 'draft'>('all');
+  const [tripImages, setTripImages] = useState<Record<string, string>>({});
+
+  // Fetch cover images from photo galleries
+  useEffect(() => {
+    const fetchTripImages = async () => {
+      if (!trips || trips.length === 0) return;
+      
+      const imageMap: Record<string, string> = {};
+      
+      await Promise.all(trips.map(async (trip) => {
+        try {
+          const token = localStorage.getItem('access_token');
+          const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/trip/${trip.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data && data.data.length > 0 && data.data[0].status === 'completed') {
+              const galleryId = data.data[0].id;
+              
+              // Get places for this gallery
+              const placesResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (placesResponse.ok) {
+                const placesData = await placesResponse.json();
+                if (placesData.data && placesData.data.length > 0) {
+                  const placeId = placesData.data[0].id;
+                  
+                  // Get photos for the first place
+                  const photosResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places/${placeId}/photos`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  
+                  if (photosResponse.ok) {
+                    const photosData = await photosResponse.json();
+                    if (photosData.data && photosData.data.length > 0) {
+                      // Use the first photo as cover image
+                      imageMap[trip.id] = photosData.data[0].url;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching cover image for trip ${trip.id}:`, error);
+        }
+      }));
+      
+      setTripImages(imageMap);
+    };
+
+    fetchTripImages();
+  }, [trips]);
 
   const filteredTrips = Array.isArray(trips) ? trips.filter(trip => {
     if (filter === 'all') return true;
@@ -81,7 +148,7 @@ function TripsPage() {
       <div className="page-header">
         <div>
           <h1>My Trips</h1>
-          <p>Manage and plan your travel adventures</p>
+          <p><Typewriter text="Manage and plan your travel adventures" speed={50} /></p>
         </div>
         <Link to="/plan-trip" className="btn btn-primary">
           <FiPlus className="icon" />
@@ -97,7 +164,7 @@ function TripsPage() {
               className={`filter-tab ${filter === tab.key ? 'active' : ''}`}
               onClick={() => setFilter(tab.key as any)}
             >
-              {tab.label}
+              <span className="tab-label">{tab.label}</span>
               <span className="tab-count">{tab.count}</span>
             </button>
           ))}
@@ -113,8 +180,9 @@ function TripsPage() {
               <div key={trip.id} className="trip-card">
                 <div className="trip-image">
                   <img
-                    src={`https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=200&fit=crop&q=80`}
+                    src={tripImages[trip.id] || trip.cover_image_url || `https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=200&fit=crop&q=80`}
                     alt={trip.title}
+                    loading="lazy"
                   />
                   <span 
                     className="trip-status-badge"

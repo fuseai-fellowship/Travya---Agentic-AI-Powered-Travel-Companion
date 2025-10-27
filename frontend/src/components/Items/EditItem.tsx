@@ -9,7 +9,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { FaExchangeAlt } from "react-icons/fa"
+import { FiEdit } from "react-icons/fi"
 
 import { type ApiError, type ItemPublic, ItemsService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -28,6 +28,7 @@ import { Field } from "../ui/field"
 
 interface EditItemProps {
   item: ItemPublic
+  onClose?: () => void
 }
 
 interface ItemUpdateForm {
@@ -35,7 +36,7 @@ interface ItemUpdateForm {
   description?: string
 }
 
-const EditItem = ({ item }: EditItemProps) => {
+const EditItem = ({ item, onClose }: EditItemProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast } = useCustomToast()
@@ -57,9 +58,10 @@ const EditItem = ({ item }: EditItemProps) => {
     mutationFn: (data: ItemUpdateForm) =>
       ItemsService.updateItem({ id: item.id, requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Item updated successfully.")
+      showSuccessToast("Note updated successfully.")
       reset()
       setIsOpen(false)
+      onClose?.()
     },
     onError: (err: ApiError) => {
       handleError(err)
@@ -74,25 +76,28 @@ const EditItem = ({ item }: EditItemProps) => {
   }
 
   return (
+    <>
     <DialogRoot
       size={{ base: "xs", md: "md" }}
       placement="center"
       open={isOpen}
-      onOpenChange={({ open }) => setIsOpen(open)}
+      onOpenChange={({ open }) => {
+        setIsOpen(open)
+        if (!open) onClose?.()
+      }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost">
-          <FaExchangeAlt fontSize="16px" />
-          Edit Item
-        </Button>
+        <button className="edit-trigger-btn">
+          <FiEdit size={16} />
+        </button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
+            <DialogTitle>Edit Note</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4}>Update the item details below.</Text>
+            <Text mb={4}>Update your travel note.</Text>
             <VStack gap={4}>
               <Field
                 required
@@ -115,11 +120,11 @@ const EditItem = ({ item }: EditItemProps) => {
                 errorText={errors.description?.message}
                 label="Description"
               >
-                <Input
+                <textarea
                   id="description"
                   {...register("description")}
-                  placeholder="Description"
-                  type="text"
+                  placeholder="Write your note here..."
+                  className="description-textarea"
                 />
               </Field>
             </VStack>
@@ -145,6 +150,46 @@ const EditItem = ({ item }: EditItemProps) => {
         <DialogCloseTrigger />
       </DialogContent>
     </DialogRoot>
+    <style>{`
+      .edit-trigger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        border-radius: 6px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .edit-trigger-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+      }
+      .description-textarea {
+        width: 100%;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #ffffff;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        outline: none;
+        min-height: 120px;
+      }
+      .description-textarea:focus {
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      }
+      .description-textarea::placeholder {
+        color: #86868b;
+      }
+    `}</style>
+    </>
   )
 }
 

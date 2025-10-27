@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AgenticTestAgenticResponse, AgenticRunAgenticQueryData, AgenticRunAgenticQueryResponse, AgentsCreateSessionData, AgentsCreateSessionResponse, AgentsGetSessionData, AgentsGetSessionResponse, AgentsPopulateIndexEndpointResponse, AgentsAgentQueryData, AgentsAgentQueryResponse, AiTravelChatWithAiPublicData, AiTravelChatWithAiPublicResponse, AiTravelPlanTripWithAiData, AiTravelPlanTripWithAiResponse, AiTravelStreamAgentEventsData, AiTravelStreamAgentEventsResponse, AiTravelChatWithAiData, AiTravelChatWithAiResponse, AiTravelGetAiSuggestionsData, AiTravelGetAiSuggestionsResponse, AiTravelOptimizeItineraryWithAiData, AiTravelOptimizeItineraryWithAiResponse, AiTravelSearchDestinationData, AiTravelSearchDestinationResponse, AiTravelSearchTravelOptionsData, AiTravelSearchTravelOptionsResponse, AiTravelGetTripRecommendationsData, AiTravelGetTripRecommendationsResponse, AiTravelGetDestinationWeatherData, AiTravelGetDestinationWeatherResponse, AiTravelSearchPlacesData, AiTravelSearchPlacesResponse, AiTravelSearchFlightsData, AiTravelSearchFlightsResponse, AiTravelSearchHotelsData, AiTravelSearchHotelsResponse, ConversationsReadConversationsData, ConversationsReadConversationsResponse, ConversationsCreateConversationData, ConversationsCreateConversationResponse, ConversationsReadConversationData, ConversationsReadConversationResponse, ConversationsUpdateConversationData, ConversationsUpdateConversationResponse, ConversationsDeleteConversationData, ConversationsDeleteConversationResponse, ConversationsReadConversationMessagesData, ConversationsReadConversationMessagesResponse, ConversationsCreateConversationMessageData, ConversationsCreateConversationMessageResponse, DocumentsUploadDocumentData, DocumentsUploadDocumentResponse, DocumentsGetDocumentData, DocumentsGetDocumentResponse, DocumentsDeleteDocumentData, DocumentsDeleteDocumentResponse, DocumentsDownloadDocumentData, DocumentsDownloadDocumentResponse, DocumentsGetTripDocumentsData, DocumentsGetTripDocumentsResponse, DocumentsGetBookingDocumentsData, DocumentsGetBookingDocumentsResponse, DocumentsUploadBookingDocumentData, DocumentsUploadBookingDocumentResponse, DocumentsUploadTripDocumentData, DocumentsUploadTripDocumentResponse, EvaluationEvaluateAgentData, EvaluationEvaluateAgentResponse, EvaluationSubmitFeedbackData, EvaluationSubmitFeedbackResponse, EvaluationGetFeedbackHistoryData, EvaluationGetFeedbackHistoryResponse, EvaluationGetAgentPerformanceMetricsData, EvaluationGetAgentPerformanceMetricsResponse, EvaluationGetAllAgentsPerformanceData, EvaluationGetAllAgentsPerformanceResponse, EvaluationStartAbTestData, EvaluationStartAbTestResponse, EvaluationGetAbTestResultsData, EvaluationGetAbTestResultsResponse, EvaluationGetEvaluationHistoryData, EvaluationGetEvaluationHistoryResponse, EvaluationGetEvaluationMetricsResponse, HealthBasicHealthCheckResponse, HealthDetailedHealthCheckResponse, HealthReadinessCheckResponse, HealthLivenessCheckResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MonitoringGetAllAgentsPerformanceResponse, MonitoringGetAgentPerformanceData, MonitoringGetAgentPerformanceResponse, MonitoringGetErrorSummaryData, MonitoringGetErrorSummaryResponse, MonitoringGetResourceUsageResponse, MonitoringGetCostSummaryResponse, MonitoringGetUsageAnalyticsData, MonitoringGetUsageAnalyticsResponse, MonitoringGetHealthStatusResponse, MonitoringGetAllMetricsResponse, MonitoringTrackRequestData, MonitoringTrackRequestResponse, MonitoringTrackErrorData, MonitoringTrackErrorResponse, MonitoringTrackCostData, MonitoringTrackCostResponse, MonitoringGetAlertsResponse, PrivateCreateUserData, PrivateCreateUserResponse, SimpleAgenticTestSimpleAgenticResponse, SimpleAgenticRunSimpleAgenticQueryData, SimpleAgenticRunSimpleAgenticQueryResponse, TravelReadTripsData, TravelReadTripsResponse, TravelCreateTripData, TravelCreateTripResponse, TravelReadTripData, TravelReadTripResponse, TravelUpdateTripData, TravelUpdateTripResponse, TravelDeleteTripData, TravelDeleteTripResponse, TravelReadItinerariesData, TravelReadItinerariesResponse, TravelCreateItineraryData, TravelCreateItineraryResponse, TravelUpdateItineraryData, TravelUpdateItineraryResponse, TravelDeleteItineraryData, TravelDeleteItineraryResponse, TravelReadBookingsData, TravelReadBookingsResponse, TravelCreateBookingData, TravelCreateBookingResponse, TravelUpdateBookingData, TravelUpdateBookingResponse, TravelDeleteBookingData, TravelDeleteBookingResponse, TravelReadCollaboratorsData, TravelReadCollaboratorsResponse, TravelAddCollaboratorData, TravelAddCollaboratorResponse, TravelRemoveCollaboratorData, TravelRemoveCollaboratorResponse, TravelReadConversationsData, TravelReadConversationsResponse, TravelCreateConversationData, TravelCreateConversationResponse, TravelReadMessagesData, TravelReadMessagesResponse, TravelCreateMessageData, TravelCreateMessageResponse, TravelDeleteConversationData, TravelDeleteConversationResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AgenticTestAgenticResponse, AgenticRunAgenticQueryData, AgenticRunAgenticQueryResponse, AgentsCreateSessionData, AgentsCreateSessionResponse, AgentsGetSessionData, AgentsGetSessionResponse, AgentsPopulateIndexEndpointResponse, AgentsAgentQueryData, AgentsAgentQueryResponse, AiTravelChatWithAiPublicData, AiTravelChatWithAiPublicResponse, AiTravelPlanTripWithAiData, AiTravelPlanTripWithAiResponse, AiTravelStreamAgentEventsData, AiTravelStreamAgentEventsResponse, AiTravelChatWithAiData, AiTravelChatWithAiResponse, AiTravelScrapeImagesData, AiTravelScrapeImagesResponse, AiTravelInvalidateUserCacheResponse, AiTravelGetCacheStatsResponse, AiTravelClearAllCacheResponse, AiTravelGetConversationImagesData, AiTravelGetConversationImagesResponse, AiTravelGetAiSuggestionsData, AiTravelGetAiSuggestionsResponse, AiTravelOptimizeItineraryWithAiData, AiTravelOptimizeItineraryWithAiResponse, AiTravelSearchDestinationData, AiTravelSearchDestinationResponse, AiTravelSearchTravelOptionsData, AiTravelSearchTravelOptionsResponse, AiTravelGetTripRecommendationsData, AiTravelGetTripRecommendationsResponse, AiTravelGetDestinationWeatherData, AiTravelGetDestinationWeatherResponse, AiTravelSearchPlacesData, AiTravelSearchPlacesResponse, AiTravelSearchFlightsData, AiTravelSearchFlightsResponse, AiTravelSearchHotelsData, AiTravelSearchHotelsResponse, ConversationsReadConversationsData, ConversationsReadConversationsResponse, ConversationsCreateConversationData, ConversationsCreateConversationResponse, ConversationsReadConversationData, ConversationsReadConversationResponse, ConversationsUpdateConversationData, ConversationsUpdateConversationResponse, ConversationsDeleteConversationData, ConversationsDeleteConversationResponse, ConversationsReadConversationMessagesData, ConversationsReadConversationMessagesResponse, ConversationsCreateConversationMessageData, ConversationsCreateConversationMessageResponse, DocumentsUploadDocumentData, DocumentsUploadDocumentResponse, DocumentsGetDocumentData, DocumentsGetDocumentResponse, DocumentsDeleteDocumentData, DocumentsDeleteDocumentResponse, DocumentsDownloadDocumentData, DocumentsDownloadDocumentResponse, DocumentsGetTripDocumentsData, DocumentsGetTripDocumentsResponse, DocumentsGetBookingDocumentsData, DocumentsGetBookingDocumentsResponse, DocumentsUploadBookingDocumentData, DocumentsUploadBookingDocumentResponse, DocumentsUploadTripDocumentData, DocumentsUploadTripDocumentResponse, EvaluationEvaluateAgentData, EvaluationEvaluateAgentResponse, EvaluationSubmitFeedbackData, EvaluationSubmitFeedbackResponse, EvaluationGetFeedbackHistoryData, EvaluationGetFeedbackHistoryResponse, EvaluationGetAgentPerformanceMetricsData, EvaluationGetAgentPerformanceMetricsResponse, EvaluationGetAllAgentsPerformanceData, EvaluationGetAllAgentsPerformanceResponse, EvaluationStartAbTestData, EvaluationStartAbTestResponse, EvaluationGetAbTestResultsData, EvaluationGetAbTestResultsResponse, EvaluationGetEvaluationHistoryData, EvaluationGetEvaluationHistoryResponse, EvaluationGetEvaluationMetricsResponse, HealthBasicHealthCheckResponse, HealthDetailedHealthCheckResponse, HealthReadinessCheckResponse, HealthLivenessCheckResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MapParserParseItineraryData, MapParserParseItineraryResponse, MapParserHealthCheckResponse, MonitoringGetAllAgentsPerformanceResponse, MonitoringGetAgentPerformanceData, MonitoringGetAgentPerformanceResponse, MonitoringGetErrorSummaryData, MonitoringGetErrorSummaryResponse, MonitoringGetResourceUsageResponse, MonitoringGetCostSummaryResponse, MonitoringGetUsageAnalyticsData, MonitoringGetUsageAnalyticsResponse, MonitoringGetHealthStatusResponse, MonitoringGetAllMetricsResponse, MonitoringTrackRequestData, MonitoringTrackRequestResponse, MonitoringTrackErrorData, MonitoringTrackErrorResponse, MonitoringTrackCostData, MonitoringTrackCostResponse, MonitoringGetAlertsResponse, PhotoGalleryGeneratePhotoGalleryData, PhotoGalleryGeneratePhotoGalleryResponse, PhotoGalleryGetTripGalleriesData, PhotoGalleryGetTripGalleriesResponse, PhotoGalleryGetGalleryData, PhotoGalleryGetGalleryResponse, PhotoGalleryDeleteGalleryData, PhotoGalleryDeleteGalleryResponse, PhotoGalleryGetGalleryPlacesData, PhotoGalleryGetGalleryPlacesResponse, PhotoGalleryGetPlacePhotosData, PhotoGalleryGetPlacePhotosResponse, PhotoGalleryTrackPhotoDownloadData, PhotoGalleryTrackPhotoDownloadResponse, PrivateCreateUserData, PrivateCreateUserResponse, SimpleAgenticTestSimpleAgenticResponse, SimpleAgenticRunSimpleAgenticQueryData, SimpleAgenticRunSimpleAgenticQueryResponse, TravelReadTripsData, TravelReadTripsResponse, TravelCreateTripData, TravelCreateTripResponse, TravelReadTripData, TravelReadTripResponse, TravelUpdateTripData, TravelUpdateTripResponse, TravelDeleteTripData, TravelDeleteTripResponse, TravelReadItinerariesData, TravelReadItinerariesResponse, TravelCreateItineraryData, TravelCreateItineraryResponse, TravelUpdateItineraryData, TravelUpdateItineraryResponse, TravelDeleteItineraryData, TravelDeleteItineraryResponse, TravelReadBookingsData, TravelReadBookingsResponse, TravelCreateBookingData, TravelCreateBookingResponse, TravelUpdateBookingData, TravelUpdateBookingResponse, TravelDeleteBookingData, TravelDeleteBookingResponse, TravelReadCollaboratorsData, TravelReadCollaboratorsResponse, TravelAddCollaboratorData, TravelAddCollaboratorResponse, TravelRemoveCollaboratorData, TravelRemoveCollaboratorResponse, TravelReadConversationsData, TravelReadConversationsResponse, TravelCreateConversationData, TravelCreateConversationResponse, TravelReadMessagesData, TravelReadMessagesResponse, TravelCreateMessageData, TravelCreateMessageResponse, TravelDeleteConversationData, TravelDeleteConversationResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AgenticService {
     /**
@@ -187,7 +187,7 @@ export class AiTravelService {
     
     /**
      * Chat With Ai
-     * Chat with AI about travel planning.
+     * Enhanced chat with AI using RAG and image support.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns ChatResponse Successful Response
@@ -199,6 +199,86 @@ export class AiTravelService {
             url: '/api/v1/ai-travel/chat',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Scrape Images
+     * Scrape images for a conversation
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static scrapeImages(data: AiTravelScrapeImagesData): CancelablePromise<AiTravelScrapeImagesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/ai-travel/scrape-images',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Invalidate User Cache
+     * Invalidate all cache for the current user
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static invalidateUserCache(): CancelablePromise<AiTravelInvalidateUserCacheResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/ai-travel/cache/invalidate'
+        });
+    }
+    
+    /**
+     * Get Cache Stats
+     * Get cache statistics for the current user
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getCacheStats(): CancelablePromise<AiTravelGetCacheStatsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/ai-travel/cache/stats'
+        });
+    }
+    
+    /**
+     * Clear All Cache
+     * Clear all cache (admin only)
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static clearAllCache(): CancelablePromise<AiTravelClearAllCacheResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/ai-travel/cache/clear'
+        });
+    }
+    
+    /**
+     * Get Conversation Images
+     * Get all images for a conversation
+     * @param data The data for the request.
+     * @param data.conversationId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getConversationImages(data: AiTravelGetConversationImagesData): CancelablePromise<AiTravelGetConversationImagesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/ai-travel/images/{conversation_id}',
+            path: {
+                conversation_id: data.conversationId
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -442,10 +522,13 @@ export class AiTravelService {
 export class ConversationsService {
     /**
      * Read Conversations
-     * Retrieve user's conversations.
+     * Retrieve user's conversations with enhanced filtering.
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
+     * @param data.search Search in conversation titles and content
+     * @param data.isArchived Filter by archived status
+     * @param data.isFavorite Filter by favorite status
      * @returns ConversationsPublic Successful Response
      * @throws ApiError
      */
@@ -455,7 +538,10 @@ export class ConversationsService {
             url: '/api/v1/conversations',
             query: {
                 skip: data.skip,
-                limit: data.limit
+                limit: data.limit,
+                search: data.search,
+                is_archived: data.isArchived,
+                is_favorite: data.isFavorite
             },
             errors: {
                 422: 'Validation Error'
@@ -578,7 +664,7 @@ export class ConversationsService {
     
     /**
      * Create Conversation Message
-     * Create a new message in a conversation.
+     * Create a new message in a conversation with RAG image support.
      * @param data The data for the request.
      * @param data.conversationId
      * @param data.requestBody
@@ -1256,6 +1342,50 @@ export class LoginService {
     
 }
 
+export class MapParserService {
+    /**
+     * Parse Itinerary
+     * Parse a travel itinerary and convert it to geo-enriched map data.
+     *
+     * Args:
+     * request: Request containing itinerary_data and chat_id
+     * current_user: Current authenticated user
+     * db: Database session
+     *
+     * Returns:
+     * Structured map data ready for frontend visualization
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static parseItinerary(data: MapParserParseItineraryData): CancelablePromise<MapParserParseItineraryResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/map-parser/parse-itinerary',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Health Check
+     * Health check endpoint for map parser service.
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static healthCheck(): CancelablePromise<MapParserHealthCheckResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/map-parser/health'
+        });
+    }
+    
+}
+
 export class MonitoringService {
     /**
      * Get All Agents Performance
@@ -1474,6 +1604,160 @@ export class MonitoringService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/monitoring/alerts'
+        });
+    }
+    
+}
+
+export class PhotoGalleryService {
+    /**
+     * Generate Photo Gallery
+     * Generate a photo gallery for a trip's itinerary
+     * @param data The data for the request.
+     * @param data.tripId
+     * @returns PhotoGalleryPublic Successful Response
+     * @throws ApiError
+     */
+    public static generatePhotoGallery(data: PhotoGalleryGeneratePhotoGalleryData): CancelablePromise<PhotoGalleryGeneratePhotoGalleryResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/photo-gallery/generate/{trip_id}',
+            path: {
+                trip_id: data.tripId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Trip Galleries
+     * Get all photo galleries for a trip
+     * @param data The data for the request.
+     * @param data.tripId
+     * @returns PhotoGalleriesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTripGalleries(data: PhotoGalleryGetTripGalleriesData): CancelablePromise<PhotoGalleryGetTripGalleriesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/photo-gallery/trip/{trip_id}',
+            path: {
+                trip_id: data.tripId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Gallery
+     * Get a specific photo gallery
+     * @param data The data for the request.
+     * @param data.galleryId
+     * @returns PhotoGalleryPublic Successful Response
+     * @throws ApiError
+     */
+    public static getGallery(data: PhotoGalleryGetGalleryData): CancelablePromise<PhotoGalleryGetGalleryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/photo-gallery/{gallery_id}',
+            path: {
+                gallery_id: data.galleryId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Gallery
+     * Delete a photo gallery
+     * @param data The data for the request.
+     * @param data.galleryId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static deleteGallery(data: PhotoGalleryDeleteGalleryData): CancelablePromise<PhotoGalleryDeleteGalleryResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/photo-gallery/{gallery_id}',
+            path: {
+                gallery_id: data.galleryId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Gallery Places
+     * Get all places in a gallery
+     * @param data The data for the request.
+     * @param data.galleryId
+     * @returns GalleryPlacesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getGalleryPlaces(data: PhotoGalleryGetGalleryPlacesData): CancelablePromise<PhotoGalleryGetGalleryPlacesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/photo-gallery/{gallery_id}/places',
+            path: {
+                gallery_id: data.galleryId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Place Photos
+     * Get all photos for a specific place
+     * @param data The data for the request.
+     * @param data.galleryId
+     * @param data.placeId
+     * @returns GalleryPhotosPublic Successful Response
+     * @throws ApiError
+     */
+    public static getPlacePhotos(data: PhotoGalleryGetPlacePhotosData): CancelablePromise<PhotoGalleryGetPlacePhotosResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/photo-gallery/{gallery_id}/places/{place_id}/photos',
+            path: {
+                gallery_id: data.galleryId,
+                place_id: data.placeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Track Photo Download
+     * Track photo download for Unsplash compliance
+     * @param data The data for the request.
+     * @param data.galleryId
+     * @param data.photoId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static trackPhotoDownload(data: PhotoGalleryTrackPhotoDownloadData): CancelablePromise<PhotoGalleryTrackPhotoDownloadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/photo-gallery/{gallery_id}/photos/{photo_id}/track-download',
+            path: {
+                gallery_id: data.galleryId,
+                photo_id: data.photoId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     

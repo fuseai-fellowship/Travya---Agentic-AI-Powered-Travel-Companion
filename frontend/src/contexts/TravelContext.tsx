@@ -14,6 +14,7 @@ interface Trip {
   trip_type?: string;
   status?: string;
   description?: string;
+  cover_image_url?: string | null;
   created_at: string;
   updated_at: string;
   ai_itinerary_data?: string; // JSON string with AI itinerary
@@ -27,6 +28,7 @@ interface TripCreate {
   budget?: number;
   trip_type?: string;
   description?: string;
+  cover_image_url?: string | null;
 }
 
 interface Itinerary {
@@ -56,11 +58,15 @@ interface Conversation {
 }
 
 interface ConversationMessage {
-  id: number;
+  id: string;
   conversation_id: string;
-  message: string;
-  sender: 'user' | 'ai';
+  content: string;
+  role: 'user' | 'assistant';
   created_at: string;
+  message_type?: string;
+  attachments?: string | null;
+  images?: string | null; // JSON string of image objects
+  message_metadata?: string | null;
 }
 
 interface TravelContextType {
@@ -465,32 +471,59 @@ Could you tell me more about where you'd like to go or what kind of trip you're 
   const chatWithAI = async (message: string, conversationId?: string): Promise<ConversationMessage> => {
     const response = await chatMutation.mutateAsync({ message, conversationId });
     return {
-      id: Date.now(),
+      id: Date.now().toString(),
       conversation_id: response.conversation_id || conversationId || '1',
-      message: response.response || 'No response',
-      sender: response.sender || 'ai',
+      content: response.response || 'No response',
+      role: response.role || 'assistant',
       created_at: new Date().toISOString()
     };
   };
 
   const fetchConversationMessages = async (conversationId: string): Promise<ConversationMessage[]> => {
     try {
+      console.log('Fetching messages for conversation:', conversationId);
       const response = await TravelService.readMessages({ 
         conversationId,
         skip: 0,
         limit: 100
       });
       
-      // Handle the response structure - it might be wrapped in a data property
+      console.log('Raw API response:', response);
+      
+      // Handle the response structure - the backend returns {messages: [...], count: number}
       const messages = (response as any)?.messages || (response as any)?.data || [];
       
-      return messages.map((msg: any) => ({
-        id: msg.id?.toString() || Date.now().toString(),
-        conversation_id: msg.conversation_id || conversationId,
-        message: msg.content || msg.message || '',
-        sender: msg.sender === 'user' ? 'user' : 'ai',
-        created_at: msg.created_at || new Date().toISOString()
-      }));
+      console.log('Extracted messages:', messages);
+      
+      const formattedMessages = messages.map((msg: any) => {
+        console.log('Processing message in context:', msg);
+        
+        // Parse images if they exist
+        let parsedImages = null;
+        if (msg.images) {
+          try {
+            parsedImages = typeof msg.images === 'string' ? JSON.parse(msg.images) : msg.images;
+          } catch (e) {
+            console.error('Error parsing images:', e);
+            parsedImages = null;
+          }
+        }
+        
+        return {
+          id: msg.id?.toString() || Date.now().toString(),
+          conversation_id: msg.conversation_id || conversationId,
+          content: msg.content || msg.message || 'Empty message',
+          role: msg.role || (msg.sender === 'user' ? 'user' : 'assistant'),
+          created_at: msg.created_at || new Date().toISOString(),
+          message_type: msg.message_type || 'text',
+          attachments: msg.attachments || null,
+          images: parsedImages,
+          message_metadata: msg.message_metadata || null
+        };
+      });
+      
+      console.log('Formatted messages in context:', formattedMessages);
+      return formattedMessages;
     } catch (error) {
       console.error('Error fetching conversation messages:', error);
       return [];

@@ -160,6 +160,7 @@ class TripBase(SQLModel):
     is_public: bool = Field(default=False)
     cover_image_url: Optional[str] = Field(default=None, max_length=500)
     ai_itinerary_data: Optional[str] = Field(default=None)  # JSON string of AI-generated itinerary
+    map_data: Optional[str] = Field(default=None)  # JSON string of parsed map data
 
 
 class TripCreate(TripBase):
@@ -191,6 +192,7 @@ class Trip(TripBase, table=True):
     itineraries: List["Itinerary"] = Relationship(back_populates="trip", cascade_delete=True)
     bookings: List["Booking"] = Relationship(back_populates="trip", cascade_delete=True)
     collaborators: List["TripCollaborator"] = Relationship(back_populates="trip", cascade_delete=True)
+    photo_galleries: List["PhotoGallery"] = Relationship(back_populates="trip", cascade_delete=True)
 
 
 class TripPublic(TripBase):
@@ -199,6 +201,7 @@ class TripPublic(TripBase):
     created_at: datetime
     updated_at: datetime
     ai_itinerary_data: Optional[str] = None
+    map_data: Optional[str] = None
 
 
 class TripsPublic(SQLModel):
@@ -360,6 +363,11 @@ class TripCollaboratorPublic(TripCollaboratorBase):
 class ConversationBase(SQLModel):
     title: Optional[str] = Field(default=None, max_length=255)
     trip_id: Optional[uuid.UUID] = None
+    context: Optional[str] = Field(default=None, max_length=5000)  # Store conversation context
+    summary: Optional[str] = Field(default=None, max_length=1000)  # AI-generated summary
+    tags: Optional[str] = Field(default=None, max_length=500)  # Comma-separated tags
+    is_archived: bool = Field(default=False)
+    is_favorite: bool = Field(default=False)
 
 
 class ConversationCreate(ConversationBase):
@@ -369,6 +377,11 @@ class ConversationCreate(ConversationBase):
 class ConversationUpdate(SQLModel):
     title: Optional[str] = Field(default=None, max_length=255)
     trip_id: Optional[uuid.UUID] = None
+    context: Optional[str] = None
+    summary: Optional[str] = None
+    tags: Optional[str] = None
+    is_archived: Optional[bool] = None
+    is_favorite: Optional[bool] = None
 
 
 class Conversation(ConversationBase, table=True):
@@ -393,7 +406,11 @@ class ConversationPublic(ConversationBase):
 
 class ConversationMessageBase(SQLModel):
     content: str = Field(min_length=1, max_length=10000)
-    sender: str = Field(max_length=20)  # user, ai, system
+    role: str = Field(default="user", max_length=20)  # user, assistant, system
+    message_type: str = Field(default="text", max_length=20)  # text, image, file, location, etc.
+    message_metadata: Optional[str] = Field(default=None, max_length=2000)  # JSON metadata
+    attachments: Optional[str] = Field(default=None, max_length=2000)  # JSON array of attachment URLs
+    images: Optional[str] = Field(default=None, max_length=10000)  # JSON array of image objects
 
 
 class ConversationMessageCreate(ConversationMessageBase):
@@ -422,6 +439,147 @@ class ConversationsPublic(SQLModel):
 
 class ConversationMessagesPublic(SQLModel):
     data: List[ConversationMessagePublic]
+    count: int
+
+
+# Photo Gallery Models
+class PhotoGalleryBase(SQLModel):
+    trip_id: uuid.UUID
+    title: str = Field(max_length=255)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    status: str = Field(default="pending", max_length=20)  # pending, processing, completed, failed
+    total_places: int = Field(default=0)
+    total_photos: int = Field(default=0)
+
+
+class PhotoGalleryCreate(PhotoGalleryBase):
+    pass
+
+
+class PhotoGalleryUpdate(SQLModel):
+    title: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    status: Optional[str] = Field(default=None, max_length=20)
+    total_places: Optional[int] = None
+    total_photos: Optional[int] = None
+
+
+class PhotoGallery(PhotoGalleryBase, table=True):
+    __tablename__ = "photogallery"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    trip_id: uuid.UUID = Field(foreign_key="trip.id", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    trip: Trip = Relationship(back_populates="photo_galleries")
+    places: List["GalleryPlace"] = Relationship(back_populates="gallery", cascade_delete=True)
+
+
+class PhotoGalleryPublic(PhotoGalleryBase):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class PhotoGalleriesPublic(SQLModel):
+    data: List[PhotoGalleryPublic]
+    count: int
+
+
+# Gallery Place Models
+class GalleryPlaceBase(SQLModel):
+    gallery_id: uuid.UUID
+    name: str = Field(max_length=255)
+    place_type: str = Field(max_length=50)  # city, landmark, natural_spot
+    caption: str = Field(max_length=200)
+    search_query: str = Field(max_length=255)
+    priority: int = Field(default=0)  # Higher number = higher priority
+
+
+class GalleryPlaceCreate(GalleryPlaceBase):
+    pass
+
+
+class GalleryPlaceUpdate(SQLModel):
+    name: Optional[str] = Field(default=None, max_length=255)
+    place_type: Optional[str] = Field(default=None, max_length=50)
+    caption: Optional[str] = Field(default=None, max_length=200)
+    search_query: Optional[str] = Field(default=None, max_length=255)
+    priority: Optional[int] = None
+
+
+class GalleryPlace(GalleryPlaceBase, table=True):
+    __tablename__ = "galleryplace"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    gallery_id: uuid.UUID = Field(foreign_key="photogallery.id", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    gallery: PhotoGallery = Relationship(back_populates="places")
+    photos: List["GalleryPhoto"] = Relationship(back_populates="place", cascade_delete=True)
+
+
+class GalleryPlacePublic(GalleryPlaceBase):
+    id: uuid.UUID
+    created_at: datetime
+
+
+class GalleryPlacesPublic(SQLModel):
+    data: List[GalleryPlacePublic]
+    count: int
+
+
+# Gallery Photo Models
+class GalleryPhotoBase(SQLModel):
+    place_id: uuid.UUID
+    url: str = Field(max_length=500)
+    thumbnail_url: str = Field(max_length=500)
+    photographer_name: str = Field(max_length=255)
+    photographer_url: str = Field(max_length=500)
+    source: str = Field(max_length=50)  # unsplash, pexels
+    width: int
+    height: int
+    description: Optional[str] = Field(default=None, max_length=500)
+    download_tracked: bool = Field(default=False)
+
+
+class GalleryPhotoCreate(GalleryPhotoBase):
+    pass
+
+
+class GalleryPhotoUpdate(SQLModel):
+    url: Optional[str] = Field(default=None, max_length=500)
+    thumbnail_url: Optional[str] = Field(default=None, max_length=500)
+    photographer_name: Optional[str] = Field(default=None, max_length=255)
+    photographer_url: Optional[str] = Field(default=None, max_length=500)
+    source: Optional[str] = Field(default=None, max_length=50)
+    width: Optional[int] = None
+    height: Optional[int] = None
+    description: Optional[str] = Field(default=None, max_length=500)
+    download_tracked: Optional[bool] = None
+
+
+class GalleryPhoto(GalleryPhotoBase, table=True):
+    __tablename__ = "galleryphoto"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    place_id: uuid.UUID = Field(foreign_key="galleryplace.id", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    place: GalleryPlace = Relationship(back_populates="photos")
+
+
+class GalleryPhotoPublic(GalleryPhotoBase):
+    id: uuid.UUID
+    created_at: datetime
+
+
+class GalleryPhotosPublic(SQLModel):
+    data: List[GalleryPhotoPublic]
     count: int
 
 
