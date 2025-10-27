@@ -26,34 +26,55 @@ Travya combines the power of AI agents with modern web technologies to provide a
 
 Travya follows a microservices architecture with clear separation of concerns:
 
+```mermaid
+flowchart TD
+    %% FRONTEND
+    subgraph F["Frontend (React)"]
+        F1["• TanStack Router for routing"]
+        F2["• TanStack Query for data fetching"]
+        F3["• Chakra UI for components"]
+    end
+
+    %% BACKEND
+    subgraph B["Backend (FastAPI)"]
+        subgraph B1["AI Agents"]
+            B1a["• Research"]
+            B1b["• Planner"]
+            B1c["• Booker"]
+        end
+
+        subgraph B2["API Routes"]
+            B2a["• Travel"]
+            B2b["• Chat"]
+            B2c["• Users"]
+        end
+
+        subgraph B3["Services"]
+            B3a["• RAG"]
+            B3b["• Documents"]
+            B3c["• Images"]
+        end
+    end
+
+    %% DATABASES
+    subgraph DB1["PostgreSQL"]
+        DB1a["• User Data"]
+        DB1b["• Trips"]
+        DB1c["• Conversations"]
+    end
+
+    subgraph DB2["Redis"]
+        DB2a["• Sessions"]
+        DB2b["• Cache"]
+        DB2c["• Memory"]
+    end
+
+    %% CONNECTIONS
+    F --> B
+    B --> DB1
+    B --> DB2
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Frontend (React)                     │
-│  • TanStack Router for routing                          │
-│  • TanStack Query for data fetching                     │
-│  • Chakra UI for components                             │
-│  • Apple-inspired design system                        │
-└──────────────────┬──────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────┐
-│                 Backend (FastAPI)                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │   AI Agents  │  │  API Routes  │  │   Services   │   │
-│  │ • Research   │  │ • Travel    │  │ • RAG       │   │
-│  │ • Planner    │  │ • Chat      │  │ • Documents  │   │
-│  │ • Booker     │  │ • Users     │  │ • Images    │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└──────────────────┬──────────────────────────────────────┘
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-┌───────▼────────┐    ┌───────▼────────┐
-│  PostgreSQL    │    │     Redis      │
-│  • User Data   │    │  • Sessions    │
-│  • Trips       │    │  • Cache       │
-│  • Conversations│   │  • Memory      │
-└────────────────┘    └────────────────┘
-```
+
 
 ## 🚀 Quick Start
 
