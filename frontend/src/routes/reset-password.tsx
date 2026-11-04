@@ -20,7 +20,7 @@ export const Route = createFileRoute("/reset-password")({
   beforeLoad: async () => {
     if (isLoggedIn()) {
       throw redirect({
-        to: "/",
+        to: "/dashboard",
       })
     }
   },
@@ -90,6 +90,7 @@ function ResetPassword() {
         errors={errors}
         {...register("new_password", passwordRules())}
         placeholder="New Password"
+        focusRingColor="blue.500"
       />
       <PasswordInput
         startElement={<FiLock />}
@@ -97,6 +98,7 @@ function ResetPassword() {
         errors={errors}
         {...register("confirm_password", confirmPasswordRules(getValues))}
         placeholder="Confirm Password"
+        focusRingColor="blue.500"
       />
       <Button variant="solid" type="submit">
         Reset Password

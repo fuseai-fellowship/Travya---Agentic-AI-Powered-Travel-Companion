@@ -5,7 +5,7 @@ import { Link } from '@tanstack/react-router';
 import { FiPlus, FiMapPin, FiCalendar, FiMessageCircle, FiTrendingUp, FiDollarSign, FiUsers } from 'react-icons/fi';
 import Typewriter from '@/components/Typewriter';
 
-export const Route = createFileRoute('/_layout/')({
+export const Route = createFileRoute('/_layout/dashboard')({
   component: Index,
 });
 

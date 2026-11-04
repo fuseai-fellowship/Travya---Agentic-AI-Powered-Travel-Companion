@@ -7,7 +7,7 @@ import type { UserPublic } from "@/client"
 import { useSidebar } from "@/contexts/SidebarContext"
 
 const items = [
-  { icon: FiHome, title: "Dashboard", path: "/" },
+  { icon: FiHome, title: "Dashboard", path: "/dashboard" },
   { icon: FiMapPin, title: "My Trips", path: "/trips" },
   { icon: FiPlus, title: "Plan Trip", path: "/plan-trip" },
   { icon: FiMessageCircle, title: "AI Chat", path: "/chat" },
