@@ -26,11 +26,14 @@ class FallbackPlaces:
         radius_m: int = 3000,
         limit: int = 30,
     ) -> list[Place]:
-        args = {"categories": categories, "radius_m": radius_m, "limit": limit}
-        backup = asyncio.create_task(self._fallback.nearby(center, **args))
+        backup = asyncio.create_task(
+            self._fallback.nearby(center, categories=categories, radius_m=radius_m, limit=limit)
+        )
         try:
             async with asyncio.timeout(PRIMARY_BUDGET_S):
-                places = await self._primary.nearby(center, **args)
+                places = await self._primary.nearby(
+                    center, categories=categories, radius_m=radius_m, limit=limit
+                )
             if places:
                 backup.cancel()
                 return places
