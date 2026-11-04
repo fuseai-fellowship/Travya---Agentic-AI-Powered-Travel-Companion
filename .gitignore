@@ -38,6 +38,7 @@ coverage/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+tfplan
 
 # Docs site build
 /site/

@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Only project_id and billing_account_id are required.
+#
+# One-time bootstrap, in order:
+#   gcloud auth application-default login
+#   gcloud config set project <project-id>
+#   gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com
+#   gcloud storage buckets create gs://<project-id>-tfstate --location=us-central1 \
+#     --uniform-bucket-level-access --public-access-prevention
+#   gcloud storage buckets update gs://<project-id>-tfstate --versioning
+#   make tf-init bucket=<project-id>-tfstate
+#   terraform -chdir=infra/terraform apply -target=google_secret_manager_secret.app
+#   printf %s "$VALUE" | gcloud secrets versions add <secret-id> --data-file=-   # each wired secret
+#   make tf-plan && make tf-apply
+#   terraform -chdir=infra/terraform output github_variables
+
+project_id         = "travya-prod"
+billing_account_id = "000000-000000-000000"
+
+# region               = "us-central1"
+# budget_amount        = 1
+# budget_currency_code = "USD"
+# frontend_origins     = ["https://travya.pages.dev"]
+# gemini_model         = "gemini-flash-latest"
+# github_repository    = "fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion"
+
+# Drop secrets that have no value yet; Cloud Run refuses to start with an empty secret.
+# wired_secrets = ["gemini-api-key", "database-url", "redis-url"]
