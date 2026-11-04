@@ -18,7 +18,7 @@
 ## What it does
 
 - **Plans a day-by-day itinerary** for any destination, pace, budget and set of interests: four research agents work in parallel, a planner drafts, a critic and hard-coded checks review, a reviser fixes.
-- **Shows the agents working.** Every step streams to the browser over Server-Sent Events; places and weather appear on the map while the plan is still being written. A live plan took ≈35 s in testing on free tiers.
+- **Shows the agents working.** Every step streams to the browser over Server-Sent Events; places and weather appear on the map while the plan is still being written. Live evals on six golden trips: 6/6 plans pass every hard check, 96% of named places land on the map, median 32 s on free tiers ([evals](docs/evals.md)).
 - **Maps the trip** with numbered stops per day and walking or driving routes on OpenStreetMap data.
 - **Answers travel questions** in a streaming assistant with five read-only tools (places, weather, travel guide, your trips, an itinerary) that cites its sources.
 - **Quotes sample flights and stays.** A booking happens only when the traveler confirms it, and every booking is simulated.
@@ -102,7 +102,7 @@ flowchart LR
 - **Abuse and cost controls.** Per-user moving-window rate limits and a global daily LLM budget in Redis; `429` with `Retry-After`, `503 Demo limit reached`. [`core/ratelimit.py`](backend/app/core/ratelimit.py)
 - **Prompt-injection fencing.** OpenStreetMap, Wikivoyage and tool output enter prompts as fenced, untrusted data; the assistant's tools are read-only and scoped to the user. [`agents/planning/prompts.py`](backend/app/agents/planning/prompts.py)
 - **Structured output plus deterministic checks.** Planner, critic and reviser emit Pydantic schemas; a quality gate adds code checks (every date covered, pace limits, budget within 10 %) before a plan is accepted. [`agents/planning/checks.py`](backend/app/agents/planning/checks.py)
-- **Fast on free tiers.** Each scout has a 30 s budget, Overpass races a Wikipedia backup, every model call has a timeout, and an overloaded model hands over to Flash-Lite at once instead of retrying: a live plan took ≈35 s in testing. [`agents/planning/pipeline.py`](backend/app/agents/planning/pipeline.py)
+- **Fast on free tiers.** Each scout has a 30 s budget, Overpass races a Wikipedia backup, every model call has a timeout, and an overloaded model hands over to Flash-Lite at once instead of retrying: the median live plan takes 32 s. [`agents/planning/pipeline.py`](backend/app/agents/planning/pipeline.py)
 - **Ports and adapters with fakes.** Nine ports, real adapters with fallbacks, polite cached HTTP, and deterministic fakes: `OFFLINE_INTEGRATIONS=true` runs the whole flow with no keys or network, so tests and CI run offline. [`integrations/ports.py`](backend/app/integrations/ports.py)
 - **One required CI check.** `ci-ok` aggregates path-filtered jobs: lint, types, tests, an OpenAPI drift check, migrations on an empty database, Playwright on the production images, a gitleaks secret scan, Trivy and SBOMs; CodeQL and Scorecard alongside. [`ci.yml`](.github/workflows/ci.yml)
 - **Keyless deploys.** GitHub OIDC to Workload Identity Federation, limited to this repository's `main`; one image per commit runs the migration job, then serves; smoke test, then Cloudflare Pages. [`deploy.yml`](.github/workflows/deploy.yml)

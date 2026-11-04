@@ -90,6 +90,7 @@ nav:
       - Data model: architecture/data-model.md
       - Integrations: architecture/integrations.md
   - API: api.md
+  - Evals: evals.md
   - Security: security.md
   - Operations:
       - Deployment: operations/deployment.md
