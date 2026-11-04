@@ -286,7 +286,7 @@ def _placeholder(seed: str, label: str) -> str:
         "<text x='40' y='490' font-family='sans-serif' font-size='36' fill='white'>"
         f"{text}</text></svg>"
     )
-    return "data:image/svg+xml," + quote(svg, safe=" ='/:,.-#")
+    return "data:image/svg+xml," + quote(svg, safe=" ='/:,.-")
 
 
 class MemoryStorage:
