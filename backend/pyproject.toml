@@ -1,0 +1,84 @@
+[project]
+name = "travya-api"
+version = "1.0.0"
+description = "Travya API: multi-agent travel planning on FastAPI and Google ADK"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi[standard]>=0.162",
+    "sqlmodel>=0.0.48",
+    "sqlalchemy[asyncio]>=2.1",
+    "psycopg[binary,pool]>=3.3",
+    "pgvector>=0.5",
+    "alembic>=1.20",
+    "pydantic>=2.14",
+    "pydantic-settings>=2.16",
+    "google-adk>=2.13",
+    "google-genai>=2.34",
+    "firebase-admin>=7.7",
+    "limits[async-redis]>=5.8",
+    "cashews[redis]>=7.6",
+    "sse-starlette>=3.6",
+    "structlog>=26.1",
+    "asgi-correlation-id>=5.0",
+    "tenacity>=9.1",
+    "httpx>=0.28",
+    "redis>=8.1",
+    "sentry-sdk[fastapi]>=2.73",
+    "google-cloud-storage>=3.17",
+    # cryptography 49+ ships no Intel-macOS wheels; Linux images still get the latest
+    "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2",
+    "pytest-asyncio>=1.4",
+    "pytest-cov>=7.0",
+    "respx>=0.23",
+    "asgi-lifespan>=2.1",
+    "ruff>=0.17",
+    "mypy>=2.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = [
+    "db: needs a Postgres database (TEST_DATABASE_URL)",
+    "live: calls real external services; skipped unless RUN_LIVE=1",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/alembic/*"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM", "ASYNC", "S", "RUF", "PT", "TID"]
+ignore = ["E501", "B008", "S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S311"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/"]
+
+[[tool.mypy.overrides]]
+module = ["firebase_admin.*", "google.cloud.*", "cashews.*", "limits.*", "pgvector.*"]
+ignore_missing_imports = true
