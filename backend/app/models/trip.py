@@ -4,11 +4,11 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import DateTime, String, Time
+from sqlalchemy import DateTime, Time
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field
 
-from app.models.base import Table, created_at_field, id_field, updated_at_field
+from app.models.base import Table, created_at_field, enum_type, id_field, updated_at_field
 
 
 class TripStatus(StrEnum):
@@ -63,10 +63,10 @@ class Trip(Table, table=True):
     travelers: int = Field(default=1, ge=1, le=20)
     budget: Decimal | None = Field(default=None, max_digits=12, decimal_places=2)
     currency: str = Field(default="USD", min_length=3, max_length=3)
-    pace: TripPace = Field(default=TripPace.balanced, sa_type=String(16))
+    pace: TripPace = Field(default=TripPace.balanced, sa_type=enum_type(TripPace))
     interests: list[str] = Field(default_factory=list, sa_type=JSONB)
     notes: str | None = Field(default=None, max_length=2000)
-    status: TripStatus = Field(default=TripStatus.draft, sa_type=String(16))
+    status: TripStatus = Field(default=TripStatus.draft, sa_type=enum_type(TripStatus))
     cover_photo_url: str | None = Field(default=None, max_length=1000)
     plan: dict[str, Any] | None = Field(default=None, sa_type=JSONB)
     planned_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
@@ -85,7 +85,7 @@ class ItineraryItem(Table, table=True):
     end_time: time | None = Field(default=None, sa_type=Time())
     title: str = Field(max_length=200)
     description: str | None = Field(default=None, max_length=2000)
-    category: ItemCategory = Field(default=ItemCategory.other, sa_type=String(16))
+    category: ItemCategory = Field(default=ItemCategory.other, sa_type=enum_type(ItemCategory))
     place_name: str | None = Field(default=None, max_length=300)
     latitude: float | None = None
     longitude: float | None = None
@@ -105,13 +105,13 @@ class Booking(Table, table=True):
     itinerary_item_id: uuid.UUID | None = Field(
         default=None, foreign_key="itinerary_items.id", ondelete="SET NULL", index=True
     )
-    kind: BookingKind = Field(sa_type=String(16))
+    kind: BookingKind = Field(sa_type=enum_type(BookingKind))
     title: str = Field(max_length=200)
     provider: str = Field(max_length=120)
     details: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     amount: Decimal = Field(max_digits=12, decimal_places=2)
     currency: str = Field(min_length=3, max_length=3)
-    status: BookingStatus = Field(default=BookingStatus.quoted, sa_type=String(16))
+    status: BookingStatus = Field(default=BookingStatus.quoted, sa_type=enum_type(BookingStatus))
     confirmation_code: str | None = Field(default=None, max_length=32)
     is_simulated: bool = True
     confirmed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))

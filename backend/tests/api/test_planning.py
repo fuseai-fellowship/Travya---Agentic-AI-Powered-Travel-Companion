@@ -89,9 +89,9 @@ async def test_plan_rate_limit(
 ) -> None:
     from app.core.config import settings
 
-    limited = await alice.post(f"/trips/{trip['id']}/plan", json={})
-    assert limited.status_code == 200
     monkeypatch.setattr(settings, "LLM_DAILY_REQUEST_BUDGET", 1)
+    first = await alice.post(f"/trips/{trip['id']}/plan", json={})
+    assert first.status_code == 200
     exhausted = await alice.post(f"/trips/{trip['id']}/plan", json={})
     assert exhausted.status_code == 503
     assert exhausted.json()["title"] == "Demo limit reached"

@@ -345,14 +345,13 @@ class TripService:
             await itinerary.add(item)
         for quote in quotes:
             await bookings.add(quote)
+        confirmed = await bookings.all(col(Booking.status) == BookingStatus.confirmed)
         await self.trips.update(
             trip,
             {
                 "plan": plan,
                 "planned_at": datetime.now(UTC),
-                "status": TripStatus.booked
-                if trip.status == TripStatus.booked
-                else TripStatus.planned,
+                "status": TripStatus.booked if confirmed else TripStatus.planned,
             },
         )
         await self.session.commit()

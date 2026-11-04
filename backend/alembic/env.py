@@ -2,12 +2,12 @@
 
 import asyncio
 
-from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 import app.models  # noqa: F401  (registers every table on the metadata)
+from alembic import context
 from app.core.config import settings
 
 target_metadata = SQLModel.metadata
