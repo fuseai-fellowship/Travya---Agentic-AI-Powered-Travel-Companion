@@ -19,7 +19,7 @@ from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.ratelimit import Limiter
 from app.core.security import init_firebase
-from app.integrations.http import build_http_client
+from app.integrations.http import create_http_client
 from app.integrations.registry import build_integrations
 
 log = get_logger(__name__)
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
     init_firebase()
     cache.setup(settings.REDIS_URL or "mem://")
-    http = build_http_client(settings)
+    http = create_http_client(settings)
     app.state.integrations = build_integrations(settings, http)
     app.state.limiter = Limiter()
     app.state.adk_sessions = await _adk_session_service()
