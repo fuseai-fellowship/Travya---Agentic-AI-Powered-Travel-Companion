@@ -1,5 +1,5 @@
 import "maplibre-gl/dist/maplibre-gl.css"
-import { Box, chakra, Text } from "@chakra-ui/react"
+import { Box, chakra, Text, VisuallyHidden } from "@chakra-ui/react"
 import { setWorkerUrl } from "maplibre-gl"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url"
 import { useEffect, useMemo, useRef } from "react"
@@ -148,7 +148,6 @@ export default function TripMap({
           <Marker key={stop.itemId} longitude={stop.lon} latitude={stop.lat} anchor="center">
             <StopButton
               type="button"
-              aria-label={`Day ${stop.dayIndex}, stop ${stop.order}: ${stop.title}`}
               aria-pressed={isActive}
               onClick={(event) => {
                 event.stopPropagation()
@@ -172,7 +171,12 @@ export default function TripMap({
               transition="transform 150ms ease-out, opacity 200ms ease-out"
               style={{ background: stop.color, color: stop.textColor }}
             >
-              {stop.dayIndex}·{stop.order}
+              <span aria-hidden="true">
+                {stop.dayIndex}·{stop.order}
+              </span>
+              <VisuallyHidden>
+                Day {stop.dayIndex}, stop {stop.order}: {stop.title}
+              </VisuallyHidden>
             </StopButton>
           </Marker>
         )

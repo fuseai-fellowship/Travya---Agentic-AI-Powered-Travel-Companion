@@ -51,7 +51,7 @@ export function DestinationInput({
       <Combobox.Control>
         <Combobox.Input placeholder="Where to? e.g. Kathmandu" onBlur={onBlur} autoComplete="off" />
         <Combobox.IndicatorGroup>
-          {query.isFetching && <Spinner size="xs" color="fg.muted" aria-label="Searching places" />}
+          {query.isFetching && <Spinner size="xs" color="fg.muted" />}
         </Combobox.IndicatorGroup>
       </Combobox.Control>
       <Portal>

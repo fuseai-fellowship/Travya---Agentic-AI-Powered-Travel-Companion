@@ -24,7 +24,7 @@ export function Sidebar() {
       py="5"
     >
       <Box px="3" pb="6">
-        <Link to="/trips" aria-label="Travya, your trips">
+        <Link to="/trips">
           <Logo />
         </Link>
       </Box>

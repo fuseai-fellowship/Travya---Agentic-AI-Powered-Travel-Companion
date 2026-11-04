@@ -19,7 +19,7 @@ export function MobileTopBar() {
       top="0"
       zIndex="sticky"
     >
-      <Link to="/trips" aria-label="Travya, your trips">
+      <Link to="/trips">
         <Logo size={24} />
       </Link>
       <HStack gap="1">

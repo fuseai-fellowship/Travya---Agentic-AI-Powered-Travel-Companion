@@ -26,21 +26,16 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
   return (
     <Menu.Root positioning={{ placement: compact ? "bottom-end" : "top-start" }}>
       <Menu.Trigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          minH="44px"
-          px="2"
-          aria-label={`Account menu for ${name}`}
-        >
-          <Avatar.Root size="xs" colorPalette="brand">
+        <Button variant="ghost" size="sm" minH="44px" px="2">
+          <Avatar.Root size="xs" colorPalette="brand" aria-hidden="true">
             <Avatar.Fallback name={user?.isAnonymous ? "Demo" : name} />
           </Avatar.Root>
-          {!compact && (
-            <Text as="span" maxW="120px" truncate fontSize="sm">
-              {name}
-            </Text>
-          )}
+          <Text as="span" srOnly>
+            Account menu for{" "}
+          </Text>
+          <Text as="span" maxW="120px" truncate fontSize="sm" srOnly={compact}>
+            {name}
+          </Text>
         </Button>
       </Menu.Trigger>
       <Portal>
