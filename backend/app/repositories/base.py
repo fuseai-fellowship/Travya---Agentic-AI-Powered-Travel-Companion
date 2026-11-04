@@ -5,8 +5,6 @@ already loaded through the user's repository), so one user can never read or cha
 Missing and foreign rows both raise NotFound, which avoids leaking whether an id exists.
 """
 
-from __future__ import annotations
-
 import uuid
 from collections.abc import Sequence
 from typing import Any, ClassVar
@@ -39,7 +37,7 @@ class ScopedRepository[T: Table]:
             raise NotFound(self.not_found)
         return obj  # type: ignore[no-any-return]
 
-    async def list(
+    async def page(
         self,
         *where: ColumnElement[bool],
         order_by: Sequence[Any] = (),

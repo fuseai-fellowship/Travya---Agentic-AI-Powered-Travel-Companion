@@ -1,12 +1,10 @@
 """Conversations with the travel assistant, streamed token by token."""
 
-from __future__ import annotations
-
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
-from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.adk.agents.run_config import RunConfig, StreamingMode  # type: ignore[attr-defined]
 from google.adk.runners import Runner
 from google.adk.sessions import BaseSessionService
 from google.genai import types
@@ -55,10 +53,10 @@ class ChatService:
         self.adk_sessions = sessions
         self.conversations = ConversationRepository(session, user.id)
 
-    async def list(
+    async def page(
         self, *, archived: bool, limit: int, offset: int
     ) -> tuple[list[Conversation], int]:
-        return await self.conversations.list(
+        return await self.conversations.page(
             col(Conversation.is_archived) == archived,
             order_by=[
                 col(Conversation.is_favorite).desc(),
@@ -100,7 +98,7 @@ class ChatService:
         self, conversation_id: uuid.UUID, *, limit: int, offset: int
     ) -> tuple[list[Message], int]:
         conversation = await self.conversations.get(conversation_id)
-        return await MessageRepository(self.session, conversation.id).list(
+        return await MessageRepository(self.session, conversation.id).page(
             order_by=[col(Message.created_at)], limit=limit, offset=offset
         )
 
@@ -108,7 +106,7 @@ class ChatService:
         conversation = await self.conversations.get(conversation_id)
         await self.limiter.spend_llm_budget()
         messages = MessageRepository(self.session, conversation.id)
-        _, count = await messages.list(limit=1)
+        _, count = await messages.page(limit=1)
         await messages.add(
             Message(conversation_id=conversation.id, role=MessageRole.user, content=content)
         )

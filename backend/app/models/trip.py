@@ -63,13 +63,13 @@ class Trip(Table, table=True):
     travelers: int = Field(default=1, ge=1, le=20)
     budget: Decimal | None = Field(default=None, max_digits=12, decimal_places=2)
     currency: str = Field(default="USD", min_length=3, max_length=3)
-    pace: TripPace = Field(default=TripPace.balanced, sa_type=String(16))  # type: ignore[call-overload]
-    interests: list[str] = Field(default_factory=list, sa_type=JSONB)  # type: ignore[call-overload]
+    pace: TripPace = Field(default=TripPace.balanced, sa_type=String(16))
+    interests: list[str] = Field(default_factory=list, sa_type=JSONB)
     notes: str | None = Field(default=None, max_length=2000)
-    status: TripStatus = Field(default=TripStatus.draft, sa_type=String(16))  # type: ignore[call-overload]
+    status: TripStatus = Field(default=TripStatus.draft, sa_type=String(16))
     cover_photo_url: str | None = Field(default=None, max_length=1000)
-    plan: dict[str, Any] | None = Field(default=None, sa_type=JSONB)  # type: ignore[call-overload]
-    planned_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
+    plan: dict[str, Any] | None = Field(default=None, sa_type=JSONB)
+    planned_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     created_at: datetime = created_at_field()
     updated_at: datetime = updated_at_field()
 
@@ -81,11 +81,11 @@ class ItineraryItem(Table, table=True):
     trip_id: uuid.UUID = Field(foreign_key="trips.id", ondelete="CASCADE", index=True)
     day: date
     position: int = 0
-    start_time: time | None = Field(default=None, sa_type=Time())  # type: ignore[call-overload]
-    end_time: time | None = Field(default=None, sa_type=Time())  # type: ignore[call-overload]
+    start_time: time | None = Field(default=None, sa_type=Time())
+    end_time: time | None = Field(default=None, sa_type=Time())
     title: str = Field(max_length=200)
     description: str | None = Field(default=None, max_length=2000)
-    category: ItemCategory = Field(default=ItemCategory.other, sa_type=String(16))  # type: ignore[call-overload]
+    category: ItemCategory = Field(default=ItemCategory.other, sa_type=String(16))
     place_name: str | None = Field(default=None, max_length=300)
     latitude: float | None = None
     longitude: float | None = None
@@ -105,16 +105,16 @@ class Booking(Table, table=True):
     itinerary_item_id: uuid.UUID | None = Field(
         default=None, foreign_key="itinerary_items.id", ondelete="SET NULL", index=True
     )
-    kind: BookingKind = Field(sa_type=String(16))  # type: ignore[call-overload]
+    kind: BookingKind = Field(sa_type=String(16))
     title: str = Field(max_length=200)
     provider: str = Field(max_length=120)
-    details: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # type: ignore[call-overload]
+    details: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     amount: Decimal = Field(max_digits=12, decimal_places=2)
     currency: str = Field(min_length=3, max_length=3)
-    status: BookingStatus = Field(default=BookingStatus.quoted, sa_type=String(16))  # type: ignore[call-overload]
+    status: BookingStatus = Field(default=BookingStatus.quoted, sa_type=String(16))
     confirmation_code: str | None = Field(default=None, max_length=32)
     is_simulated: bool = True
-    confirmed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
+    confirmed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     created_at: datetime = created_at_field()
     updated_at: datetime = updated_at_field()
 

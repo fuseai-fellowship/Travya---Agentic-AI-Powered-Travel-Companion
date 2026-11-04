@@ -43,9 +43,9 @@ class Message(Table, table=True):
     conversation_id: uuid.UUID = Field(
         foreign_key="conversations.id", ondelete="CASCADE", index=True
     )
-    role: MessageRole = Field(sa_type=String(16))  # type: ignore[call-overload]
-    content: str = Field(sa_type=Text)  # type: ignore[call-overload]
-    meta: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # type: ignore[call-overload]
+    role: MessageRole = Field(sa_type=String(16))
+    content: str = Field(sa_type=Text)
+    meta: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     created_at: datetime = created_at_field()
 
 
@@ -58,7 +58,7 @@ class Note(Table, table=True):
         default=None, foreign_key="trips.id", ondelete="SET NULL", index=True
     )
     title: str = Field(max_length=200)
-    content: str = Field(default="", sa_type=Text)  # type: ignore[call-overload]
+    content: str = Field(default="", sa_type=Text)
     color: str = Field(default="yellow", max_length=16)
     is_pinned: bool = False
     created_at: datetime = created_at_field()
@@ -92,9 +92,9 @@ class Feedback(Table, table=True):
 
     id: uuid.UUID = id_field()
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
-    target_type: FeedbackTarget = Field(sa_type=String(16))  # type: ignore[call-overload]
+    target_type: FeedbackTarget = Field(sa_type=String(16))
     target_id: uuid.UUID
-    rating: int = Field(ge=1, le=5, sa_type=SmallInteger)  # type: ignore[call-overload]
+    rating: int = Field(ge=1, le=5, sa_type=SmallInteger)
     comment: str | None = Field(default=None, max_length=1000)
     created_at: datetime = created_at_field()
 
@@ -119,7 +119,7 @@ class KnowledgeChunk(Table, table=True):
     source_url: str = Field(max_length=1000)
     chunk_index: int = 0
     title: str = Field(max_length=300)
-    content: str = Field(sa_type=Text)  # type: ignore[call-overload]
+    content: str = Field(sa_type=Text)
     license: str = Field(default="CC BY-SA 4.0", max_length=64)
     embedding: list[float] = Field(sa_column=Column(Vector(EMBEDDING_DIM), nullable=False))
     created_at: datetime = created_at_field()

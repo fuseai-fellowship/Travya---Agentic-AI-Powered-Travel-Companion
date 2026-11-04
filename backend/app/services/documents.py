@@ -1,7 +1,5 @@
 """Trip documents (tickets, reservations, visas) in object storage with validated uploads."""
 
-from __future__ import annotations
-
 import hashlib
 import uuid
 
@@ -44,7 +42,7 @@ class DocumentService:
         self.storage = storage
         self.documents = DocumentRepository(session, user.id)
 
-    async def list(self, trip_id: uuid.UUID | None) -> list[Document]:
+    async def for_trip(self, trip_id: uuid.UUID | None) -> list[Document]:
         where = [col(Document.trip_id) == trip_id] if trip_id else []
         return await self.documents.all(*where, order_by=[newest_first(Document)])
 

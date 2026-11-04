@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import DateTime
 from sqlmodel import Field, SQLModel
@@ -9,18 +10,18 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def id_field() -> uuid.UUID:
+def id_field() -> Any:
     return Field(default_factory=uuid.uuid4, primary_key=True)
 
 
-def created_at_field() -> datetime:
-    return Field(default_factory=utcnow, sa_type=DateTime(timezone=True), nullable=False)  # type: ignore[call-overload]
+def created_at_field() -> Any:
+    return Field(default_factory=utcnow, sa_type=DateTime(timezone=True), nullable=False)
 
 
-def updated_at_field() -> datetime:
+def updated_at_field() -> Any:
     return Field(
         default_factory=utcnow,
-        sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
+        sa_type=DateTime(timezone=True),
         nullable=False,
         sa_column_kwargs={"onupdate": utcnow},
     )

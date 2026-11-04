@@ -1,7 +1,5 @@
 """Trips, itinerary, simulated bookings, photos, weather and the trip map."""
 
-from __future__ import annotations
-
 import math
 import secrets
 import uuid
@@ -82,7 +80,7 @@ class TripService:
         await self.session.commit()
         return trip
 
-    async def list(
+    async def page(
         self, *, status: TripStatus | None, query: str | None, limit: int, offset: int
     ) -> tuple[list[Trip], int]:
         where = []
@@ -91,7 +89,7 @@ class TripService:
         if query:
             pattern = f"%{query.strip()}%"
             where.append(col(Trip.title).ilike(pattern) | col(Trip.destination).ilike(pattern))
-        return await self.trips.list(
+        return await self.trips.page(
             *where,
             order_by=[col(Trip.start_date).desc(), newest_first(Trip)],
             limit=limit,
@@ -299,7 +297,7 @@ class TripService:
         for day, stops in by_day.items():
             if len(stops) < 2:
                 continue
-            points = [GeoPoint(lat=s.latitude, lon=s.longitude) for s in stops]  # type: ignore[arg-type]
+            points = [GeoPoint(lat=s.latitude, lon=s.longitude) for s in stops]
             spread = max(_km(points[0], p) for p in points)
             try:
                 route = await self.integrations.router.route(

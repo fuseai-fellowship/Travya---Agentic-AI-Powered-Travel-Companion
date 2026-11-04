@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -46,7 +47,7 @@ async def list_conversations(
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[ConversationRead]:
-    rows, total = await service.list(archived=archived, limit=limit, offset=offset)
+    rows, total = await service.page(archived=archived, limit=limit, offset=offset)
     return Page(
         items=[ConversationRead.model_validate(c) for c in rows],
         total=total,
@@ -99,8 +100,8 @@ async def send_message(
 ) -> EventSourceResponse:
     conversation = await service.start(conversation_id, data.content)
 
-    async def events():  # type: ignore[no-untyped-def]
+    async def events() -> AsyncIterator[ServerSentEvent]:
         async for event in service.reply(conversation, data.content):
-            yield ServerSentEvent(**event.sse())
+            yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
 
     return EventSourceResponse(events(), ping=15, headers={"X-Accel-Buffering": "no"})

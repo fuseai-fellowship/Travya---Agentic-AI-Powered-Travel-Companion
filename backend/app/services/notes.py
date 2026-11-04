@@ -20,11 +20,11 @@ class NoteService:
         if trip_id is not None:
             await TripRepository(self.session, self.user.id).get(trip_id)
 
-    async def list(
+    async def page(
         self, *, trip_id: uuid.UUID | None, limit: int, offset: int
     ) -> tuple[list[Note], int]:
         where = [col(Note.trip_id) == trip_id] if trip_id else []
-        return await self.notes.list(
+        return await self.notes.page(
             *where,
             order_by=[col(Note.is_pinned).desc(), col(Note.updated_at).desc()],
             limit=limit,

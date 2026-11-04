@@ -74,7 +74,7 @@ async def list_notes(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[NoteRead]:
-    rows, total = await notes.list(trip_id=trip_id, limit=limit, offset=offset)
+    rows, total = await notes.page(trip_id=trip_id, limit=limit, offset=offset)
     return Page(
         items=[NoteRead.model_validate(n) for n in rows], total=total, limit=limit, offset=offset
     )
@@ -108,7 +108,7 @@ Documents = Annotated[DocumentService, Depends(document_service)]
 async def list_documents(
     documents: Documents, trip_id: uuid.UUID | None = None
 ) -> list[DocumentRead]:
-    return [DocumentRead.model_validate(d) for d in await documents.list(trip_id)]
+    return [DocumentRead.model_validate(d) for d in await documents.for_trip(trip_id)]
 
 
 @router.post(

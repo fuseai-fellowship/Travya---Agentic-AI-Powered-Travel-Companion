@@ -70,7 +70,7 @@ def _llm(
         name=name,
         description=description,
         model=agent_model(),
-        instruction=instruction,  # type: ignore[arg-type]
+        instruction=instruction,
         output_schema=schema,
         output_key=output_key,
         include_contents="none",

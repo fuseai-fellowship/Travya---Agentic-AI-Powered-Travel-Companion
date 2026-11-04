@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -45,7 +46,7 @@ async def list_trips(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[TripRead]:
-    trips, total = await service.list(status=status_, query=q, limit=limit, offset=offset)
+    trips, total = await service.page(status=status_, query=q, limit=limit, offset=offset)
     return Page(
         items=[TripRead.model_validate(t) for t in trips], total=total, limit=limit, offset=offset
     )
@@ -91,9 +92,9 @@ async def plan_trip(
     planner = PlanningService(session, user, integrations, limiter)
     trip = await planner.start(trip_id)
 
-    async def events():  # type: ignore[no-untyped-def]
+    async def events() -> AsyncIterator[ServerSentEvent]:
         async for event in planner.stream(trip, data.instructions):
-            yield ServerSentEvent(**event.sse())
+            yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
 
     return EventSourceResponse(events(), ping=15, headers={"X-Accel-Buffering": "no"})
 

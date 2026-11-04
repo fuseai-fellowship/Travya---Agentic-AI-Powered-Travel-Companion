@@ -22,8 +22,8 @@ def _storage_uri() -> str:
 class Limiter:
     def __init__(self, uri: str | None = None) -> None:
         storage = storage_from_string(uri or _storage_uri())
-        self._moving = MovingWindowRateLimiter(storage)  # type: ignore[arg-type]
-        self._fixed = FixedWindowRateLimiter(storage)  # type: ignore[arg-type]
+        self._moving = MovingWindowRateLimiter(storage)
+        self._fixed = FixedWindowRateLimiter(storage)
 
     async def hit(self, limit: str, scope: str, key: str) -> None:
         item = parse(limit)

@@ -103,7 +103,7 @@ def build_assistant(
 
     async def my_trips() -> dict[str, Any]:
         """List the current user's trips (title, destination, dates, status, id)."""
-        rows, _ = await trips.list(order_by=[col(Trip.start_date).desc()], limit=20)
+        rows, _ = await trips.page(order_by=[col(Trip.start_date).desc()], limit=20)
         return {
             "trips": [
                 {

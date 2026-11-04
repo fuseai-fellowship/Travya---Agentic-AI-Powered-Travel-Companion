@@ -2,8 +2,9 @@
 
 import re
 from dataclasses import dataclass
+from typing import Any, cast
 
-from sqlmodel import col, func, select
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.logging import get_logger
@@ -92,7 +93,7 @@ class KnowledgeService:
         rows = await self.session.exec(
             select(KnowledgeChunk)
             .where(KnowledgeChunk.destination == key)
-            .order_by(col(KnowledgeChunk.embedding).cosine_distance(vector))
+            .order_by(cast("Any", KnowledgeChunk.embedding).cosine_distance(vector))
             .limit(k)
         )
         return [
