@@ -78,6 +78,12 @@ class TripService:
             trip.cover_photo_url = photos[0].url
         trip = await self.trips.add(trip)
         await self.session.commit()
+        if photos:
+            # Unsplash's API terms: report a download when a photo is used in the app.
+            try:
+                await self.integrations.photos.track_download(photos[0])
+            except Exception as exc:
+                log.warning("photo_tracking_failed", error=type(exc).__name__)
         return trip
 
     async def page(
