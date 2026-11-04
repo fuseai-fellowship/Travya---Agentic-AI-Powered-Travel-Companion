@@ -11,9 +11,13 @@
 
 **Live demo:** <https://travya.pages.dev> (coming soon) · **Docs:** <https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/>
 
-<!-- Uncomment once the screenshot exists:
 ![The agent timeline and live map while Travya plans a trip](docs/assets/screenshot-planning.png)
--->
+
+<sub>Four research scouts run in parallel while places land on the map; then the planner, critic and quality gate take over. Live run on free tiers.</sub>
+
+| Itinerary on the map | Simulated bookings, confirmed by you |
+|---|---|
+| ![Day-by-day itinerary with routes on the map](docs/assets/screenshot-itinerary.png) | ![Sample stay quotes with an explicit confirm step](docs/assets/screenshot-bookings.png) |
 
 ## What it does
 
