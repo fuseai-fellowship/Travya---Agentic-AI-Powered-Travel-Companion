@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kathmandu-culture",
+    "ok": true,
+    "seconds": 0.1,
+    "hard_check_issues": [],
+    "critic_approved": false,
+    "revisions": 0,
+    "items": 12,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "lisbon-food",
+    "ok": true,
+    "seconds": 0.1,
+    "hard_check_issues": [],
+    "critic_approved": false,
+    "revisions": 0,
+    "items": 16,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  }
+]
