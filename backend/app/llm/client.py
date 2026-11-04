@@ -10,6 +10,7 @@ from collections.abc import AsyncGenerator, Sequence
 from functools import lru_cache
 from typing import Literal
 
+import httpx
 from google.adk.models import Gemini
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
@@ -41,29 +42,35 @@ class FallbackGemini(Gemini):
             async for response in super().generate_content_async(llm_request, stream):
                 yielded = True
                 yield response
-        except errors.APIError as exc:
-            if yielded or exc.code not in _RETRYABLE or not self.fallback_model:
+        except (errors.APIError, httpx.TimeoutException) as exc:
+            code = exc.code if isinstance(exc, errors.APIError) else 504
+            if yielded or code not in _RETRYABLE or not self.fallback_model:
                 raise
             log.warning(
-                "llm_fallback",
-                primary=llm_request.model,
-                fallback=self.fallback_model,
-                code=exc.code,
+                "llm_fallback", primary=llm_request.model, fallback=self.fallback_model, code=code
             )
             llm_request.model = self.fallback_model
             async for response in super().generate_content_async(llm_request, stream):
                 yield response
 
 
-def agent_model() -> FallbackGemini:
+def agent_model(*, light: bool = False) -> FallbackGemini:
+    """The main model with the light one as fallback, or the light model alone.
+
+    An overloaded model (503) is not retried: the light model answers in about a second instead.
+    """
     return FallbackGemini(
-        model=settings.GEMINI_MODEL,
-        fallback_model=settings.GEMINI_FALLBACK_MODEL,
+        model=settings.GEMINI_FALLBACK_MODEL if light else settings.GEMINI_MODEL,
+        fallback_model=None if light else settings.GEMINI_FALLBACK_MODEL,
         client_kwargs={"api_key": _api_key()},
         retry_options=types.HttpRetryOptions(
-            attempts=3, initial_delay=1.0, max_delay=8.0, http_status_codes=[429, 503]
+            attempts=2, initial_delay=1.0, max_delay=4.0, http_status_codes=[429, 500, 502, 504]
         ),
     )
+
+
+def http_options(timeout_s: float) -> types.HttpOptions:
+    return types.HttpOptions(timeout=int(timeout_s * 1000))
 
 
 SAFETY_SETTINGS = [
@@ -95,6 +102,22 @@ def _fake_embedding(text: str) -> list[float]:
     return [v / norm for v in vector]
 
 
+async def _embed_batch(
+    texts: list[str], task: Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
+) -> list[list[float]]:
+    try:
+        result = await _client().aio.models.embed_content(
+            model=settings.GEMINI_EMBEDDING_MODEL,
+            contents=texts,
+            config=types.EmbedContentConfig(
+                task_type=task, output_dimensionality=settings.EMBEDDING_DIM
+            ),
+        )
+    except errors.APIError as exc:
+        raise UpstreamUnavailable("The embedding service is busy, please retry") from exc
+    return [e.values or [] for e in result.embeddings or []]
+
+
 async def embed(
     texts: Sequence[str], *, task: Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
 ) -> list[list[float]]:
@@ -102,17 +125,10 @@ async def embed(
         return []
     if settings.OFFLINE_INTEGRATIONS or not _api_key():
         return [_fake_embedding(t) for t in texts]
-    try:
-        result = await _client().aio.models.embed_content(
-            model=settings.GEMINI_EMBEDDING_MODEL,
-            contents=list(texts),
-            config=types.EmbedContentConfig(
-                task_type=task, output_dimensionality=settings.EMBEDDING_DIM
-            ),
-        )
-    except errors.APIError as exc:
-        raise UpstreamUnavailable("The embedding service is busy, please retry") from exc
-    vectors = [e.values or [] for e in result.embeddings or []]
+    vectors = await _embed_batch(list(texts), task)
+    if len(vectors) != len(texts):
+        # Multimodal embedding models merge a list of inputs into one vector; embed one by one.
+        vectors = [v for text in texts for v in await _embed_batch([text], task)]
     # Truncated Gemini embeddings must be re-normalised for cosine distance.
     out = []
     for vector in vectors:

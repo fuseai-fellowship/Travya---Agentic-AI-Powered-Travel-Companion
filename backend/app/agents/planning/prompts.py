@@ -46,7 +46,10 @@ def _research(state: dict[str, Any]) -> str:
 
 PLANNER_RULES = """Build a realistic day-by-day itinerary:
 - One entry in `days` for every date of the trip, in order, using ISO dates.
-- Use real places from the places and guide context; copy their names exactly into `place_name`.
+- Set `place_name` for every activity that happens at a specific place: copy the name exactly from
+  the places or guide context when it is there, otherwise use the real, specific name of a
+  well-known place (e.g. "Sarangkot Viewpoint", not "a viewpoint"). Leave it empty only for generic
+  activities such as breakfast at the hotel.
 - Give each activity a start and end time, leave buffers for travel and rest, and include breakfast,
   lunch and dinner suggestions as `food` activities.
 - Group nearby places on the same day to keep travel short; respect opening hours when known.

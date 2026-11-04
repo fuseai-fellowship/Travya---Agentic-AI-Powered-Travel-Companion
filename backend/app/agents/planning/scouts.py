@@ -4,6 +4,7 @@ Each writes its findings to session state through `state_delta` and reports prog
 A failing scout never fails the plan; it reports what is missing and the planner works without it.
 """
 
+import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import date
 from decimal import Decimal
@@ -16,6 +17,7 @@ from google.genai import types
 from pydantic import PrivateAttr
 
 from app.core.logging import get_logger
+from app.integrations.geo import haversine_m
 from app.integrations.ports import GeoPoint, PoiCategory
 from app.integrations.registry import Integrations
 from app.services.knowledge import KnowledgeService
@@ -34,6 +36,9 @@ INTEREST_CATEGORIES: dict[str, list[PoiCategory]] = {
     "photography": ["viewpoint", "attraction"],
     "family": ["park", "attraction", "museum"],
 }
+
+SCOUT_BUDGET_S = 30.0
+SHORT_HOP_KM = 250.0  # below this, road travel beats flying
 
 Finding = tuple[str, dict[str, Any]]  # (progress message, state delta)
 
@@ -58,9 +63,10 @@ class Scout(BaseAgent):
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event]:
         trip = ctx.session.state["trip"]
         try:
-            message, delta = await self._work(trip)
+            async with asyncio.timeout(SCOUT_BUDGET_S):
+                message, delta = await self._work(trip)
         except Exception as exc:  # a scout must never sink the whole plan
-            log.warning("scout_failed", scout=self.name, error=str(exc))
+            log.warning("scout_failed", scout=self.name, error=type(exc).__name__)
             message, delta = (
                 f"Could not reach this source ({type(exc).__name__}); continuing without it.",
                 self._fallback,
@@ -81,6 +87,15 @@ def _center(trip: dict[str, Any]) -> GeoPoint | None:
 
 
 def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> list[BaseAgent]:
+    async def _distance_km(trip: dict[str, Any]) -> float | None:
+        center = _center(trip)
+        if not trip.get("origin") or center is None:
+            return None
+        origin = await integrations.geocoder.search(trip["origin"], limit=1)
+        if not origin:
+            return None
+        return haversine_m(origin[0].lat, origin[0].lon, center.lat, center.lon) / 1000
+
     async def weather(trip: dict[str, Any]) -> Finding:
         center = _center(trip)
         if center is None:
@@ -108,10 +123,17 @@ def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> lis
             center, categories=list(dict.fromkeys(categories)), radius_m=6000, limit=45
         )
         data = [
-            p.model_dump(include={"name", "category", "lat", "lon", "opening_hours", "address"})
+            p.model_dump(
+                include={"name", "category", "lat", "lon", "opening_hours", "address", "source"}
+            )
             for p in found
         ]
-        return f"Found {len(found)} places on OpenStreetMap.", {"places": data}
+        source = (
+            "Wikipedia"
+            if found and all(p.source == "wikipedia" for p in found)
+            else "OpenStreetMap"
+        )
+        return f"Found {len(found)} places on {source}.", {"places": data}
 
     async def guide(trip: dict[str, Any]) -> Finding:
         destination = trip["destination"]
@@ -142,7 +164,8 @@ def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> lis
             currency=trip["currency"],
         )
         flights = []
-        if trip.get("origin"):
+        distance_km = await _distance_km(trip)
+        if trip.get("origin") and (distance_km is None or distance_km >= SHORT_HOP_KM):
             flights = await integrations.offers.flights(
                 origin=trip["origin"],
                 destination=trip["destination"],
@@ -150,8 +173,14 @@ def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> lis
                 return_date=end,
                 travelers=trip["travelers"],
                 currency=trip["currency"],
+                distance_km=distance_km,
             )
         data = [o.model_dump(mode="json") for o in [*flights, *hotels]]
+        if trip.get("origin") and not flights:
+            return (
+                f"Found {len(hotels)} stays; {trip['origin']} is close enough to travel by road.",
+                {"offers": data},
+            )
         return (
             f"Found {len(hotels)} stays and {len(flights)} flights (sample fares, booking is simulated).",
             {"offers": data},

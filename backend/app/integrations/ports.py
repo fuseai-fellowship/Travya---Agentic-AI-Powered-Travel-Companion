@@ -162,6 +162,7 @@ class OffersProvider(Protocol):
         return_date: date | None,
         travelers: int,
         currency: str,
+        distance_km: float | None = None,
     ) -> list[TravelOffer]: ...
 
     async def hotels(

@@ -15,7 +15,7 @@ from google.genai import types
 
 from app.agents.planning.checks import PACE_LIMITS
 from app.models import ItemCategory
-from app.schemas.plan import PlannedActivity, PlannedDay, TripPlan
+from app.schemas.plan import BudgetBreakdown, PlannedActivity, PlannedDay, TripPlan
 
 SLOTS = ["09:00", "11:00", "14:00", "16:00", "18:00", "20:00", "21:30"]
 
@@ -68,7 +68,7 @@ def scripted_plan(trip: dict[str, Any], places: list[dict[str, Any]]) -> TripPla
         summary=f"A {trip['pace']} {len(days)}-day trip to {trip['destination']} built offline from OpenStreetMap data.",
         days=days,
         estimated_total=total,
-        budget_breakdown={"activities": total},
+        budget_breakdown=BudgetBreakdown(activities=total),
         packing_tips=["Comfortable walking shoes", "Reusable water bottle"],
         local_tips=["Check opening hours before you go."],
     )

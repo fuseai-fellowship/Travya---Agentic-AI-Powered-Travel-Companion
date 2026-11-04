@@ -22,7 +22,9 @@ from app.integrations.offers.sample import SampleOffers
 from app.integrations.photos import FallbackPhotos
 from app.integrations.photos.unsplash import UnsplashPhotos
 from app.integrations.photos.wikimedia import WikimediaPhotos
+from app.integrations.places import FallbackPlaces
 from app.integrations.places.overpass import OverpassPlaces
+from app.integrations.places.wikipedia import WikipediaPlaces
 from app.integrations.ports import (
     Autocomplete,
     Geocoder,
@@ -80,7 +82,7 @@ def build_integrations(settings: Settings, http: httpx.AsyncClient) -> Integrati
     return Integrations(
         geocoder=NominatimGeocoder(http),
         autocomplete=PhotonAutocomplete(http),
-        places=OverpassPlaces(http),
+        places=FallbackPlaces(OverpassPlaces(http), WikipediaPlaces(http)),
         router=router,
         weather=OpenMeteoWeather(http),
         guides=WikivoyageGuides(http),

@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.agents.planning.prompts import UNTRUSTED_NOTE
 from app.integrations.ports import GeoPoint, PoiCategory
 from app.integrations.registry import Integrations
-from app.llm.client import SAFETY_SETTINGS, agent_model
+from app.llm.client import SAFETY_SETTINGS, agent_model, http_options
 from app.models import ItineraryItem, Trip
 from app.repositories import ItineraryRepository, TripRepository
 from app.services.knowledge import KnowledgeService
@@ -157,6 +157,9 @@ def build_assistant(
         instruction=INSTRUCTION + focus,
         tools=[search_places, weather_forecast, destination_guide, my_trips, trip_itinerary],
         generate_content_config=types.GenerateContentConfig(
-            temperature=0.5, safety_settings=SAFETY_SETTINGS, max_output_tokens=2048
+            temperature=0.5,
+            safety_settings=SAFETY_SETTINGS,
+            max_output_tokens=2048,
+            http_options=http_options(60),
         ),
     )
