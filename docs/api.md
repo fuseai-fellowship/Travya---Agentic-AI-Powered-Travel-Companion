@@ -12,7 +12,8 @@ from the code.
 To call protected endpoints from Swagger UI, get an ID token (see
 [Getting started](getting-started.md#firebase-auth-emulator)), press **Authorize** and paste it.
 Operation ids are `<tag>-<function>`, for example `trips-plan_trip`; the typed frontend client is
-generated from them (`make client`).
+generated from them (`make client`). CI fails when the committed `frontend/openapi.json` no longer
+matches the code.
 
 ## Conventions
 
@@ -169,7 +170,7 @@ data: {"agent":"places_scout","kind":"progress","message":"Found 45 places on Op
 
 | Field | Type | Meaning |
 |---|---|---|
-| `agent` | string | `travya` (the run itself), a pipeline agent (`weather_scout`, `places_scout`, `guide_scout`, `offers_scout`, `planner`, `critic`, `quality_gate`, `reviser`) or `assistant` |
+| `agent` | string | `travya` (the run itself), a planning node (`weather_scout`, `places_scout`, `guide_scout`, `offers_scout`, `planner`, `critic`, `quality_gate`, `reviser`, `finalize`) or `assistant` |
 | `kind` | string | `started`, `progress`, `result`, `token`, `error` or `done`; also the SSE `event` name |
 | `message` | string | Human-readable text; for `token`, the next chunk of the answer |
 | `data` | object or null | Structured payload, for example scout previews, critic issues, or ids on `done` |

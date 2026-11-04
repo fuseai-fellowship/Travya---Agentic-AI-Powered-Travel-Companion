@@ -11,7 +11,7 @@ generation, and the open challenges: reliability, privacy, trust and user agency
 
 - **Generate, then verify.** The literature on LLM planning (for example the LLM-Modulo line of work on
   travel planning) argues that a model's plan should be checked by external verifiers rather than
-  trusted. Travya's refine loop does this: an LLM critic plus deterministic checks for dates, pace and
+  trusted. Travya's review loop does this: an LLM critic plus deterministic checks for dates, pace and
   budget, with the issues fed back to a reviser
   ([Agents](architecture/agents.md#quality-gate-and-deterministic-checks)).
 - **Grounding.** Plans are built from fetched data (OpenStreetMap places, Wikivoyage passages,

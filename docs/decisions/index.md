@@ -7,7 +7,7 @@ integrations and deployment did not work as documented.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-google-adk-multi-agent.md) | Google ADK workflow agents for planning, one tool-using agent for chat | Accepted |
+| [0001](0001-google-adk-multi-agent.md) | A Google ADK 2.x `Workflow` graph for planning, one tool-using agent for chat | Accepted |
 | [0002](0002-pgvector-over-faiss.md) | pgvector in Postgres for guide retrieval instead of an in-process FAISS index | Accepted |
 | [0003](0003-firebase-authentication.md) | Firebase Authentication instead of custom JWT login | Accepted |
 | [0004](0004-cloud-run-free-tier.md) | Cloud Run and managed free tiers instead of a self-hosted server | Accepted |

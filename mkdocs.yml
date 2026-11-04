@@ -96,7 +96,7 @@ nav:
       - Runbook: operations/runbook.md
   - Decisions:
       - decisions/index.md
-      - 0001 Google ADK multi-agent pipeline: decisions/0001-google-adk-multi-agent.md
+      - 0001 Google ADK Workflow graph: decisions/0001-google-adk-multi-agent.md
       - 0002 pgvector over FAISS: decisions/0002-pgvector-over-faiss.md
       - 0003 Firebase Authentication: decisions/0003-firebase-authentication.md
       - 0004 Cloud Run on the free tier: decisions/0004-cloud-run-free-tier.md

@@ -44,8 +44,9 @@ adapter for a deterministic fake from `backend/app/integrations/fakes.py`:
 
 - geocoding, places, routing, weather, guides and photos return stable, plausible data (a few real
   cities resolve to their true coordinates, anything else gets hash-based ones);
-- the planning pipeline replaces the Gemini planner with `ScriptedPlanner`, which builds an itinerary
-  from the scouts' findings, so research, persistence, the map and bookings all work end to end;
+- the planning workflow replaces the Gemini planner and critic with `ScriptedPlanner`, which builds an
+  itinerary from the scouts' findings, so research, persistence, the map and bookings all work end to
+  end;
 - guide embeddings are deterministic hash vectors;
 - the assistant answers with a fixed "offline demo mode" message;
 - trip documents are kept in memory and disappear when the API restarts.
@@ -63,8 +64,8 @@ keys are set). Without a Gemini key the API still uses real data but keeps the s
 offline assistant reply.
 
 !!! warning "Free-tier quota"
-    A planning run costs one planner call, up to two critic calls and up to two reviser calls, plus
-    embedding requests for the guide. The global `LLM_DAILY_REQUEST_BUDGET` counts runs, not model
+    A planning run costs one planner call, up to two reviser calls and up to three critic calls (on
+    the light model), plus embedding requests for the guide. The global `LLM_DAILY_REQUEST_BUDGET` counts runs, not model
     calls, and protects the key's daily quota.
 
 ## Firebase Auth emulator
@@ -167,8 +168,8 @@ local development, as noted.
 |---|---|---|
 | `GEMINI_API_KEY` | unset | Google AI Studio key. Without it the scripted planner and the offline assistant are used. |
 | `GEMINI_MODEL` | `gemini-flash-latest` | Model for every agent |
-| `GEMINI_FALLBACK_MODEL` | `gemini-flash-lite-latest` | Used when the primary model answers 429 or 5xx |
-| `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-2` | Guide embeddings |
+| `GEMINI_FALLBACK_MODEL` | `gemini-flash-lite-latest` | Takes over at once when the primary is overloaded (503) or times out, and after a failed retry on 429 or other 5xx; also the critic's model |
+| `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-001` | Guide embeddings, sent in batches |
 | `EMBEDDING_DIM` | `768` | Must match the `vector(768)` column in `knowledge_chunks` |
 | `LLM_DAILY_REQUEST_BUDGET` | `400` | Global cap on agent runs (plans and chat messages) per day |
 

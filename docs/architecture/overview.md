@@ -69,7 +69,7 @@ flowchart LR
     routers --> services["services<br/>use cases"]
     services --> repos["repositories<br/>owner-scoped queries"]
     repos --> models["models<br/>SQLModel tables"]
-    services --> agents["agents<br/>ADK pipeline, assistant"]
+    services --> agents["agents<br/>ADK workflow, assistant"]
     agents --> llm["llm/client.py<br/>Gemini with fallback"]
     agents --> ports["integrations/ports.py<br/>protocols"]
     services --> ports
@@ -83,7 +83,7 @@ flowchart LR
 | `app/api/v1/` | Thin routers: validate input, call one service, map to response schemas |
 | `app/services/` | Use cases: trips, planning, chat, documents, notes, feedback, knowledge base, users |
 | `app/repositories/` | `ScopedRepository` and one subclass per table; every query carries the owner scope |
-| `app/agents/` | The ADK planning pipeline, its prompts, scouts and checks; the travel assistant; SSE event model |
+| `app/agents/` | The ADK planning workflow graph, its prompts, scouts and checks; the travel assistant; SSE event model |
 | `app/llm/` | Gemini model with retries and fallback, safety settings, embeddings |
 | `app/integrations/` | Ports, adapters for each provider, fakes, the shared HTTP client, cache TTLs, the registry |
 | `app/models/`, `app/schemas/` | Tables, and the request, response and structured-output models |

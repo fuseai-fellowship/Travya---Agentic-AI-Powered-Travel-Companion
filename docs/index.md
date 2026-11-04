@@ -3,7 +3,8 @@
 Travya plans trips with a team of AI agents and shows them working. Four research scouts gather
 weather, places, guide passages and sample fares in parallel; a planner drafts a day-by-day
 itinerary; a critic and a set of deterministic checks review it; a reviser fixes what they find.
-Every step streams to the browser, and the result lands on a map built from OpenStreetMap data.
+Every step streams to the browser, and the result lands on a map built from OpenStreetMap data. In
+testing, a live plan took about 35 seconds on free tiers.
 Bookings are simulated and always need the traveler's explicit confirmation.
 
 The project was built by Tilak Parajuli during the FuseAI Fellowship, with early UI work by Bigya.
@@ -12,8 +13,8 @@ The project was built by Tilak Parajuli during the FuseAI Fellowship, with early
 
 | | |
 |---|---|
-| Agents | Google ADK: `SequentialAgent` → `ParallelAgent` (4 scouts) → planner `LlmAgent` → `LoopAgent` (critic, quality gate, reviser) |
-| Model | Gemini Flash with a Flash-Lite fallback; Gemini embeddings for guide retrieval |
+| Agents | Google ADK 2 `Workflow` graph: 4 concurrent scouts → join → planner → critic → quality gate, which routes to finalize or to the reviser (at most 2 revisions) |
+| Model | Gemini Flash with an immediate Flash-Lite fallback, the critic on Flash-Lite; Gemini embeddings for guide retrieval |
 | API | FastAPI on Python 3.13, SQLModel, Server-Sent Events, RFC 9457 problem+json errors |
 | Data | Postgres 17 with pgvector, Redis for rate limits and the HTTP cache |
 | Auth | Firebase Authentication (email/password, Google, anonymous demo) |
