@@ -1,581 +1,182 @@
-# Travya - AI-Powered Travel Companion
+# Travya
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18.2+-blue.svg)](https://reactjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org)
+**An agentic AI travel planner: parallel research agents, a planner and a critic loop on Google ADK and Gemini, grounded in open map data, with every step streamed live.**
 
-> **Travya** is an intelligent travel planning and booking platform powered by AI agents. Plan trips, discover destinations, book flights, and manage your travel experiences with ease.
+[![CI](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/actions/workflows/ci.yml/badge.svg)](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/actions/workflows/codeql.yml/badge.svg)](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/badge)](https://scorecard.dev/viewer/?uri=github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
+[![React 19](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](frontend/)
 
-## 🌟 Overview
+**Live demo:** <https://travya.pages.dev> (coming soon) · **Docs:** <https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/>
 
-Travya combines the power of AI agents with modern web technologies to provide a comprehensive travel planning experience. The platform features multi-agent AI systems for intelligent trip planning, real-time booking capabilities, and a beautiful, intuitive interface.
+<!-- Uncomment once the screenshot exists:
+![The agent timeline and live map while Travya plans a trip](docs/assets/screenshot-planning.png)
+-->
 
-### Key Features
+## What it does
 
-- 🤖 **AI-Powered Trip Planning** - Multi-agent system for intelligent itinerary generation
-- 🗺️ **Real-Time Mapping** - Interactive maps with location parsing and visualization
-- 📸 **Photo Gallery** - Automated photo collection from web scraping
-- 💬 **AI Chat Assistant** - Conversational interface for travel queries
-- 📝 **Travel Notes** - Sticky-note style notes for trip reminders
-- 🔐 **Secure Authentication** - JWT-based auth with user management
-- 📊 **Dashboard** - Overview of trips, conversations, and travel statistics
-- 🎨 **Modern UI** - Apple-inspired design with dark mode support
+- **Plans a day-by-day itinerary** for any destination, pace, budget and set of interests: four research agents work in parallel, a planner drafts, a critic and hard-coded checks review, a reviser fixes.
+- **Shows the agents working.** Every step streams to the browser over Server-Sent Events; places and weather appear on the map while the plan is still being written.
+- **Maps the trip** with numbered stops per day and walking or driving routes on OpenStreetMap data.
+- **Answers travel questions** in a streaming assistant with five read-only tools (places, weather, travel guide, your trips, an itinerary) that cites its sources.
+- **Quotes sample flights and stays.** A booking happens only when the traveler confirms it, and every booking is simulated.
+- **Keeps the rest of the trip together**: notes, documents (PDF and images, signed downloads), photos with author credit, and per-day weather (forecast or climate estimate).
 
-## 🏗️ Architecture
-
-Travya follows a microservices architecture with clear separation of concerns:
+## How the agents work
 
 ```mermaid
-flowchart TD
-    %% FRONTEND
-    subgraph F["Frontend (React)"]
-        F1["• TanStack Router for routing"]
-        F2["• TanStack Query for data fetching"]
-        F3["• Chakra UI for components"]
-    end
-
-    %% BACKEND
-    subgraph B["Backend (FastAPI)"]
-        subgraph B1["AI Agents"]
-            B1a["• Research"]
-            B1b["• Planner"]
-            B1c["• Booker"]
+flowchart LR
+    request(["Plan request"])
+    subgraph pipeline["SequentialAgent trip_planner"]
+        subgraph research["ParallelAgent: research scouts, no LLM"]
+            weather["Weather<br/>Open-Meteo"]
+            places["Places<br/>OpenStreetMap"]
+            guide["Guide<br/>Wikivoyage + pgvector"]
+            offers["Offers<br/>sample fares"]
         end
-
-        subgraph B2["API Routes"]
-            B2a["• Travel"]
-            B2b["• Chat"]
-            B2c["• Users"]
-        end
-
-        subgraph B3["Services"]
-            B3a["• RAG"]
-            B3b["• Documents"]
-            B3c["• Images"]
+        planner["Planner<br/>LlmAgent, structured TripPlan"]
+        subgraph refine["LoopAgent: at most 2 rounds"]
+            critic["Critic<br/>LlmAgent"] --> gate{"Quality gate<br/>critic + deterministic checks"}
+            gate -- "issues" --> reviser["Reviser<br/>LlmAgent"]
         end
     end
-
-    %% DATABASES
-    subgraph DB1["PostgreSQL"]
-        DB1a["• User Data"]
-        DB1b["• Trips"]
-        DB1c["• Conversations"]
-    end
-
-    subgraph DB2["Redis"]
-        DB2a["• Sessions"]
-        DB2b["• Cache"]
-        DB2c["• Memory"]
-    end
-
-    %% CONNECTIONS
-    F --> B
-    B --> DB1
-    B --> DB2
+    request --> weather & places & guide & offers
+    weather & places & guide & offers --> planner
+    planner --> critic
+    reviser -. "next round" .-> critic
+    gate -- "approved" --> saved[("Itinerary, map,<br/>quoted bookings")]
+    reviser -- "rounds used up" --> saved
+    saved --> confirm(["Traveler confirms a quote"]) --> booked["Simulated booking"]
 ```
 
+The scouts are plain code and spend no tokens. Third-party text reaches the model only inside fenced, untrusted `<context>` blocks, output must match a Pydantic schema, and no agent can book: confirming is a separate API call made by the user. Details: [Agents](https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/architecture/agents/).
 
-## 🚀 Quick Start
+## Architecture
 
-### Prerequisites
+```mermaid
+flowchart LR
+    browser(["Browser"])
+    spa["Cloudflare Pages<br/>React SPA, MapLibre"]
+    tiles["OpenFreeMap tiles"]
+    firebase["Firebase Auth"]
+    api["Cloud Run<br/>FastAPI + Google ADK"]
+    neon[("Neon<br/>Postgres + pgvector")]
+    redis[("Upstash Redis<br/>limits, cache")]
+    gemini["Gemini API"]
+    open["OSM services, Open-Meteo,<br/>Wikivoyage, Unsplash"]
+    gcs[("Cloud Storage<br/>documents")]
 
-- **Docker Desktop** (recommended for quick setup)
-- **Node.js** 18+ and **Python** 3.11+ (for local development)
-- **Git**
+    browser --> spa
+    browser --> tiles
+    browser -- "sign in" --> firebase
+    browser -- "REST + SSE, ID token" --> api
+    api -- "verify token" --> firebase
+    api --> neon
+    api --> redis
+    api --> gemini
+    api --> open
+    api --> gcs
+```
 
-### Installation & Running
+## Tech stack
 
-```bash
-# 1. Clone the repository
-git clone <repository-url>
+| Layer | Technology |
+|---|---|
+| Agents | Google ADK (`SequentialAgent`, `ParallelAgent`, `LoopAgent`), Gemini Flash with Flash-Lite fallback, Gemini embeddings |
+| Backend | Python 3.13, FastAPI, Pydantic 2, SQLModel and SQLAlchemy 2 (async, psycopg 3), Alembic, sse-starlette, structlog |
+| Data | Postgres 17 + pgvector (HNSW), Redis (`limits`, cashews) |
+| Frontend | React 19, Vite, TypeScript, TanStack Router and Query, Chakra UI v3, MapLibre GL + OpenFreeMap |
+| Auth | Firebase Authentication (email, Google, anonymous demo), firebase-admin |
+| Open data | Nominatim, Photon, Overpass, OSRM / OpenRouteService, Open-Meteo, Wikivoyage, Unsplash / Wikimedia Commons |
+| Quality | pytest, respx, Ruff, mypy (strict), Vitest, Playwright, Biome |
+| Delivery | Docker, Compose, GitHub Actions, Trivy + SBOM, CodeQL, OpenSSF Scorecard, Dependabot, release-please, Terraform |
+| Hosting | Cloud Run, Neon, Upstash, Cloudflare Pages, Firebase, Cloud Storage: all free tier |
+
+## Engineering highlights
+
+- **IDOR-proof by construction.** Every query for user data goes through a repository bound to the caller (or to a trip already loaded through it); foreign and missing ids both return 404. A test walks every endpoint as a second user. [`repositories/base.py`](backend/app/repositories/base.py)
+- **Abuse and cost controls.** Per-user moving-window rate limits and a global daily LLM budget in Redis; `429` with `Retry-After`, `503 Demo limit reached`. [`core/ratelimit.py`](backend/app/core/ratelimit.py)
+- **Prompt-injection fencing.** OpenStreetMap, Wikivoyage and tool output enter prompts as fenced, untrusted data; the assistant's tools are read-only and scoped to the user. [`agents/planning/prompts.py`](backend/app/agents/planning/prompts.py)
+- **Structured output plus deterministic checks.** Planner, critic and reviser emit Pydantic schemas; a quality gate adds code checks (every date covered, pace limits, budget within 10 %) before the loop can exit. [`agents/planning/checks.py`](backend/app/agents/planning/checks.py)
+- **Ports and adapters with fakes.** Nine ports, real adapters with fallbacks, polite cached HTTP, and deterministic fakes: `OFFLINE_INTEGRATIONS=true` runs the whole flow with no keys or network, so tests and CI run offline. [`integrations/ports.py`](backend/app/integrations/ports.py)
+- **One required CI check.** `ci-ok` aggregates path-filtered jobs: lint, types, tests, migrations on an empty database, Playwright on the production images, Trivy and SBOMs; CodeQL and Scorecard alongside. [`ci.yml`](.github/workflows/ci.yml)
+- **Keyless deploys.** GitHub OIDC to Workload Identity Federation, limited to this repository's `main`; one image per commit runs the migration job, then serves; smoke test, then Cloudflare Pages. [`deploy.yml`](.github/workflows/deploy.yml)
+- **$0 hosting.** Cloud Run scales from zero to one instance; Neon, Upstash, Cloudflare Pages and Firebase free tiers; Terraform with a $1 budget alert. [`infra/terraform`](infra/terraform)
+
+## Run locally
+
+Requires Docker with Compose v2.24+.
+
+```sh
+git clone https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion.git travya
 cd travya
-
-# 2. Set up environment variables
-cp backend/env.example .env
-# Edit .env with your configuration (API keys, secrets, etc.)
-
-# 3. Start all services
-docker compose up -d --build
-
-# 4. Verify services are running
-docker compose ps
-
-# 5. Access the application
-# Frontend:  http://localhost:5173
-# Backend API: http://localhost:8001
-# API Docs: http://localhost:8001/docs
-# Database Admin: http://localhost:8080
+cp .env.example .env    # offline mode: no API keys needed
+make up                 # Postgres + pgvector, Redis, Firebase Auth emulator, migrations, API, web
 ```
 
-The application will be accessible at:
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8001
-- **Interactive API Docs**: http://localhost:8001/docs
-- **Alternative API Docs**: http://localhost:8001/redoc
+Open <http://localhost:5173> for the app and <http://localhost:8000/api/v1/docs> for the API. Postgres is published on host port **5433** (5432 is often taken by a local install).
 
-## 📁 Project Structure
+`OFFLINE_INTEGRATIONS=true` (the default in `.env.example`) replaces every external service with a deterministic fake and the Gemini planner with a scripted one, so the full flow works without keys. For the real agents, set these in `.env` and run `make up` again:
 
+```sh
+GEMINI_API_KEY=<your Google AI Studio key>
+OFFLINE_INTEGRATIONS=false
 ```
-travya/
-├── backend/                    # FastAPI backend application
-│   ├── app/
-│   │   ├── agents/            # AI agent system
-│   │   │   ├── base_agent.py          # Base agent class
-│   │   │   ├── orchestrator.py       # Agent coordinator
-│   │   │   ├── research.py           # Research agent
-│   │   │   ├── planner.py            # Planning agent
-│   │   │   ├── booker.py              # Booking agent
-│   │   │   ├── rag_system.py         # RAG implementation
-│   │   │   └── tools.py              # Agent tools
-│   │   ├── api/               # API endpoints
-│   │   │   ├── routes/        # Route handlers
-│   │   │   │   ├── ai_travel.py      # AI travel planning
-│   │   │   │   ├── conversations.py  # Chat endpoints
-│   │   │   │   ├── travel.py          # Trip management
-│   │   │   │   ├── map_parser.py      # Map parsing
-│   │   │   │   └── photo_gallery.py   # Photo management
-│   │   │   └── main.py        # API router setup
-│   │   ├── core/              # Core configuration
-│   │   │   ├── config.py       # Settings management
-│   │   │   ├── db.py           # Database connection
-│   │   │   ├── llm.py          # LLM integration
-│   │   │   └── security.py     # Auth utilities
-│   │   ├── services/          # Business logic
-│   │   │   ├── vector_rag.py           # Vector database
-│   │   │   ├── redis_cache.py          # Caching layer
-│   │   │   ├── document_storage.py     # File storage
-│   │   │   ├── image_scraping.py       # Image collection
-│   │   │   ├── itinerary_parser.py     # Itinerary parsing
-│   │   │   ├── photo_gallery.py        # Gallery management
-│   │   │   └── map_parser.py           # Map processing
-│   │   ├── alembic/           # Database migrations
-│   │   ├── models.py          # SQLModel definitions
-│   │   └── crud.py            # CRUD operations
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── requirements.txt
-│
-├── frontend/                   # React frontend application
+
+Tests and linters run on the host (needs [uv](https://docs.astral.sh/uv/) and Node 24): `make test`, `make lint`, `make e2e`. `make help` lists every target.
+
+## Project structure
+
+```text
+.
+├── backend/              FastAPI API (Python 3.13, uv)
+│   ├── app/              api, agents, core, integrations, llm, models, repositories, schemas, services
+│   ├── alembic/          database migrations
+│   ├── tests/            api, integrations, unit
+│   └── Dockerfile
+├── frontend/             React SPA (Vite)
 │   ├── src/
-│   │   ├── components/        # React components
-│   │   │   ├── Common/        # Shared components
-│   │   │   │   ├── Navbar.tsx         # Top navigation
-│   │   │   │   ├── Sidebar.tsx        # Side navigation
-│   │   │   │   └── SidebarItems.tsx   # Menu items
-│   │   │   ├── Items/          # Travel Notes
-│   │   │   │   ├── AddItem.tsx        # Create note
-│   │   │   │   ├── EditItem.tsx       # Edit note
-│   │   │   │   └── DeleteItem.tsx     # Delete note
-│   │   │   ├── MapParserComponent.tsx # Map visualization
-│   │   │   ├── PhotoGallery.tsx       # Photo display
-│   │   │   └── Typewriter.tsx        # Typing effect
-│   │   ├── routes/            # Application routes
-│   │   │   ├── _layout.tsx           # Main layout
-│   │   │   ├── _layout/index.tsx     # Dashboard
-│   │   │   ├── _layout/chat.tsx      # AI Chat
-│   │   │   ├── _layout/plan-trip.tsx # Trip planning
-│   │   │   ├── _layout/trips.tsx     # Trip list
-│   │   │   ├── _layout/settings.tsx  # User settings
-│   │   │   └── _layout/items.tsx     # Travel Notes
-│   │   ├── contexts/          # React contexts
-│   │   │   ├── AuthContext.tsx       # Auth state
-│   │   │   ├── TravelContext.tsx     # Travel data
-│   │   │   └── SidebarContext.tsx    # UI state
-│   │   ├── hooks/             # Custom hooks
-│   │   ├── client/            # Generated API client
-│   │   └── main.tsx           # App entry point
-│   ├── public/
-│   │   └── assets/
-│   │       └── images/       # Static assets (logos)
 │   ├── Dockerfile
-│   └── package.json
-│
-├── docs/                       # Documentation
-│   ├── ai-agents/             # AI agents documentation
-│   ├── backend-api/           # Backend API docs
-│   ├── frontend/              # Frontend docs
-│   ├── database/              # Database schema
-│   ├── deployment/            # Deployment guides
-│   └── external-apis/         # API integrations
-│
-├── scripts/                    # Build and deployment scripts
-├── docker-compose.yml          # Docker Compose configuration
-├── .env                        # Environment variables (gitignored)
-└── README.md                   # This file
+│   └── nginx.conf
+├── infra/
+│   ├── terraform/        Cloud Run, Artifact Registry, Secret Manager, WIF, Cloud Storage, budget
+│   ├── firebase/         Auth emulator image
+│   └── postgres/init/    pgvector and the test database
+├── docs/                 documentation site (MkDocs Material)
+├── .github/workflows/    ci, codeql, scorecard, deploy, release-please, docs
+├── compose.yaml          production-like stack; compose.override.yaml adds dev mode
+├── Makefile
+└── mkdocs.yml
 ```
 
-## 🎯 Core Features & Implementation
+## Documentation
 
-### 1. AI-Powered Trip Planning
+The [documentation site](https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/) is built from [`docs/`](docs):
 
-**How it works:**
+- [Getting started](docs/getting-started.md): setup, environment variables, offline mode, tests
+- Architecture: [overview](docs/architecture/overview.md), [agents](docs/architecture/agents.md), [data model](docs/architecture/data-model.md), [integrations](docs/architecture/integrations.md)
+- [API reference](docs/api.md) and [security](docs/security.md) (OWASP API and LLM Top 10 mapping)
+- Operations: [deployment](docs/operations/deployment.md), [runbook](docs/operations/runbook.md)
+- [Architecture decision records](docs/decisions/index.md)
+- [Literature review](docs/research/literature-review.pdf) (FuseAI Fellowship)
 
-1. **User creates a trip** via `/plan-trip` page
-2. **Request flows**: Frontend → `POST /api/v1/travel/plan` → AI Travel Router
-3. **Orchestrator agent** receives the request and delegates to specialized agents:
-   - **Research Agent**: Queries knowledge base and external APIs (Google Places)
-   - **Planner Agent**: Generates structured itinerary using LLM
-   - **Booker Agent**: Handles booking operations (Flights, Hotels)
-4. **Response returned**: Complete trip plan with itineraries, bookings, and recommendations
+## Data and credits
 
-**Code Flow:**
-```
-frontend/src/routes/_layout/plan-trip.tsx
-  → API call: /api/v1/travel/plan
-    → backend/app/api/routes/ai_travel.py
-      → Agent orchestration: backend/app/agents/orchestrator.py
-        → Research: backend/app/agents/research.py
-        → Planning: backend/app/agents/planner.py
-        → Booking: backend/app/agents/booker.py
-```
+- Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under the Open Database License (ODbL); tiles by OpenFreeMap.
+- Travel guides from [Wikivoyage](https://en.wikivoyage.org/) and [Wikipedia](https://en.wikipedia.org/), CC BY-SA 4.0.
+- Weather data by [Open-Meteo](https://open-meteo.com/), CC BY 4.0.
+- Photos from [Unsplash](https://unsplash.com/) and [Wikimedia Commons](https://commons.wikimedia.org/), credited to their authors.
+- Flight and hotel offers are illustrative samples. **Bookings are simulated**: nothing is reserved or paid for.
 
-### 2. Interactive AI Chat
+## Team
 
-**How it works:**
+- **Tilak Parajuli**: architecture, backend, agents, infrastructure.
+- **Bigya Vijay Dhungana**: early landing and chat UI; co-author of the literature review.
 
-1. **User sends message** via chat interface
-2. **Message stored** in conversation context
-3. **AI processes query** and provides travel recommendations
-4. **Context maintained** across conversation history
-5. **Real-time updates** with streaming responses
+Built during the **FuseAI Fellowship**.
 
-**Code Flow:**
-```
-frontend/src/routes/_layout/chat.tsx
-  → API call: /api/v1/conversations/send
-    → backend/app/api/routes/conversations.py
-      → LLM processing: backend/app/core/llm.py
-      → Context retrieval: backend/app/services/vector_rag.py
-      → Response streaming back to frontend
-```
+## License
 
-### 3. Travel Notes (Sticky Notes)
-
-**How it works:**
-
-1. **User creates a note** on `/items` page
-2. **Note stored** in PostgreSQL database
-3. **Visual display** with colorful sticky-note design
-4. **Edit/Delete** actions with confirmation modals
-5. **Notes can contain** travel reminders, checklists, ideas
-
-**Code Flow:**
-```
-frontend/src/routes/_layout/items.tsx
-  → API call: /api/v1/items/
-    → backend/app/api/routes/items.py
-      → CRUD operations: backend/app/crud.py
-      → Database: backend/app/models.py (Item model)
-```
-
-### 4. Map Parsing & Visualization
-
-**How it works:**
-
-1. **User uploads image** with travel map/locations
-2. **Image processed** via OCR and computer vision
-3. **Locations extracted** and geocoded
-4. **Interactive map displayed** with markers
-5. **Clickable markers** show location details
-
-**Code Flow:**
-```
-frontend/src/components/MapParserComponent.tsx
-  → Upload image
-    → backend/app/api/routes/map_parser.py
-      → OCR processing: backend/app/services/map_parser.py
-      → Geocoding: External API (Google Maps)
-      → Data returned for visualization
-```
-
-### 5. Photo Gallery
-
-**How it works:**
-
-1. **Travellers share photos** from their trips
-2. **Auto-collected** via web scraping service
-3. **Organized by trip** and location
-4. **Displayed in gallery** with captions
-5. **Search and filter** capabilities
-
-**Code Flow:**
-```
-frontend/src/components/PhotoGallery.tsx
-  → API call: /api/v1/photo-gallery/
-    → backend/app/api/routes/photo_gallery.py
-      → Image collection: backend/app/services/image_scraping.py
-      → Display in UI
-```
-
-## 🛠️ Development Guide
-
-### Local Development Setup
-
-#### Backend Development
-
-```bash
-# Navigate to backend
-cd backend
-
-# Install dependencies using uv (recommended)
-uv sync
-source .venv/bin/activate
-
-# Or using pip
-pip install -r requirements.txt
-
-# Set up environment
-cp env.example .env
-# Edit .env with your API keys
-
-# Run database migrations
-alembic upgrade head
-
-# Start development server
-fastapi run app/main.py --reload
-```
-
-#### Frontend Development
-
-```bash
-# Navigate to frontend
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Frontend will be available at http://localhost:5173
-```
-
-### Database Migrations
-
-```bash
-# Create a new migration
-docker compose exec backend alembic revision --autogenerate -m "Your description"
-
-# Apply migrations
-docker compose exec backend alembic upgrade head
-
-# View migration history
-docker compose exec backend alembic history
-```
-
-### Running Tests
-
-```bash
-# Backend tests
-docker compose exec backend pytest
-docker compose exec backend pytest tests/agents/
-docker compose exec backend pytest tests/api/
-
-# Frontend tests
-cd frontend
-npm test
-
-# E2E tests
-npx playwright test
-npx playwright test --ui  # Interactive mode
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-**Backend (.env)**
-```bash
-# Application
-PROJECT_NAME="Travya"
-ENVIRONMENT=local
-SECRET_KEY="your-secret-key-here"
-
-# Database
-POSTGRES_SERVER=db
-POSTGRES_PORT=5432
-POSTGRES_USER=travya
-POSTGRES_PASSWORD=travya_password
-POSTGRES_DB=travya
-
-# Redis
-REDIS_URL=redis://redis:6379/0
-
-# AI & External APIs
-OPENAI_API_KEY="sk-your-openai-key"
-GOOGLE_AI_API_KEY="your-google-key"
-GOOGLE_MAPS_API_KEY="your-maps-key"
-AMADEUS_API_KEY="your-amadeus-key"
-AMADEUS_API_SECRET="your-amadeus-secret"
-
-# Email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-EMAILS_FROM_EMAIL=noreply@travya.com
-
-# Security
-ACCESS_TOKEN_EXPIRE_MINUTES=11520
-CORS_ORIGINS=["http://localhost:5173"]
-```
-
-**Frontend (frontend/.env)**
-```bash
-VITE_API_URL=http://localhost:8001
-```
-
-### API Keys Setup
-
-1. **OpenAI**: Get API key from https://platform.openai.com
-2. **Google AI**: Get API key from https://makersuite.google.com
-3. **Google Maps**: Get API key from https://console.cloud.google.com
-4. **Amadeus**: Get API credentials from https://developers.amadeus.com
-
-## 📚 API Documentation
-
-### Interactive Documentation
-
-Once the backend is running, access:
-- **Swagger UI**: http://localhost:8001/docs
-- **ReDoc**: http://localhost:8001/redoc
-
-### Key Endpoints
-
-**Authentication**
-- `POST /api/v1/login/access-token` - Login
-- `POST /api/v1/login/register` - Register
-- `GET /api/v1/users/me` - Get current user
-
-**Travel Planning**
-- `POST /api/v1/travel/plan` - Create trip plan
-- `GET /api/v1/travel/trips` - List user trips
-- `GET /api/v1/travel/trips/{trip_id}` - Get trip details
-
-**AI Chat**
-- `POST /api/v1/conversations/send` - Send message
-- `GET /api/v1/conversations` - Get conversations
-
-**Travel Notes**
-- `GET /api/v1/items` - List notes
-- `POST /api/v1/items` - Create note
-- `PUT /api/v1/items/{id}` - Update note
-- `DELETE /api/v1/items/{id}` - Delete note
-
-## 🧪 Testing
-
-### Backend Testing
-
-```bash
-# Run all tests
-docker compose exec backend pytest
-
-# Run with coverage
-docker compose exec backend pytest --cov=app --cov-report=html
-
-# Run specific test file
-docker compose exec backend pytest tests/agents/test_orchestrator.py
-
-# Run with verbose output
-docker compose exec backend pytest -v
-```
-
-### Frontend Testing
-
-```bash
-# Unit tests
-cd frontend
-npm test
-
-# E2E tests
-npx playwright test
-
-# E2E tests in UI mode
-npx playwright test --ui
-
-# Run specific test
-npx playwright test login.spec.ts
-```
-
-## 🚀 Deployment
-
-### Production Deployment
-
-```bash
-# 1. Set production environment
-export ENVIRONMENT=production
-
-# 2. Build images
-docker compose -f docker-compose.prod.yml build
-
-# 3. Start services
-docker compose -f docker-compose.prod.yml up -d
-
-# 4. Check status
-docker compose -f docker-compose.prod.yml ps
-```
-
-### Using Traefik for HTTPS
-
-```bash
-# Start with Traefik
-docker compose -f docker-compose.traefik.yml up -d
-```
-
-## 📊 Monitoring & Health Checks
-
-```bash
-# Health check endpoints
-curl http://localhost:8001/api/v1/health
-
-# View logs
-docker compose logs -f backend
-docker compose logs -f frontend
-
-# View specific service logs
-docker compose logs -f redis
-docker compose logs -f db
-```
-
-## 🤝 Contributing
-
-1. **Fork the repository**
-2. **Create feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make your changes**
-4. **Run tests**: `pytest && npm test`
-5. **Commit changes**: `git commit -m 'Add amazing feature'`
-6. **Push to branch**: `git push origin feature/amazing-feature`
-7. **Open Pull Request**
-
-### Code Style
-
-**Backend** (Python)
-```bash
-black .
-isort .
-flake8 .
-```
-
-**Frontend** (TypeScript/React)
-```bash
-npm run lint
-npm run format
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: Check the [docs](docs/) directory
-- **Issues**: Create an issue on GitHub
-- **API Docs**: http://localhost:8001/docs (when running)
-
-## 🙏 Acknowledgments
-
-- FastAPI for the excellent backend framework
-- TanStack for Router and Query
-- Chakra UI for the component library
-- The open-source community
+[MIT](LICENSE)
