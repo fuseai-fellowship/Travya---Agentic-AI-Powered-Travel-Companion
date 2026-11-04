@@ -5,6 +5,7 @@ import { useTravel } from '@/contexts/TravelContext';
 import ItineraryDisplay from '@/components/ItineraryDisplay';
 import AgentActivityFeed from '@/components/AgentActivityFeed';
 import Typewriter from '@/components/Typewriter';
+import { getApiBaseUrl } from '@/utils';
 
 export const Route = createFileRoute('/_layout/plan-trip')({
   component: PlanTripPage,
@@ -129,7 +130,8 @@ function PlanTripPage() {
   const triggerPhotoGallery = async (tripId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/generate/${tripId}`, {
+      const apiBase = getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/v1/photo-gallery/generate/${tripId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -153,11 +155,12 @@ function PlanTripPage() {
     try {
       const token = localStorage.getItem('access_token');
       const chatId = `trip_${tripId}_${Date.now()}`;
+      const apiBase = getApiBaseUrl();
       
       // Get itinerary data from the response
       const itineraryData = response.itinerary?.itinerary || response.itinerary || response;
       
-      const mapResponse = await fetch(`http://localhost:8000/api/v1/map-parser/parse-itinerary`, {
+      const mapResponse = await fetch(`${apiBase}/api/v1/map-parser/parse-itinerary`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

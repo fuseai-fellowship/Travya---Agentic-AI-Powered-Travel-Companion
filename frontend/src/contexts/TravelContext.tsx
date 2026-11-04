@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, ReactNode } from 'r
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TravelService, AiTravelService } from '@/client';
 import { useAuth } from './AuthContext';
+import { getApiBaseUrl } from '@/utils';
 
 // Types matching the backend API
 interface Trip {
@@ -122,6 +123,7 @@ export const TravelProvider: React.FC<TravelProviderProps> = ({ children }) => {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
+  const apiBase = getApiBaseUrl();
   // Tracks the latest server-issued conversation id so we keep threading correctly
   const lastServerConversationIdRef = useRef<string | null>(null);
 
@@ -233,7 +235,7 @@ export const TravelProvider: React.FC<TravelProviderProps> = ({ children }) => {
   const deleteConversationMutation = useMutation({
     mutationFn: async (conversationId: string) => {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/v1/conversations/${conversationId}`, {
+      const response = await fetch(`${apiBase}/api/v1/conversations/${conversationId}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {

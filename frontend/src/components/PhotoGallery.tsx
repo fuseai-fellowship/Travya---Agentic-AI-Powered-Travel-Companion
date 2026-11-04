@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiCamera, FiExternalLink, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { getApiBaseUrl } from '@/utils';
 
 interface PhotoSource {
   id: string;
@@ -54,13 +55,15 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
     loadGallery();
   }, [tripId]);
 
+  const apiBase = getApiBaseUrl();
+
   const loadGallery = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('access_token');
       
       // Get galleries for this trip
-      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/trip/${tripId}`, {
+      const response = await fetch(`${apiBase}/api/v1/photo-gallery/trip/${tripId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -94,7 +97,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
   const loadPlaces = async (galleryId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places`, {
+      const response = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}/places`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -109,7 +112,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
         const placesWithPhotos = await Promise.all(
           placesData.map(async (place: any) => {
             try {
-              const photosResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places/${place.id}/photos`, {
+              const photosResponse = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}/places/${place.id}/photos`, {
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json',
@@ -148,7 +151,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
   const deleteGallery = async (galleryId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}`, {
+      const response = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -178,7 +181,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
       
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/generate/${tripId}`, {
+      const response = await fetch(`${apiBase}/api/v1/photo-gallery/generate/${tripId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,7 +210,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
           
           // Load the gallery to check its status
           const token = localStorage.getItem('access_token');
-          const galleryResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/trip/${tripId}`, {
+          const galleryResponse = await fetch(`${apiBase}/api/v1/photo-gallery/trip/${tripId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -295,7 +298,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
     const poll = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}`, {
+        const response = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -330,7 +333,7 @@ const PhotoGalleryComponent: React.FC<PhotoGalleryProps> = ({ tripId, onGenerate
   const trackPhotoDownload = async (galleryId: string, photoId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/photos/${photoId}/track-download`, {
+      await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}/photos/${photoId}/track-download`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

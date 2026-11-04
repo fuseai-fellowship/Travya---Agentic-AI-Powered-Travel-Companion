@@ -103,16 +103,16 @@ docker compose ps
 
 # 5. Access the application
 # Frontend:  http://localhost:5173
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
+# Backend API: http://localhost:8001
+# API Docs: http://localhost:8001/docs
 # Database Admin: http://localhost:8080
 ```
 
 The application will be accessible at:
 - **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **Interactive API Docs**: http://localhost:8000/docs
-- **Alternative API Docs**: http://localhost:8000/redoc
+- **Backend API**: http://localhost:8001
+- **Interactive API Docs**: http://localhost:8001/docs
+- **Alternative API Docs**: http://localhost:8001/redoc
 
 ## 📁 Project Structure
 
@@ -423,7 +423,7 @@ CORS_ORIGINS=["http://localhost:5173"]
 
 **Frontend (frontend/.env)**
 ```bash
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8001
 ```
 
 ### API Keys Setup
@@ -438,8 +438,8 @@ VITE_API_URL=http://localhost:8000
 ### Interactive Documentation
 
 Once the backend is running, access:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **Swagger UI**: http://localhost:8001/docs
+- **ReDoc**: http://localhost:8001/redoc
 
 ### Key Endpoints
 
@@ -527,7 +527,7 @@ docker compose -f docker-compose.traefik.yml up -d
 
 ```bash
 # Health check endpoints
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8001/api/v1/health
 
 # View logs
 docker compose logs -f backend
@@ -571,7 +571,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: Check the [docs](docs/) directory
 - **Issues**: Create an issue on GitHub
-- **API Docs**: http://localhost:8000/docs (when running)
+- **API Docs**: http://localhost:8001/docs (when running)
 
 ## 🙏 Acknowledgments
 

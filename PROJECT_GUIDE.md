@@ -25,15 +25,37 @@ A comprehensive travel planning and booking platform powered by AI agents, built
    # Edit backend/.env with your configuration
    ```
 
-3. **Start the application**
+3. **(First-time only) Initialize the database schema**
+   ```bash
+   # Build images so we can reuse the backend container for Alembic
+   docker compose build backend
+
+   # Start only Postgres (it needs to be reachable for migrations)
+   docker compose up -d db
+
+   # Apply all migrations from inside the backend image
+   docker compose run --rm \
+     -v "$PWD/backend":/app \
+     backend bash -lc "cd /app && uv run alembic -c /app/alembic.ini upgrade head"
+
+   # Optional but recommended: seed the initial superuser/data set
+   docker compose run --rm \
+     -v "$PWD/backend":/app \
+     backend bash -lc "cd /app && uv run python -m app.initial_data"
+   ```
+
+4. **Start the full application stack**
    ```bash
    docker compose up -d --build
    ```
 
-4. **Access the application**
+5. **Access the application**
    - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+   - Backend API: http://localhost:8001
+   - API Documentation: http://localhost:8001/docs
+
+> **Need to reset to a clean slate later?**  
+> Run `docker compose down -v` to remove all containers and the Postgres volume, then repeat step 3 before bringing the stack back up.
 
 ### Option 2: Local Development
 
@@ -140,7 +162,7 @@ SMTP_PASSWORD=your-app-password
 
 #### Frontend (.env)
 ```bash
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8001
 ```
 
 ## 🧪 Testing
@@ -229,12 +251,12 @@ docker compose exec backend pytest tests/integration/
 
 2. **Run database migrations**
    ```bash
-   alembic upgrade head
+   uv run alembic -c alembic.ini upgrade head
    ```
 
 3. **Generate new migration**
    ```bash
-   alembic revision --autogenerate -m "Description"
+   uv run alembic -c alembic.ini revision --autogenerate -m "Description"
    ```
 
 ### Frontend Development
@@ -303,7 +325,7 @@ docker compose up --build
 ## 📊 Monitoring
 
 ### Health Checks
-- Backend: http://localhost:8000/api/v1/health
+- Backend: http://localhost:8001/api/v1/health
 - Frontend: http://localhost:5173/health
 
 ### Logs

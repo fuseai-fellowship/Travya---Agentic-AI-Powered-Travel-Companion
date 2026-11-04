@@ -23,7 +23,7 @@ The Backend API is built with FastAPI and provides comprehensive travel planning
 
 ### Base URL
 ```
-http://localhost:8000/api/v1
+http://localhost:8001/api/v1
 ```
 
 ### Authentication
@@ -52,7 +52,7 @@ Authorization: Bearer <your-jwt-token>
 ```python
 # Login
 response = requests.post(
-    "http://localhost:8000/api/v1/login/access-token",
+    "http://localhost:8001/api/v1/login/access-token",
     data={"username": "user@example.com", "password": "password"}
 )
 token = response.json()["access_token"]
@@ -60,7 +60,7 @@ token = response.json()["access_token"]
 # Get current user
 headers = {"Authorization": f"Bearer {token}"}
 response = requests.get(
-    "http://localhost:8000/api/v1/users/me",
+    "http://localhost:8001/api/v1/users/me",
     headers=headers
 )
 ```
@@ -96,7 +96,7 @@ trip_data = {
 }
 
 response = requests.post(
-    "http://localhost:8000/api/v1/ai-travel/plan-trip",
+    "http://localhost:8001/api/v1/ai-travel/plan-trip",
     json=trip_data,
     headers=headers
 )
@@ -133,7 +133,7 @@ trip_data = {
 }
 
 response = requests.post(
-    "http://localhost:8000/api/v1/travel/trips",
+    "http://localhost:8001/api/v1/travel/trips",
     json=trip_data,
     headers=headers
 )
@@ -151,7 +151,7 @@ itinerary_data = {
 }
 
 response = requests.post(
-    "http://localhost:8000/api/v1/travel/itineraries",
+    "http://localhost:8001/api/v1/travel/itineraries",
     json=itinerary_data,
     headers=headers
 )

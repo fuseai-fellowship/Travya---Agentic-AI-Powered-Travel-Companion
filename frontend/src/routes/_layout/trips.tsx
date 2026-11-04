@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, Link, Outlet } from '@tanstack/react-rout
 import { FiMapPin, FiCalendar, FiDollarSign, FiPlus, FiEdit, FiTrash2, FiEye, FiUsers } from 'react-icons/fi';
 import { useTravel } from '@/contexts/TravelContext';
 import Typewriter from '@/components/Typewriter';
+import { getApiBaseUrl } from '@/utils';
 
 export const Route = createFileRoute('/_layout/trips')({
   component: TripsPage,
@@ -18,13 +19,14 @@ function TripsPage() {
   useEffect(() => {
     const fetchTripImages = async () => {
       if (!trips || trips.length === 0) return;
+      const apiBase = getApiBaseUrl();
       
       const imageMap: Record<string, string> = {};
       
       await Promise.all(trips.map(async (trip) => {
         try {
           const token = localStorage.getItem('access_token');
-          const response = await fetch(`http://localhost:8000/api/v1/photo-gallery/trip/${trip.id}`, {
+          const response = await fetch(`${apiBase}/api/v1/photo-gallery/trip/${trip.id}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -37,7 +39,7 @@ function TripsPage() {
               const galleryId = data.data[0].id;
               
               // Get places for this gallery
-              const placesResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places`, {
+              const placesResponse = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}/places`, {
                 headers: {
                   'Authorization': `Bearer ${token}`,
                   'Content-Type': 'application/json',
@@ -50,7 +52,7 @@ function TripsPage() {
                   const placeId = placesData.data[0].id;
                   
                   // Get photos for the first place
-                  const photosResponse = await fetch(`http://localhost:8000/api/v1/photo-gallery/${galleryId}/places/${placeId}/photos`, {
+                  const photosResponse = await fetch(`${apiBase}/api/v1/photo-gallery/${galleryId}/places/${placeId}/photos`, {
                     headers: {
                       'Authorization': `Bearer ${token}`,
                       'Content-Type': 'application/json',

@@ -293,6 +293,9 @@ async def _generate_gallery_background(session, gallery_id: uuid.UUID, itinerary
             
             # Create photos for this place
             for photo_source in place_photo.photos:
+                description = photo_source.description
+                if description and len(description) > 500:
+                    description = description[:497] + "..."
                 photo_data = GalleryPhotoCreate(
                     place_id=place.id,
                     url=photo_source.url,
@@ -302,7 +305,7 @@ async def _generate_gallery_background(session, gallery_id: uuid.UUID, itinerary
                     source=photo_source.source,
                     width=photo_source.width,
                     height=photo_source.height,
-                    description=photo_source.description
+                    description=description
                 )
                 
                 photo = GalleryPhoto.model_validate(photo_data)

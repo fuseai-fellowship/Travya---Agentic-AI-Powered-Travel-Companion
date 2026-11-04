@@ -1,4 +1,4 @@
-import type { ApiError } from "./client"
+import { OpenAPI, type ApiError } from "./client"
 import useCustomToast from "./hooks/useCustomToast"
 
 export const emailPattern = {
@@ -52,4 +52,10 @@ export const handleError = (err: ApiError) => {
     errorMessage = errDetail[0].msg
   }
   showErrorToast(errorMessage)
+}
+
+export const getApiBaseUrl = () => {
+  return (
+    OpenAPI.BASE ?? import.meta.env.VITE_API_URL ?? "http://localhost:8001"
+  )
 }

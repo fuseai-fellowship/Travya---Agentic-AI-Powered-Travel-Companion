@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { FiSend, FiUser, FiMessageCircle, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { useTravel } from '@/contexts/TravelContext';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { getApiBaseUrl } from '@/utils';
 
 export const Route = createFileRoute('/_layout/chat')({
   component: ChatPage,
@@ -56,7 +57,8 @@ function ChatPage() {
     
     _setIsScrapingImages(true);
     try {
-      const response = await fetch('http://localhost:8000/api/v1/ai-travel/scrape-images', {
+      const apiBase = getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/v1/ai-travel/scrape-images`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

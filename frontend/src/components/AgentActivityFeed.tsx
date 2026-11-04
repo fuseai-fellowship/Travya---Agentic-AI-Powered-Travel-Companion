@@ -11,6 +11,7 @@ import {
   FiZap,
   FiLoader
 } from 'react-icons/fi';
+import { getApiBaseUrl } from '@/utils';
 
 interface AgentEvent {
   id: string;
@@ -88,8 +89,9 @@ export default function AgentActivityFeed({ sessionId, isActive }: Props) {
     }
 
     // Connect to SSE endpoint
+    const apiBase = getApiBaseUrl();
     const eventSource = new EventSource(
-      `http://localhost:8000/api/v1/ai-travel/agent-stream/${sessionId}`
+      `${apiBase}/api/v1/ai-travel/agent-stream/${sessionId}`
     );
 
     eventSource.onopen = () => {

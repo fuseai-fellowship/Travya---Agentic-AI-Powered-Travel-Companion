@@ -16,7 +16,13 @@ import { TravelProvider } from "./contexts/TravelContext"
 import "./styles/globals.css"
 import "./styles/components.css"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL
+const envApiBase = import.meta.env.VITE_API_URL
+const defaultApiBase = "http://localhost:8001"
+const apiBase =
+  envApiBase && envApiBase.includes("localhost:8000")
+    ? envApiBase.replace("localhost:8000", "localhost:8001")
+    : envApiBase ?? defaultApiBase
+OpenAPI.BASE = apiBase
 OpenAPI.TOKEN = async () => {
   return localStorage.getItem("access_token") || ""
 }

@@ -78,7 +78,7 @@ services:
     image: '${DOCKER_IMAGE_BACKEND}:${TAG}'
     restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -128,7 +128,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://localhost:8000
+        - VITE_API_URL=http://localhost:8001
         - NODE_ENV=production
     depends_on:
       - backend
