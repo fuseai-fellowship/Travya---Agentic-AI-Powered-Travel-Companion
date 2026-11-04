@@ -47,6 +47,32 @@ def _money(value: float | None) -> Decimal | None:
         return None
 
 
+def _scout_preview(author: str, delta: dict[str, Any]) -> dict[str, Any] | None:
+    """A small slice of each scout's findings so the UI can show research as it lands."""
+    if author == "places_scout":
+        return {
+            "places": [
+                {k: p.get(k) for k in ("name", "category", "lat", "lon")}
+                for p in (delta.get("places") or [])[:40]
+            ]
+        }
+    if author == "weather_scout":
+        return {
+            "weather": [
+                {
+                    k: d.get(k)
+                    for k in ("day", "summary", "temp_min_c", "temp_max_c", "weather_code")
+                }
+                for d in delta.get("weather") or []
+            ]
+        }
+    if author == "guide_scout":
+        return {"sources": list(dict.fromkeys(g.get("url") for g in delta.get("guide") or []))[:3]}
+    if author == "offers_scout":
+        return {"offers": len(delta.get("offers") or [])}
+    return None
+
+
 def trip_context(trip: Trip, instructions: str | None) -> dict[str, Any]:
     return {
         "destination": trip.destination,
@@ -196,8 +222,15 @@ class PlanningService:
             text = (
                 "".join(p.text or "" for p in (event.content.parts or [])) if event.content else ""
             )
-            if text:
-                out.append(AgentEvent(agent=author, kind="progress", message=text[:300]))
+            if text and author != "planner":
+                out.append(
+                    AgentEvent(
+                        agent=author,
+                        kind="progress",
+                        message=text[:300],
+                        data=_scout_preview(author, delta),
+                    )
+                )
         return out
 
     async def _items(
