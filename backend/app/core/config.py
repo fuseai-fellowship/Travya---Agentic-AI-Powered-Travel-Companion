@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = False
     SENTRY_DSN: str | None = None
+    ENABLE_CLOUD_TRACE: bool = False  # export ADK agent/LLM spans to Cloud Trace
 
     # Postgres 17 with pgvector. Neon needs `?sslmode=require` in the URL.
     DATABASE_URL: str = "postgresql+psycopg://travya:travya@localhost:5433/travya"

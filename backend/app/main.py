@@ -19,6 +19,7 @@ from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.ratelimit import Limiter
 from app.core.security import init_firebase
+from app.core.telemetry import configure_tracing
 from app.integrations.http import create_http_client
 from app.integrations.registry import build_integrations
 
@@ -52,6 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             traces_sample_rate=0.1,
             send_default_pii=False,
         )
+    configure_tracing()
     init_firebase()
     cache.setup(settings.REDIS_URL or "mem://")
     http = create_http_client(settings)
