@@ -181,6 +181,7 @@ class PlanningService:
         )
 
         seen: set[str] = set()
+        scouts_left = {"weather_scout", "places_scout", "guide_scout", "offers_scout"}
         failure: str | None = None
         try:
             async for event in runner.run_async(
@@ -190,6 +191,8 @@ class PlanningService:
             ):
                 for out in self._translate(event, seen):
                     yield out
+                    for following in self._next_stage(out, scouts_left, seen):
+                        yield following
             final = await _sessions.get_session(
                 app_name=APP_NAME, user_id=str(self.user.id), session_id=adk_session.id
             )
@@ -236,6 +239,29 @@ class PlanningService:
             update(Trip).where(col(Trip.id) == trip_id).values(status=status)
         )
         await self.session.commit()
+
+    @staticmethod
+    def _next_stage(out: AgentEvent, scouts_left: set[str], seen: set[str]) -> list[AgentEvent]:
+        """LLM stages emit one final event, so announce each stage as soon as the graph reaches it."""
+        follow: str | None = None
+        if out.kind == "progress" and out.agent in scouts_left:
+            scouts_left.discard(out.agent)
+            follow = "planner" if not scouts_left else None
+        elif out.kind == "result" and out.agent in ("planner", "reviser"):
+            follow = "critic"
+        elif out.kind == "result" and out.agent == "critic":
+            follow = "quality_gate"
+        elif (
+            out.kind == "progress"
+            and out.agent == "quality_gate"
+            and out.message.startswith("Sending")
+        ):
+            follow = "reviser"
+        if follow is None or (follow == "planner" and "planner" in seen):
+            return []
+        seen.add(follow)
+        label = AGENT_LABELS.get(follow, follow)
+        return [AgentEvent(agent=follow, kind="started", message=f"{label} started")]
 
     @staticmethod
     def _translate(event: Event, seen: set[str]) -> list[AgentEvent]:

@@ -4,9 +4,12 @@ import re
 from dataclasses import dataclass
 from typing import Any, cast
 
-from sqlmodel import func, select
+from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.integrations.ports import GuideProvider
 from app.llm.client import embed
@@ -49,13 +52,17 @@ class KnowledgeService:
         self.session = session
         self.guides = guides
 
+    def _usable(self) -> list[Any]:
+        # Offline sample guides can share a local database with live runs; live mode skips them.
+        return [] if settings.OFFLINE_INTEGRATIONS else [col(KnowledgeChunk.source) != "fake"]
+
     async def ensure_indexed(self, destination: str) -> bool:
         key = destination_key(destination)
         existing = (
             await self.session.exec(
                 select(func.count())
                 .select_from(KnowledgeChunk)
-                .where(KnowledgeChunk.destination == key)
+                .where(KnowledgeChunk.destination == key, *self._usable())
             )
         ).one()
         if existing:
@@ -74,6 +81,12 @@ class KnowledgeService:
             pieces.extend((section.title, c) for c in _chunks(section.title, section.text))
         pieces = pieces[:60]
         vectors = await embed([text for _, text in pieces], task="RETRIEVAL_DOCUMENT")
+        if not settings.OFFLINE_INTEGRATIONS:
+            await self.session.execute(
+                delete(KnowledgeChunk).where(
+                    col(KnowledgeChunk.destination) == key, col(KnowledgeChunk.source) == "fake"
+                )
+            )
         for index, ((title, text), vector) in enumerate(zip(pieces, vectors, strict=True)):
             self.session.add(
                 KnowledgeChunk(
@@ -87,7 +100,12 @@ class KnowledgeService:
                     embedding=vector,
                 )
             )
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            # Another request indexed the same guide first; its rows serve this one too.
+            await self.session.rollback()
+            return True
         log.info("guide_indexed", destination=key, chunks=len(pieces), source=guide.source)
         return True
 
@@ -96,7 +114,7 @@ class KnowledgeService:
         [vector] = await embed([query], task="RETRIEVAL_QUERY")
         rows = await self.session.exec(
             select(KnowledgeChunk)
-            .where(KnowledgeChunk.destination == key)
+            .where(KnowledgeChunk.destination == key, *self._usable())
             .order_by(cast("Any", KnowledgeChunk.embedding).cosine_distance(vector))
             .limit(k)
         )

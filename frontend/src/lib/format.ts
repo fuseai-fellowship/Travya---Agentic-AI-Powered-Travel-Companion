@@ -76,8 +76,10 @@ export function formatMoney(
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
-      maximumFractionDigits: options.compact || Math.abs(amount) >= 1000 ? 0 : 2,
-      minimumFractionDigits: 0,
+      // Whole amounts and large ones without cents ("$1,500"); otherwise always two ("$516.80").
+      ...(options.compact || Math.abs(amount) >= 1000 || Number.isInteger(amount)
+        ? { maximumFractionDigits: 0, minimumFractionDigits: 0 }
+        : { maximumFractionDigits: 2, minimumFractionDigits: 2 }),
     }).format(amount)
   } catch {
     return `${amount.toFixed(0)} ${currency}`

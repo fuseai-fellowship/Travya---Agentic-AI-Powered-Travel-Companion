@@ -62,6 +62,14 @@ class Scout(BaseAgent):
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event]:
         trip = ctx.session.state["trip"]
+        # A partial event marks the start, so the UI can time each scout.
+        yield Event(
+            author=self.name,
+            invocation_id=ctx.invocation_id,
+            branch=ctx.branch,
+            partial=True,
+            content=types.Content(role="model", parts=[types.Part(text="Working…")]),
+        )
         try:
             async with asyncio.timeout(SCOUT_BUDGET_S):
                 message, delta = await self._work(trip)
@@ -176,7 +184,12 @@ def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> lis
                 distance_km=distance_km,
             )
         data = [o.model_dump(mode="json") for o in [*flights, *hotels]]
-        if trip.get("origin") and not flights:
+        if not trip.get("origin"):
+            return (
+                f"Found {len(hotels)} stays (sample fares). Add a starting city for flight quotes.",
+                {"offers": data},
+            )
+        if not flights:
             return (
                 f"Found {len(hotels)} stays; {trip['origin']} is close enough to travel by road.",
                 {"offers": data},
