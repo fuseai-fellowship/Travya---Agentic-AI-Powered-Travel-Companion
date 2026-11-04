@@ -1,36 +1,30 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.6.1/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
-    "ignore": [
-      "node_modules",
-      "src/routeTree.gen.ts",
-      "playwright.config.ts",
-      "playwright-report"
+    "includes": [
+      "**",
+      "!src/client",
+      "!src/routeTree.gen.ts",
+      "!openapi.json",
+      "!dist",
+      "!coverage",
+      "!playwright-report",
+      "!test-results",
+      "!playwright"
     ]
   },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
+    "domains": { "react": "recommended" },
     "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noExplicitAny": "off",
-        "noArrayIndexKey": "off"
-      },
-      "style": {
-        "noNonNullAssertion": "off"
-      }
+      "preset": "recommended",
+      "style": { "noNonNullAssertion": "error" },
+      "suspicious": { "noExplicitAny": "error" }
     }
   },
-  "formatter": {
-    "indentStyle": "space"
-  },
+  "formatter": { "enabled": true, "indentStyle": "space", "lineWidth": 100 },
   "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "semicolons": "asNeeded"
-    }
+    "formatter": { "quoteStyle": "double", "semicolons": "asNeeded" }
   }
 }

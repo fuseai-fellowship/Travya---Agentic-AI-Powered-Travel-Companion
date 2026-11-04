@@ -1,14 +1,22 @@
+/// <reference types="vitest/config" />
 import path from "node:path"
-import { TanStackRouterVite } from "@tanstack/router-vite-plugin"
-import react from "@vitejs/plugin-react-swc"
+import { tanstackRouter } from "@tanstack/router-plugin/vite"
+import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
-// https://vitejs.dev/config/
 export default defineConfig({
+  plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
-  plugins: [react(), TanStackRouterVite()],
+  server: { port: 5173, strictPort: true },
+  preview: { port: 4173, strictPort: true },
+  build: { target: "es2022" },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
+    css: false,
+    restoreMocks: true,
+  },
 })
