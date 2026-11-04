@@ -8,16 +8,18 @@
 The planner and the assistant need relevant passages from destination guides (retrieval-augmented
 generation). The prototype kept a FAISS index in process memory and computed embeddings locally with
 PyTorch models. That put a heavy ML runtime into the API image, lost the index on every restart,
-could not be shared between instances, and in places queried with random vectors. The target host is a free-tier
-Cloud Run instance with 512 MiB of memory that scales to zero.
+could not be shared between instances, and in places queried with random vectors. The target host is
+a free-tier Cloud Run instance with 512 MiB of memory that scales to zero.
 
 ## Decision
 
 Store guide chunks and their embeddings in Postgres with pgvector (`knowledge_chunks`,
 `backend/app/models/content.py`):
 
-- 768-dimensional Gemini embeddings (`gemini-embedding-2`, truncated and re-normalised), with
-  `RETRIEVAL_DOCUMENT` for chunks and `RETRIEVAL_QUERY` for questions;
+- 768-dimensional Gemini embeddings (`gemini-embedding-001`, truncated and re-normalised), requested
+  in batches, with `RETRIEVAL_DOCUMENT` for chunks and `RETRIEVAL_QUERY` for questions. Multimodal
+  models such as `gemini-embedding-2` return one vector for a whole batch, so the client falls back to
+  one input per call when the counts do not match;
 - an HNSW index with cosine distance;
 - lazy indexing: the first plan or question for a destination fetches its Wikivoyage guide, chunks it
   (about 900 characters, at most 60 chunks) and stores it; later requests only query;

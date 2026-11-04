@@ -23,16 +23,17 @@ flowchart LR
 |---|---|---|---|---|
 | `Geocoder` | Trip creation (coordinates, country), assistant tools, itinerary place lookup | `NominatimGeocoder` (nominatim.openstreetmap.org) | none | `FakeGeocoder` |
 | `Autocomplete` | `GET /explore/places` | `PhotonAutocomplete` (photon.komoot.io) | none | `FakeAutocomplete` |
-| `PlacesSearch` | Places scout, `search_places` tool | `OverpassPlaces` (overpass-api.de) | none | `FakePlaces` |
+| `PlacesSearch` | Places scout, `search_places` tool | `OverpassPlaces` (overpass-api.de), 12 s budget | `WikipediaPlaces` (Wikipedia geosearch), queried at the same time | `FakePlaces` |
 | `Router` | Per-day routes on the trip map | `OrsRouter` (OpenRouteService) when `ORS_API_KEY` is set | `OsrmRouter` (FOSSGIS OSRM, routing.openstreetmap.de), also the default without a key | `FakeRouter` |
 | `WeatherProvider` | Weather scout, trip weather, `weather_forecast` tool | `OpenMeteoWeather` (forecast and archive APIs) | none | `FakeWeather` |
 | `GuideProvider` | Guide scout and knowledge base, `GET /explore/guide`, `destination_guide` tool | `WikivoyageGuides` (en.wikivoyage.org) | Wikipedia page summary, inside the same adapter | `FakeGuides` |
 | `PhotoProvider` | Trip cover photo, `POST /trips/{trip_id}/photos/refresh` | `UnsplashPhotos` when `UNSPLASH_ACCESS_KEY` is set | `WikimediaPhotos` (Wikimedia Commons), also the default without a key | `FakePhotos` |
-| `OffersProvider` | Offers scout | `SampleOffers`: deterministic sample flights and hotels | none | `SampleOffers` (same) |
+| `OffersProvider` | Offers scout | `SampleOffers`: deterministic sample flights and hotels, fares scaled by distance | none | `SampleOffers` (same) |
 | `ObjectStorage` | Trip documents | `GcsStorage` with `STORAGE_BACKEND=gcs` | `LocalStorage` (default) | `MemoryStorage` |
 
-The fallbacks are composed adapters: `FallbackRouter` switches to OSRM when OpenRouteService raises
-`UpstreamUnavailable`; `FallbackPhotos` uses Wikimedia Commons when Unsplash fails or returns nothing.
+The fallbacks are composed adapters: `FallbackPlaces` races Overpass against Wikipedia's geosearch;
+`FallbackRouter` switches to OSRM when OpenRouteService raises `UpstreamUnavailable`; `FallbackPhotos`
+uses Wikimedia Commons when Unsplash fails or returns nothing.
 
 Adapter results are Pydantic models (`Place`, `Route`, `DailyWeather`, `DestinationGuide`, `Photo`,
 `TravelOffer`), so nothing from a third-party response reaches a service unvalidated.
@@ -43,9 +44,18 @@ Notes per adapter:
   forecast API is used; beyond it, the archive API returns the same calendar dates from the most
   recent year with data (the archive trails real time by about a week), and each day is flagged
   `is_climate_estimate`.
-- **Overpass**: one query per call for all requested categories (`tourism`, `amenity`, `leisure` and
-  `shop` tags with a `name`), notable places (with `wikidata`) output first, radius capped at 25 km,
-  query timeout 25 s.
+- **Overpass and its backup**: one Overpass query per call for all requested categories (`tourism`,
+  `amenity`, `leisure` and `shop` tags with a `name`), notable places (with `wikidata`) output first,
+  radius capped at 25 km. The public Overpass servers are often overloaded, so `FallbackPlaces`
+  (`places/__init__.py`) gives Overpass 12 s and starts a Wikipedia geosearch at the same time. Overpass
+  wins when it answers in time with results; otherwise (error, timeout or no results) the Wikipedia
+  answer is used. Wikipedia only knows landmarks with articles: it answers for sightseeing categories,
+  searches twice the radius (at most 10 km), skips articles about districts, provinces, wards,
+  airports, railways and similar areas, and labels every result `attraction` with `source = "wikipedia"`.
+- **Sample offers**: when the trip's origin can be geocoded, fares and flight times scale with the
+  great-circle distance (about 45 USD plus 0.11 USD per km, varied per route; about 40 minutes plus
+  12.5 km per minute), and the offers scout skips flights entirely below 250 km. Without a usable
+  origin, fares are drawn from a fixed range.
 - **Wikivoyage**: plain-text extract, intro plus the Understand, Get around, See, Do, Eat, Drink,
   Sleep, Stay safe and Respect sections, disambiguation pages rejected.
 - **Routing**: at most 25 waypoints per route; unroutable points return no route, and the map still
@@ -83,7 +93,8 @@ All adapters share one `httpx.AsyncClient` created in the app lifespan (`http.py
   services require an identifying agent, so deployments should keep a contact in `HTTP_USER_AGENT`.
 - **Per-host rate limits**: Nominatim is limited to 1 request per second per process
   (`HOST_RATE_LIMITS`), as its usage policy requires. Autocomplete goes to Photon, never to Nominatim.
-- **Timeouts**: `HTTP_TIMEOUT_SECONDS` (15 s) by default, 35 s for Overpass.
+- **Timeouts**: `HTTP_TIMEOUT_SECONDS` (15 s) by default, 35 s for an Overpass request; on top of that
+  the planning scouts have 30 s each and Overpass 12 s inside `FallbackPlaces`.
 - **Retries**: up to 3 attempts on connection and read errors and on 429, 502, 503 and 504, with
   exponential backoff and jitter (0.5 s initial, 8 s maximum) or the server's `Retry-After`, capped at
   10 s. Every retry and every give-up is logged (`upstream_retry`, `upstream_gave_up`).
@@ -97,10 +108,10 @@ All adapters share one `httpx.AsyncClient` created in the app lifespan (`http.py
 
 | Source | Licence or terms | Requirement | Where Travya meets it |
 |---|---|---|---|
-| OpenStreetMap data (Nominatim, Photon, Overpass, OSRM, OpenRouteService, OpenFreeMap tiles) | ODbL 1.0 | Credit "© OpenStreetMap contributors" wherever the data is shown | `TripMap.attribution`, the map's attribution control, the plan's `sources` list |
-| Wikivoyage, Wikipedia | CC BY-SA 4.0 | Credit and link the source page, name the licence | `GuideRead.url` and `license`; `knowledge_chunks.source_url` and `license`; the plan's `sources` |
+| OpenStreetMap data (Nominatim, Photon, Overpass, OSRM, OpenRouteService, OpenFreeMap tiles) | ODbL 1.0 | Credit "© OpenStreetMap contributors" wherever the data is shown | `TripMap.attribution`, the map's attribution control, the plan's `sources` list when any place came from Overpass |
+| Wikivoyage, Wikipedia | CC BY-SA 4.0 | Credit and link the source page, name the licence | `GuideRead.url` and `license`; `knowledge_chunks.source_url` and `license`; the plan's `sources`, including "Wikipedia (CC BY-SA 4.0)" when places came from the geosearch backup |
 | Open-Meteo | CC BY 4.0 | Credit Open-Meteo | The plan's `sources` ("Open-Meteo weather data") |
-| Unsplash | Unsplash License and API guidelines | Hotlink the image URLs, credit the photographer and Unsplash with referral links | `Photo.author_name`, `author_url` and `source_url` carry `utm_source=travya&utm_medium=referral` |
+| Unsplash | Unsplash License and API guidelines | Hotlink the image URLs, credit the photographer and Unsplash with referral links, report a download when a photo is used | `Photo.author_name`, `author_url` and `source_url` carry `utm_source=travya&utm_medium=referral`; choosing a trip's cover photo calls `track_download` |
 | Wikimedia Commons | Per file (CC BY, CC BY-SA, public domain, ...) | Credit the author and link the file page | `Photo.author_name`, `author_url`, `source_url` |
 | Sample offers | — | Must not look like real fares | `is_sample` on every offer, a note in `details`, `is_simulated` on every booking |
 

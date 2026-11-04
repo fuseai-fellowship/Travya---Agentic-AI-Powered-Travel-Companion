@@ -14,7 +14,7 @@ Travya was built during the **FuseAI Fellowship 2025**.
 |---|---|---|
 | [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors | Geocoding (Nominatim), autocomplete (Photon), points of interest (Overpass), routing (OSRM, OpenRouteService), map tiles | Open Database License (ODbL) 1.0 |
 | [OpenFreeMap](https://openfreemap.org/) | Vector map tiles | Free service; data © OpenStreetMap contributors |
-| [Wikivoyage](https://en.wikivoyage.org/) and [Wikipedia](https://en.wikipedia.org/) | Destination guides and the retrieval corpus | CC BY-SA 4.0 |
+| [Wikivoyage](https://en.wikivoyage.org/) and [Wikipedia](https://en.wikipedia.org/) | Destination guides, the retrieval corpus, and points of interest when Overpass is unavailable | CC BY-SA 4.0 |
 | [Open-Meteo](https://open-meteo.com/) | Forecasts and historical weather | CC BY 4.0 |
 | [Unsplash](https://unsplash.com/) | Destination photos, credited to each photographer | Unsplash License |
 | [Wikimedia Commons](https://commons.wikimedia.org/) | Destination photos, credited to each author | Per file: CC BY, CC BY-SA or public domain |

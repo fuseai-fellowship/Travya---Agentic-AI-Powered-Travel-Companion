@@ -18,7 +18,7 @@ Build on open data, called from the backend only (except map tiles):
 |---|---|
 | Geocoding | Nominatim |
 | Destination autocomplete | Photon |
-| Points of interest | Overpass API |
+| Points of interest | Overpass API, with Wikipedia geosearch as a concurrent backup |
 | Routing | FOSSGIS OSRM, or OpenRouteService when a key is set |
 | Map tiles | OpenFreeMap vector tiles in MapLibre |
 | Weather | Open-Meteo forecast and archive |
@@ -36,12 +36,13 @@ credits with photos, and a `sources` list on every plan.
 - The full product works without any key except Gemini's; with `OFFLINE_INTEGRATIONS=true` it needs
   none at all.
 - No secrets reach the browser.
-- Public instances have usage policies (for example one request per second on Nominatim). Caching
-  and limits keep Travya within them, but throughput is capped and heavy use would need self-hosted or
-  paid instances.
+- Public instances have usage policies (for example one request per second on Nominatim) and are
+  sometimes overloaded (Overpass). Caching, limits, time budgets and backups keep Travya within them
+  and responsive, but throughput is capped and heavy use would need self-hosted or paid instances.
 - Data quality varies by region: opening hours and addresses are often missing, and there are no
   ratings or reviews.
-- Licence obligations (ODbL, CC BY-SA, CC BY) must be honoured in the UI.
+- Licence obligations (ODbL, CC BY-SA, CC BY) must be honoured in the UI, and the credit has to follow
+  the source that actually answered.
 
 ## Alternatives considered
 

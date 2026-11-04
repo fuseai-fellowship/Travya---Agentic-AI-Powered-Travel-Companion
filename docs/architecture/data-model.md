@@ -196,8 +196,9 @@ row per user and target (unique `user_id, target_type, target_id`); a second rat
   `knowledge_chunks (source_url, chunk_index)`.
 - `knowledge_chunks.destination` is indexed; `knowledge_chunks.embedding` has an HNSW index with
   `vector_cosine_ops` (`ix_knowledge_chunks_embedding_hnsw`).
-- Enumerations are stored as `VARCHAR(16)` and validated by the application, so adding a value needs no
-  database migration.
+- Enumerations are stored as `VARCHAR(16)` holding the value (SQLAlchemy `Enum` with
+  `native_enum=False` and no CHECK constraint) and loaded back as enum members, so adding a value needs
+  no database migration.
 
 | Enumeration | Values |
 |---|---|
@@ -249,10 +250,12 @@ Confirming sets a `SIM-XXXXXX` confirmation code and `confirmed_at`; confirming 
   (`make revision m="..."`, with type comparison) and applies them with `alembic upgrade head`:
   the Compose `migrate` service locally, the `travya-migrate` Cloud Run job in production, before the
   new API revision starts.
-- **pgvector** must be installed in the database (`CREATE EXTENSION vector`). The Compose init script
-  `infra/postgres/init/10-databases.sql` does this for `travya` and `travya_test`.
+- **The baseline migration** (`alembic/versions/20261104_8514c84913fe_initial_schema.py`) runs
+  `CREATE EXTENSION IF NOT EXISTS vector` and `CREATE SCHEMA IF NOT EXISTS adk`, then creates every
+  table and index above, so an empty database (Compose or Neon) needs no manual step. The Compose init
+  script `infra/postgres/init/10-databases.sql` also enables pgvector in the `travya_test` database.
 - **Tests** build the schema straight from the models (`create_all`) in `travya_test`.
-- **ADK's tables live in a separate `adk` schema.** At startup the API runs
-  `CREATE SCHEMA IF NOT EXISTS adk` and gives ADK's `DatabaseSessionService` an engine with
+- **ADK's tables live in a separate `adk` schema.** The baseline migration creates it, and at startup
+  the API runs `CREATE SCHEMA IF NOT EXISTS adk` again and gives ADK's `DatabaseSessionService` an engine with
   `schema_translate_map={None: "adk"}`. ADK creates and owns its session, event and state tables
   there; Alembic does not manage them, and they never mix with the application tables.

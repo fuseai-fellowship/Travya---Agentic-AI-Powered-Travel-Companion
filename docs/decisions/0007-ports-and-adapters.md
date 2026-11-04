@@ -15,8 +15,8 @@ policies, and CI, reviewers and the end-to-end suite must run without network ac
 - `backend/app/integrations/ports.py` defines one `Protocol` per capability (`Geocoder`,
   `Autocomplete`, `PlacesSearch`, `Router`, `WeatherProvider`, `GuideProvider`, `PhotoProvider`,
   `OffersProvider`, `ObjectStorage`) and the Pydantic models they return.
-- Each provider has an adapter in its own module; fallbacks are composed adapters (`FallbackRouter`,
-  `FallbackPhotos`).
+- Each provider has an adapter in its own module; fallbacks are composed adapters (`FallbackPlaces`,
+  `FallbackRouter`, `FallbackPhotos`).
 - `fakes.py` implements every port deterministically and without network.
 - `registry.py` builds an `Integrations` bundle from the settings at startup:
   `OFFLINE_INTEGRATIONS=true` selects the fakes. Services and agents receive the bundle and never
