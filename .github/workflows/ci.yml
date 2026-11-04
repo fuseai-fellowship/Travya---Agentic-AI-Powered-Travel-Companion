@@ -157,6 +157,11 @@ jobs:
         run: uv run ruff format --check .
       - name: Mypy
         run: uv run mypy app
+      - name: OpenAPI contract is committed and current
+        run: |
+          uv run python -m app.scripts.export_openapi > "$RUNNER_TEMP/openapi.json"
+          diff -u ../frontend/openapi.json "$RUNNER_TEMP/openapi.json" \
+            || { echo "::error::frontend/openapi.json is stale: run 'make openapi' and commit"; exit 1; }
       - name: Migrations apply to an empty database
         run: uv run alembic upgrade head
       - name: Create the test database
@@ -310,10 +315,27 @@ jobs:
           path: sbom-${{ matrix.image }}.cdx.json
           retention-days: 30
 
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan history of this push or pull request
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo "ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}" \
+            git --redact --verbose --log-opts="${{ github.event.pull_request.base.sha || github.event.before }}..HEAD" \
+            || docker run --rm -v "$PWD:/repo" -w /repo "ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}" dir --redact /repo
+
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [changes, release-guard, backend, frontend, e2e, docker]
+    needs: [changes, release-guard, secrets, backend, frontend, e2e, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

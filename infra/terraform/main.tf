@@ -163,7 +163,7 @@ resource "google_storage_bucket" "documents" {
   # Browsers upload and download through signed URLs.
   cors {
     origin          = var.frontend_origins
-    method          = ["GET", "HEAD", "PUT"]
+    method          = ["GET", "HEAD"]
     response_header = ["Content-Type", "Content-Disposition", "Content-Length"]
     max_age_seconds = 3600
   }
