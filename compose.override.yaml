@@ -2,8 +2,9 @@
 # dev image targets, source mounts with hot reload, ports published on 127.0.0.1 only.
 services:
   db:
+    # 5433 on the host: a native Postgres may already own 5432.
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
 
   redis:
     ports:
