@@ -1,0 +1,327 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run every job regardless of changed paths
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      full:
+        description: Run every job regardless of changed paths
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' }}
+
+env:
+  # Build args for the e2e web image; identical in the docker and e2e jobs so they share the layer cache.
+  WEB_BUILD_ARGS: |
+    VITE_API_URL=http://api:8000
+    VITE_FIREBASE_API_KEY=demo-api-key
+    VITE_FIREBASE_AUTH_DOMAIN=demo-travya.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=demo-travya
+    VITE_FIREBASE_AUTH_EMULATOR_URL=http://auth:9099
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend == 'true' || steps.mode.outputs.full == 'true' }}
+      frontend: ${{ steps.filter.outputs.frontend == 'true' || steps.mode.outputs.full == 'true' }}
+      stack: ${{ steps.filter.outputs.stack == 'true' || steps.mode.outputs.full == 'true' }}
+    steps:
+      - name: Decide whether to run everything
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          FULL_INPUT: ${{ inputs.full }}
+        run: |
+          full=false
+          if [ "$FULL_INPUT" = "true" ] || [ "$EVENT" = "workflow_dispatch" ] || [ "$EVENT" = "schedule" ] || [ "$REF" = "refs/heads/main" ]; then
+            full=true
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.mode.outputs.full != 'true'
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: steps.mode.outputs.full != 'true'
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            stack:
+              - 'compose.yaml'
+              - 'infra/firebase/**'
+              - 'infra/postgres/**'
+
+  release-guard:
+    name: Release source branch
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Only dev, hotfix/* and release-please branches may target main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "::error::Pull requests into main must come from a branch of $REPO"
+            exit 1
+          fi
+          case "$HEAD_REF" in
+            dev|hotfix/*|release-please--*) echo "Source branch $HEAD_REF may target main" ;;
+            *) echo "::error::Pull requests into main must come from dev, hotfix/* or release-please (got $HEAD_REF)"; exit 1 ;;
+          esac
+
+  backend:
+    name: Backend (lint, types, tests)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: travya
+          POSTGRES_PASSWORD: travya
+          POSTGRES_DB: travya
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travya -d travya"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      UV_LOCKED: "1"
+      ENVIRONMENT: test
+      OFFLINE_INTEGRATIONS: "true"
+      FIREBASE_PROJECT_ID: demo-travya
+      DATABASE_URL: postgresql+psycopg://travya:travya@localhost:5432/travya
+      TEST_DATABASE_URL: postgresql+psycopg://travya:travya@localhost:5432/travya_test
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync
+      - name: Ruff lint
+        run: uv run ruff check --output-format=github .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Mypy
+        run: uv run mypy app
+      - name: Migrations apply to an empty database
+        run: uv run alembic upgrade head
+      - name: Create the test database
+        env:
+          PGPASSWORD: travya
+        run: createdb -h localhost -U travya travya_test
+      - name: Pytest with coverage
+        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing:skip-covered
+      - name: Coverage summary
+        if: always() && hashFiles('backend/.coverage') != ''
+        run: uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && hashFiles('backend/coverage.xml') != ''
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
+
+  frontend:
+    name: Frontend (lint, types, tests, build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - name: Build
+        env:
+          VITE_API_URL: http://localhost:8000
+          VITE_FIREBASE_API_KEY: demo-api-key
+          VITE_FIREBASE_AUTH_DOMAIN: demo-travya.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: demo-travya
+        run: npm run build
+
+  e2e:
+    name: End-to-end (Playwright on compose)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.stack == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE: docker compose -p travya-e2e -f compose.yaml --profile e2e
+      OFFLINE_INTEGRATIONS: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build API image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: prod
+          load: true
+          push: false
+          tags: travya-api:local
+          cache-from: type=gha,scope=api
+      - name: Build web image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          target: prod
+          load: true
+          push: false
+          tags: travya-web:local
+          build-args: ${{ env.WEB_BUILD_ARGS }}
+          cache-from: type=gha,scope=web
+      - name: Run Playwright against the stack
+        run: $COMPOSE run --rm e2e
+      - name: Collect service logs
+        if: failure()
+        run: $COMPOSE logs --no-color > compose-logs.txt 2>&1 || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            compose-logs.txt
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v --remove-orphans
+
+  docker:
+    name: Image (${{ matrix.image }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            context: backend
+          - image: web
+            context: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build prod image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          target: prod
+          load: true
+          push: false
+          tags: travya-${{ matrix.image }}:ci
+          build-args: ${{ matrix.image == 'web' && env.WEB_BUILD_ARGS || '' }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - name: Trivy (fail on fixable CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: travya-${{ matrix.image }}:ci
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+      - name: SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: travya-${{ matrix.image }}:ci
+          format: cyclonedx
+          output: sbom-${{ matrix.image }}.cdx.json
+          exit-code: "0"
+          skip-setup-trivy: true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ matrix.image }}
+          path: sbom-${{ matrix.image }}.cdx.json
+          retention-days: 30
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [changes, release-guard, backend, frontend, e2e, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: All required jobs passed or were skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) echo "::error::At least one job failed or was cancelled"; exit 1 ;;
+          esac

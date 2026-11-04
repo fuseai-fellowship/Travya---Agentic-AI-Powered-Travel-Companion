@@ -1,0 +1,18 @@
+# Keep the build context to what the image needs: pyproject.toml, uv.lock, README.md, app/, alembic/, alembic.ini.
+.venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.storage/
+tests/
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore
