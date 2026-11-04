@@ -1,5 +1,6 @@
 """Runs the planning agents for a trip, streams their activity, and persists the result."""
 
+import re
 import uuid
 from collections.abc import AsyncIterator
 from datetime import date, time
@@ -19,6 +20,7 @@ from app.agents.events import AGENT_LABELS, AgentEvent
 from app.agents.planning.pipeline import build_planning_pipeline
 from app.core.logging import get_logger
 from app.core.ratelimit import Limiter
+from app.integrations.geo import haversine_m
 from app.integrations.registry import Integrations
 from app.models import Booking, BookingKind, ItemCategory, ItineraryItem, Trip, TripStatus, User
 from app.schemas.plan import TripPlan
@@ -73,6 +75,57 @@ def _scout_preview(author: str, delta: dict[str, Any]) -> dict[str, Any] | None:
     if author == "offers_scout":
         return {"offers": len(delta.get("offers") or [])}
     return None
+
+
+def _normalise(name: str) -> str:
+    words = re.sub(r"[^a-z0-9 ]+", " ", name.casefold()).split()
+    return " ".join(w for w in words if w not in {"the", "a", "of", "at", "and"})
+
+
+class _PlaceResolver:
+    """Finds coordinates for a planned place: research results first, then a bounded geocode."""
+
+    MAX_GEOCODES = 15
+    MAX_DISTANCE_KM = 60.0
+
+    def __init__(
+        self, integrations: Integrations, trip: Trip, places: list[dict[str, Any]]
+    ) -> None:
+        self.integrations = integrations
+        self.trip = trip
+        self.known = {_normalise(p["name"]): (p["lat"], p["lon"]) for p in places if p.get("name")}
+        self.geocoded = 0
+
+    def _match(self, key: str) -> tuple[float, float] | None:
+        if key in self.known:
+            return self.known[key]
+        for name, coords in self.known.items():
+            if len(name) >= 5 and len(key) >= 5 and (name in key or key in name):
+                return coords
+        return None
+
+    def _near_trip(self, lat: float, lon: float) -> bool:
+        if self.trip.latitude is None or self.trip.longitude is None:
+            return True
+        distance = haversine_m(lat, lon, self.trip.latitude, self.trip.longitude) / 1000
+        return distance <= self.MAX_DISTANCE_KM
+
+    async def locate(self, place_name: str | None) -> tuple[float | None, float | None]:
+        if not place_name:
+            return None, None
+        key = _normalise(place_name)
+        if coords := self._match(key):
+            return coords
+        if self.geocoded >= self.MAX_GEOCODES:
+            return None, None
+        self.geocoded += 1
+        city = self.trip.destination.split(",")[0]
+        matches = await self.integrations.geocoder.search(f"{place_name}, {city}", limit=3)
+        for match in matches:
+            if self._near_trip(match.lat, match.lon):
+                self.known[key] = (match.lat, match.lon)
+                return match.lat, match.lon
+        return None, None
 
 
 def trip_context(trip: Trip, instructions: str | None) -> dict[str, Any]:
@@ -237,8 +290,7 @@ class PlanningService:
     async def _items(
         self, trip: Trip, plan: TripPlan, places: list[dict[str, Any]]
     ) -> list[ItineraryItem]:
-        coords = {p["name"].strip().lower(): (p["lat"], p["lon"]) for p in places if p.get("name")}
-        geocoded = 0
+        resolver = _PlaceResolver(self.integrations, trip, places)
         items: list[ItineraryItem] = []
         for day in plan.days:
             try:
@@ -248,19 +300,7 @@ class PlanningService:
             if not trip.start_date <= day_date <= trip.end_date:
                 continue
             for position, activity in enumerate(day.activities):
-                lat = lon = None
-                if activity.place_name:
-                    key = activity.place_name.strip().lower()
-                    if key in coords:
-                        lat, lon = coords[key]
-                    elif geocoded < 12:
-                        geocoded += 1
-                        matches = await self.integrations.geocoder.search(
-                            f"{activity.place_name}, {trip.destination}", limit=1
-                        )
-                        if matches:
-                            lat, lon = matches[0].lat, matches[0].lon
-                            coords[key] = (lat, lon)
+                lat, lon = await resolver.locate(activity.place_name)
                 items.append(
                     ItineraryItem(
                         trip_id=trip.id,

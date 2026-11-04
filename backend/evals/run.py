@@ -76,8 +76,11 @@ async def run_case(case: dict[str, Any], start: date) -> dict[str, Any]:
                 "critic_approved": bool((plan.get("review") or {}).get("approved")),
                 "revisions": sum(1 for e in events if e.agent == "reviser" and e.kind == "result"),
                 "items": len(items),
+                # share of items that name a place and got coordinates for the map
                 "mapped_share": round(
-                    sum(1 for i in items if i.latitude is not None) / max(1, len(items)), 2
+                    sum(1 for i in items if i.place_name and i.latitude is not None)
+                    / max(1, sum(1 for i in items if i.place_name)),
+                    2,
                 ),
                 "sources": len(plan.get("sources") or []),
                 "error": next((e.message for e in events if e.kind == "error"), None),
@@ -98,7 +101,7 @@ def report(results: list[dict[str, Any]], offline: bool) -> str:
         f"- Passing all hard checks: **{sum(1 for r in ok if not r['hard_check_issues'])}/{len(ok)}**",
         f"- Critic approved: **{sum(1 for r in ok if r['critic_approved'])}/{len(ok)}**",
         f"- Median latency: **{statistics.median([r['seconds'] for r in ok]) if ok else 0:.1f} s**",
-        f"- Mean share of mapped items: **{statistics.mean([r['mapped_share'] for r in ok]) if ok else 0:.0%}**",
+        f"- Mean share of named places on the map: **{statistics.mean([r['mapped_share'] for r in ok]) if ok else 0:.0%}**",
         "",
         "| trip | ok | s | hard-check issues | critic | revisions | items | mapped | sources |",
         "|---|---|---|---|---|---|---|---|---|",
