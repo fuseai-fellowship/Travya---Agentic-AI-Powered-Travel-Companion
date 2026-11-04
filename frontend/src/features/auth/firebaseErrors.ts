@@ -19,19 +19,18 @@ const MESSAGES: Record<string, string> = {
   "auth/invalid-action-code": "This reset link is invalid or was already used.",
 }
 
+export function firebaseErrorCode(error: unknown): string {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code: unknown }).code)
+    : ""
+}
+
 export function firebaseErrorMessage(error: unknown): string {
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? String((error as { code: unknown }).code)
-      : ""
-  return MESSAGES[code] ?? "Sign-in failed. Please try again."
+  return MESSAGES[firebaseErrorCode(error)] ?? "Sign-in failed. Please try again."
 }
 
 /** Closing the popup yourself isn't an error worth a red toast. */
 export function isPopupDismissed(error: unknown): boolean {
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? String((error as { code: unknown }).code)
-      : ""
+  const code = firebaseErrorCode(error)
   return code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
 }

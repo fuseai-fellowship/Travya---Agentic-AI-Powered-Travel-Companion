@@ -7,7 +7,7 @@ import { z } from "zod"
 import { PasswordInput } from "@/components/PasswordInput"
 import { AuthLayout } from "./AuthLayout"
 import { completePasswordReset, requestPasswordReset } from "./actions"
-import { firebaseErrorMessage } from "./firebaseErrors"
+import { firebaseErrorCode, firebaseErrorMessage } from "./firebaseErrors"
 
 const route = getRouteApi("/reset-password")
 
@@ -34,7 +34,9 @@ function RequestResetForm() {
       await requestPasswordReset(email)
       setSentTo(email)
     } catch (caught) {
-      setError(firebaseErrorMessage(caught))
+      // Never reveal whether an account exists: an unknown email gets the same answer.
+      if (firebaseErrorCode(caught) === "auth/user-not-found") setSentTo(email)
+      else setError(firebaseErrorMessage(caught))
     }
   })
 
