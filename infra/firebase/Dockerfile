@@ -5,7 +5,9 @@ ARG FIREBASE_TOOLS_VERSION=15.34.2
 RUN npm install --global --no-audit --no-fund "firebase-tools@${FIREBASE_TOOLS_VERSION}" \
     && npm cache clean --force
 WORKDIR /srv/firebase
-COPY firebase.json ./
+# firebase-tools writes firebase-debug.log to the working directory
+COPY --chown=node:node firebase.json ./
+RUN chown node:node /srv/firebase
 USER node
 EXPOSE 9099
 HEALTHCHECK --interval=5s --timeout=3s --start-period=20s --retries=20 \
