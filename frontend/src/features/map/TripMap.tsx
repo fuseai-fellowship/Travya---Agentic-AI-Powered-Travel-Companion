@@ -13,6 +13,7 @@ import MapGL, {
   Popup,
   Source,
 } from "react-map-gl/maplibre"
+import { useColorMode } from "@/components/ui/color-mode"
 import { formatTime } from "@/lib/format"
 import { usePrefersReducedMotion } from "@/lib/hooks"
 import {
@@ -27,7 +28,10 @@ import {
 // MapLibre 6 resolves its worker next to its own module, which a bundler moves; point at the asset.
 setWorkerUrl(workerUrl)
 
-export const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron"
+export const MAP_STYLES = {
+  light: "https://tiles.openfreemap.org/styles/positron",
+  dark: "https://tiles.openfreemap.org/styles/dark",
+} as const
 
 export interface TripMapProps {
   center: [number, number] | null
@@ -52,6 +56,7 @@ export default function TripMap({
 }: TripMapProps) {
   const mapRef = useRef<MapRef>(null)
   const reducedMotion = usePrefersReducedMotion()
+  const { colorMode } = useColorMode()
   const visibleStops =
     selectedDay === null ? stops : stops.filter((stop) => stop.dayIndex === selectedDay)
   const active = stops.find((stop) => stop.itemId === activeItemId) ?? null
@@ -88,7 +93,7 @@ export default function TripMap({
           ? { longitude: center[0], latitude: center[1], zoom: 11 }
           : { longitude: 10, latitude: 25, zoom: 1.4 }
       }
-      mapStyle={MAP_STYLE}
+      mapStyle={MAP_STYLES[colorMode === "dark" ? "dark" : "light"]}
       attributionControl={false}
       style={{ width: "100%", height: "100%" }}
       onClick={() => onSelectItem(null)}
