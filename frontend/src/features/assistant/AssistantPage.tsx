@@ -24,6 +24,8 @@ export function AssistantPage() {
   const queryClient = useQueryClient()
   const chat = useChat()
   const [draftTripId, setDraftTripId] = useState(tripParam ?? "")
+  // Mobile shows either the list or the thread; "New chat" opens an empty thread.
+  const [composing, setComposing] = useState(Boolean(tripParam))
 
   const trips = useQuery(tripsListTripsOptions({ query: { limit: 100 } }))
   const active = useQuery(chatListConversationsOptions({ query: { archived: false, limit: 100 } }))
@@ -67,7 +69,13 @@ export function AssistantPage() {
     else setDraftTripId(value)
   }
 
-  const showThreadOnMobile = Boolean(conversationId) || chat.pending !== null
+  const noConversations = active.data?.items.length === 0 && !conversationId
+  const showThreadOnMobile =
+    Boolean(conversationId) || chat.pending !== null || composing || noConversations
+  const backToList = () => {
+    setComposing(false)
+    void navigate({ search: {} })
+  }
 
   return (
     <Flex h={{ base: "calc(100dvh - 56px - 72px)", lg: "100dvh" }} minH="480px">
@@ -85,6 +93,7 @@ export function AssistantPage() {
           selectedId={conversationId}
           onNew={() => {
             chat.clear()
+            setComposing(true)
             void navigate({ search: {} })
           }}
           onDeleted={(id) => id === conversationId && navigate({ search: {} })}
@@ -100,11 +109,11 @@ export function AssistantPage() {
         <HStack justify="space-between" gap="3" flexWrap="wrap">
           <HStack gap="2" minW="0">
             <Button
-              display={{ md: "none" }}
+              display={{ base: noConversations ? "none" : "inline-flex", md: "none" }}
               size="sm"
               variant="ghost"
               aria-label="Back to conversations"
-              onClick={() => navigate({ search: {} })}
+              onClick={backToList}
             >
               <LuArrowLeft />
             </Button>
