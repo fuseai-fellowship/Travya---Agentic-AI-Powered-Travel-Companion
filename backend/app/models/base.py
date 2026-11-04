@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Enum
 from sqlmodel import Field, SQLModel
 
 
@@ -24,6 +25,17 @@ def updated_at_field() -> Any:
         sa_type=DateTime(timezone=True),
         nullable=False,
         sa_column_kwargs={"onupdate": utcnow},
+    )
+
+
+def enum_type(enum: type[StrEnum]) -> Enum:
+    """Stored as VARCHAR holding the enum value (no native PG enum), loaded back as the enum member."""
+    return Enum(
+        enum,
+        native_enum=False,
+        create_constraint=False,
+        length=16,
+        values_callable=lambda members: [m.value for m in members],
     )
 
 

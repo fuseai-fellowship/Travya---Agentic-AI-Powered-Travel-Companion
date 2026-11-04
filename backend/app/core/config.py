@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-flash-latest"
     GEMINI_FALLBACK_MODEL: str = "gemini-flash-lite-latest"
-    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-2"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # batches; -2 merges inputs
     EMBEDDING_DIM: int = 768
     LLM_DAILY_REQUEST_BUDGET: int = Field(
         default=400, description="Global cap on agent runs per day"

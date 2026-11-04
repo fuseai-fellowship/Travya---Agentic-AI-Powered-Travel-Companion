@@ -6,11 +6,13 @@ from datetime import date, time
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+import anyio
 from google.adk.events import Event
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import ValidationError
+from sqlmodel import col, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.events import AGENT_LABELS, AgentEvent
@@ -109,13 +111,13 @@ class PlanningService:
         return trip
 
     async def stream(self, trip: Trip, instructions: str | None) -> AsyncIterator[AgentEvent]:
-        previous_status = trip.status
+        trip_id, previous_status = trip.id, trip.status
         await self.trips.trips.update(trip, {"status": TripStatus.planning})
         await self.session.commit()
 
         knowledge = KnowledgeService(self.session, self.integrations.guides)
         pipeline = build_planning_pipeline(self.integrations, knowledge)
-        runner = Runner(app_name=APP_NAME, agent=pipeline, session_service=_sessions)
+        runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
         adk_session = await _sessions.create_session(
             app_name=APP_NAME,
             user_id=str(self.user.id),
@@ -126,6 +128,7 @@ class PlanningService:
         )
 
         seen: set[str] = set()
+        failure: str | None = None
         try:
             async for event in runner.run_async(
                 user_id=str(self.user.id),
@@ -140,28 +143,25 @@ class PlanningService:
             state = dict(final.state) if final else {}
             plan = TripPlan.model_validate(state.get("plan"))
         except (ValidationError, TypeError) as exc:
-            log.warning("plan_invalid", trip_id=str(trip.id), error=str(exc))
-            await self._restore(trip, previous_status)
-            yield AgentEvent(
-                agent="travya",
-                kind="error",
-                message="The planner returned an incomplete plan. Please try again.",
-            )
-            return
-        except Exception as exc:
-            log.exception("plan_failed", trip_id=str(trip.id))
-            await self._restore(trip, previous_status)
-            yield AgentEvent(
-                agent="travya",
-                kind="error",
-                message="Planning failed because an AI or data service is unavailable. Please retry shortly.",
-                data={"error": type(exc).__name__},
-            )
-            return
+            log.warning("plan_invalid", trip_id=str(trip_id), error=str(exc))
+            failure = "The planner returned an incomplete plan. Please try again."
+        except Exception:
+            log.exception("plan_failed", trip_id=str(trip_id))
+            failure = "Planning failed because an AI or data service is unavailable. Please retry shortly."
+        except BaseException:
+            # Client went away mid-stream: put the trip back before the cancellation propagates.
+            with anyio.CancelScope(shield=True):
+                await self._set_status(trip_id, previous_status)
+            raise
         finally:
-            await _sessions.delete_session(
-                app_name=APP_NAME, user_id=str(self.user.id), session_id=adk_session.id
-            )
+            with anyio.CancelScope(shield=True):
+                await _sessions.delete_session(
+                    app_name=APP_NAME, user_id=str(self.user.id), session_id=adk_session.id
+                )
+        if failure:
+            await self._set_status(trip_id, previous_status)
+            yield AgentEvent(agent="travya", kind="error", message=failure)
+            return
 
         items = await self._items(trip, plan, state.get("places") or [])
         quotes = self._quotes(trip, state.get("offers") or [])
@@ -177,16 +177,17 @@ class PlanningService:
             data={"trip_id": str(trip.id), "items": len(items), "quotes": len(quotes)},
         )
 
-    async def _restore(self, trip: Trip, status: TripStatus) -> None:
+    async def _set_status(self, trip_id: uuid.UUID, status: TripStatus) -> None:
         await self.session.rollback()
-        await self.session.refresh(trip)
-        await self.trips.trips.update(trip, {"status": status})
+        await self.session.execute(
+            update(Trip).where(col(Trip.id) == trip_id).values(status=status)
+        )
         await self.session.commit()
 
     @staticmethod
     def _translate(event: Event, seen: set[str]) -> list[AgentEvent]:
         author = event.author or "travya"
-        if author == "user":
+        if author in ("user", "trip_planner", "research_done"):
             return []
         label = AGENT_LABELS.get(author, author)
         out: list[AgentEvent] = []
@@ -311,7 +312,12 @@ class PlanningService:
                     "title": f"{snippet.get('source', 'guide').capitalize()} travel guide",
                     "url": url,
                 }
-        if state.get("places"):
+        if any(p.get("source") == "wikipedia" for p in state.get("places") or []):
+            sources["wikipedia"] = {
+                "title": "Wikipedia (CC BY-SA 4.0)",
+                "url": "https://en.wikipedia.org/",
+            }
+        if any(p.get("source") != "wikipedia" for p in state.get("places") or []):
             sources["osm"] = {
                 "title": "OpenStreetMap contributors",
                 "url": "https://www.openstreetmap.org/copyright",

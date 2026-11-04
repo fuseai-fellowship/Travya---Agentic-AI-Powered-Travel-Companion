@@ -60,7 +60,11 @@ class KnowledgeService:
         ).one()
         if existing:
             return True
-        guide = await self.guides.guide(destination)
+        # "Pokhara, Nepal" → the "Pokhara" article, falling back to the full name.
+        short = destination.split(",")[0].strip()
+        guide = await self.guides.guide(short) or (
+            await self.guides.guide(destination) if short != destination else None
+        )
         if guide is None:
             return False
         pieces: list[tuple[str, str]] = [

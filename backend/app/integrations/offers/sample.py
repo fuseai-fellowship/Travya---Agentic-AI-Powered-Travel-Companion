@@ -78,13 +78,19 @@ class SampleOffers:
         return_date: date | None,
         travelers: int,
         currency: str,
+        distance_km: float | None = None,
     ) -> list[TravelOffer]:
         travelers = max(travelers, 1)
         rng = _rng(
             "flights", (origin or "").casefold(), destination.casefold(), depart, return_date
         )
-        base_usd = rng.uniform(140, 780)
-        base_minutes = rng.randrange(90, 13 * 60, 5)
+        if distance_km is None:
+            base_usd = rng.uniform(140, 780)
+            base_minutes = rng.randrange(90, 13 * 60, 5)
+        else:
+            # Roughly what economy fares and block times look like by distance.
+            base_usd = (45 + 0.11 * distance_km) * rng.uniform(0.85, 1.25)
+            base_minutes = int(40 + distance_km / 12.5) // 5 * 5
         offers: list[TravelOffer] = []
         for airline, code, stops, price_factor in _FLIGHT_OPTIONS:
             fare_usd = base_usd * price_factor * (1.85 if return_date else 1.0)

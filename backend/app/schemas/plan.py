@@ -31,15 +31,24 @@ class PlannedDay(BaseModel):
     activities: list[PlannedActivity]
 
 
+class BudgetBreakdown(BaseModel):
+    """Explicit fields: the Gemini API does not accept free-form maps in response schemas."""
+
+    lodging: float | None = None
+    food: float | None = None
+    activities: float | None = None
+    transport: float | None = None
+
+
 class TripPlan(BaseModel):
     summary: str = Field(description="Three to four sentences describing the trip")
     days: list[PlannedDay]
     estimated_total: float | None = Field(
         default=None, description="Total estimated cost in the trip currency"
     )
-    budget_breakdown: dict[str, float] = Field(
-        default_factory=dict,
-        description="Estimated cost per category: lodging, food, activities, transport",
+    budget_breakdown: BudgetBreakdown = Field(
+        default_factory=lambda: BudgetBreakdown(),
+        description="Estimated cost per category in the trip currency",
     )
     packing_tips: list[str] = Field(default_factory=list, max_length=8)
     local_tips: list[str] = Field(

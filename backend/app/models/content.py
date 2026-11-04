@@ -6,11 +6,11 @@ from enum import StrEnum
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, Index, SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import Column, Index, SmallInteger, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field
 
-from app.models.base import Table, created_at_field, id_field, updated_at_field
+from app.models.base import Table, created_at_field, enum_type, id_field, updated_at_field
 
 EMBEDDING_DIM = 768
 
@@ -43,7 +43,7 @@ class Message(Table, table=True):
     conversation_id: uuid.UUID = Field(
         foreign_key="conversations.id", ondelete="CASCADE", index=True
     )
-    role: MessageRole = Field(sa_type=String(16))
+    role: MessageRole = Field(sa_type=enum_type(MessageRole))
     content: str = Field(sa_type=Text)
     meta: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     created_at: datetime = created_at_field()
@@ -92,7 +92,7 @@ class Feedback(Table, table=True):
 
     id: uuid.UUID = id_field()
     user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
-    target_type: FeedbackTarget = Field(sa_type=String(16))
+    target_type: FeedbackTarget = Field(sa_type=enum_type(FeedbackTarget))
     target_id: uuid.UUID
     rating: int = Field(ge=1, le=5, sa_type=SmallInteger)
     comment: str | None = Field(default=None, max_length=1000)

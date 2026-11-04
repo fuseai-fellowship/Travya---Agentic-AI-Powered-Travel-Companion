@@ -10,6 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
+from pgvector.sqlalchemy import Vector  # noqa: F401
 ${imports if imports else ""}
 
 revision: str = ${repr(up_revision)}
