@@ -12,7 +12,9 @@ from asgi_correlation_id import correlation_id
 from app.core.config import settings
 
 
-def _add_request_id(_: object, __: str, event_dict: structlog.typing.EventDict) -> structlog.typing.EventDict:
+def _add_request_id(
+    _: object, __: str, event_dict: structlog.typing.EventDict
+) -> structlog.typing.EventDict:
     if request_id := correlation_id.get():
         event_dict["request_id"] = request_id
     return event_dict
@@ -28,7 +30,9 @@ def configure_logging() -> None:
         structlog.processors.StackInfoRenderer(),
     ]
     renderer: structlog.typing.Processor = (
-        structlog.processors.JSONRenderer() if settings.LOG_JSON else structlog.dev.ConsoleRenderer()
+        structlog.processors.JSONRenderer()
+        if settings.LOG_JSON
+        else structlog.dev.ConsoleRenderer()
     )
     structlog.configure(
         processors=[*shared, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],

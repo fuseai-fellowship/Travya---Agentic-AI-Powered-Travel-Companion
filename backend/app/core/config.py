@@ -35,7 +35,9 @@ class Settings(BaseSettings):
     GEMINI_FALLBACK_MODEL: str = "gemini-flash-lite-latest"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-2"
     EMBEDDING_DIM: int = 768
-    LLM_DAILY_REQUEST_BUDGET: int = Field(default=400, description="Global cap on agent runs per day")
+    LLM_DAILY_REQUEST_BUDGET: int = Field(
+        default=400, description="Global cap on agent runs per day"
+    )
 
     # Abuse controls (per user)
     RATE_LIMIT_DEFAULT: str = "120/minute"
@@ -44,9 +46,7 @@ class Settings(BaseSettings):
 
     # External services. OFFLINE_INTEGRATIONS swaps every adapter for its fake (tests, demos without network).
     OFFLINE_INTEGRATIONS: bool = False
-    HTTP_USER_AGENT: str = (
-        "Travya/1.0 (+https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion)"
-    )
+    HTTP_USER_AGENT: str = "Travya/1.0 (+https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion)"
     HTTP_TIMEOUT_SECONDS: float = 15.0
     UNSPLASH_ACCESS_KEY: SecretStr | None = None
     ORS_API_KEY: SecretStr | None = None

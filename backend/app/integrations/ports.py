@@ -40,7 +40,9 @@ class Place(BaseModel):
     address: str | None = None
     opening_hours: str | None = None
     website: str | None = None
-    osm_ref: str | None = Field(default=None, description="e.g. 'node/123' for attribution and dedupe")
+    osm_ref: str | None = Field(
+        default=None, description="e.g. 'node/123' for attribution and dedupe"
+    )
     source: str
 
 
@@ -61,7 +63,8 @@ class DailyWeather(BaseModel):
     weather_code: int
     summary: str
     is_climate_estimate: bool = Field(
-        default=False, description="True when the date is beyond the forecast range and climate normals are used"
+        default=False,
+        description="True when the date is beyond the forecast range and climate normals are used",
     )
 
 
@@ -89,7 +92,9 @@ class Photo(BaseModel):
     author_url: str | None = None
     source: str
     source_url: str
-    download_location: str | None = Field(default=None, description="Unsplash download-tracking endpoint")
+    download_location: str | None = Field(
+        default=None, description="Unsplash download-tracking endpoint"
+    )
 
 
 class TravelOffer(BaseModel):
@@ -99,7 +104,9 @@ class TravelOffer(BaseModel):
     amount: Decimal
     currency: str
     details: dict[str, Any]
-    is_sample: bool = Field(description="Sample fares are illustrative; bookings in Travya are simulated")
+    is_sample: bool = Field(
+        description="Sample fares are illustrative; bookings in Travya are simulated"
+    )
 
 
 class Geocoder(Protocol):
@@ -109,17 +116,26 @@ class Geocoder(Protocol):
 
 
 class Autocomplete(Protocol):
-    async def suggest(self, query: str, *, limit: int = 6, near: GeoPoint | None = None) -> list[Place]: ...
+    async def suggest(
+        self, query: str, *, limit: int = 6, near: GeoPoint | None = None
+    ) -> list[Place]: ...
 
 
 class PlacesSearch(Protocol):
     async def nearby(
-        self, center: GeoPoint, *, categories: list[PoiCategory], radius_m: int = 3000, limit: int = 30
+        self,
+        center: GeoPoint,
+        *,
+        categories: list[PoiCategory],
+        radius_m: int = 3000,
+        limit: int = 30,
     ) -> list[Place]: ...
 
 
 class Router(Protocol):
-    async def route(self, points: list[GeoPoint], *, profile: RouteProfile = "foot") -> Route | None: ...
+    async def route(
+        self, points: list[GeoPoint], *, profile: RouteProfile = "foot"
+    ) -> Route | None: ...
 
 
 class WeatherProvider(Protocol):

@@ -66,7 +66,13 @@ class UpstreamUnavailable(DomainError):
 
 
 def _problem(status: int, title: str, detail: str, request: Request) -> dict[str, object]:
-    return {"type": "about:blank", "title": title, "status": status, "detail": detail, "instance": request.url.path}
+    return {
+        "type": "about:blank",
+        "title": title,
+        "status": status,
+        "detail": detail,
+        "instance": request.url.path,
+    }
 
 
 def install_error_handlers(app: FastAPI) -> None:
