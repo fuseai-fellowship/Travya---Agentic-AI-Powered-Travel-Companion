@@ -1,6 +1,9 @@
 """The travel assistant: one ADK LlmAgent with read-only tools, scoped to travel and to the current user."""
 
+import functools
 import uuid
+from collections.abc import Awaitable, Callable
+from datetime import date, timedelta
 from typing import Any
 
 from google.adk.agents import LlmAgent
@@ -9,12 +12,15 @@ from sqlmodel import col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.planning.prompts import UNTRUSTED_NOTE
+from app.core.logging import get_logger
 from app.integrations.ports import GeoPoint, PoiCategory
 from app.integrations.registry import Integrations
 from app.llm.client import SAFETY_SETTINGS, agent_model, http_options
 from app.models import ItineraryItem, Trip
 from app.repositories import ItineraryRepository, TripRepository
 from app.services.knowledge import KnowledgeService
+
+log = get_logger(__name__)
 
 INSTRUCTION = f"""You are Travya, a friendly and precise travel assistant.
 
@@ -75,10 +81,18 @@ def build_assistant(
             start_date: YYYY-MM-DD.
             end_date: YYYY-MM-DD, at most 16 days after start_date.
         """
-        from datetime import date, timedelta
-
-        start = date.fromisoformat(start_date)
-        end = min(date.fromisoformat(end_date), start + timedelta(days=15))
+        try:
+            start = date.fromisoformat(start_date)
+            end = date.fromisoformat(end_date)
+        except ValueError:
+            return _fence("open-meteo", {"error": "Dates must be YYYY-MM-DD"})
+        today = date.today()
+        if end < today or start > today + timedelta(days=365):
+            return _fence(
+                "open-meteo", {"error": f"Ask about dates between {today} and one year ahead"}
+            )
+        start = max(start, today)
+        end = min(max(end, start), start + timedelta(days=15))
         matches = await integrations.geocoder.search(destination, limit=1)
         if not matches:
             return _fence("open-meteo", {"error": f"Unknown destination: {destination}"})
@@ -145,6 +159,23 @@ def build_assistant(
             ],
         }
 
+    def safe(
+        tool: Callable[..., Awaitable[dict[str, Any]]],
+    ) -> Callable[..., Awaitable[dict[str, Any]]]:
+        """Tools never raise: an exception would abort the whole agent run."""
+
+        @functools.wraps(tool)
+        async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            try:
+                return await tool(*args, **kwargs)
+            except Exception as exc:
+                log.warning("assistant_tool_failed", tool=tool.__name__, error=type(exc).__name__)
+                return {
+                    "error": "This source is unavailable right now; answer without it and say so."
+                }
+
+        return wrapper
+
     focus = (
         f"\n\nThe user opened this chat from trip id {trip_id}; prefer it when they say 'my trip'."
         if trip_id
@@ -154,8 +185,11 @@ def build_assistant(
         name="assistant",
         description="Travel assistant",
         model=agent_model(),
-        instruction=INSTRUCTION + focus,
-        tools=[search_places, weather_forecast, destination_guide, my_trips, trip_itinerary],
+        instruction=f"{INSTRUCTION}\n\nToday is {date.today():%A, %d %B %Y}.{focus}",
+        tools=[
+            safe(t)
+            for t in (search_places, weather_forecast, destination_guide, my_trips, trip_itinerary)
+        ],
         generate_content_config=types.GenerateContentConfig(
             temperature=0.5,
             safety_settings=SAFETY_SETTINGS,
