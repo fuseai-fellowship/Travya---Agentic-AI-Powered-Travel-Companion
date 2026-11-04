@@ -118,7 +118,7 @@ export function TripPage() {
           display={{ base: "inline-flex", lg: "none" }}
           position="absolute"
           left="2"
-          bottom="2"
+          top="2"
           size="sm"
           variant="surface"
           aria-expanded={mapExpanded}

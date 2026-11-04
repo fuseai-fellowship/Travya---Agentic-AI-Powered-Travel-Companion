@@ -36,8 +36,8 @@ describe("numbers", () => {
 
   it("formats times and durations", () => {
     expect(formatTime("09:30:00")).toBe("09:30")
-    expect(formatElapsed(2400)).toBe("2.4 s")
-    expect(formatElapsed(75_000)).toBe("1 min 15 s")
+    expect(formatElapsed(2400)).toBe("2.4\u00a0s")
+    expect(formatElapsed(75_000)).toBe("1\u00a0min 15\u00a0s")
   })
 })
 

@@ -1,5 +1,6 @@
 import { Box, Heading, HStack, Image, LinkBox, LinkOverlay, Stack, Text } from "@chakra-ui/react"
 import { Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { LuUsers } from "react-icons/lu"
 import type { TripRead } from "@/client/types.gen"
 import { countdown, formatDateRange, plural, tripLength } from "@/lib/format"
@@ -7,6 +8,8 @@ import { StatusPill } from "./status"
 
 export function TripRow({ trip }: { trip: TripRead }) {
   const length = tripLength(trip.start_date, trip.end_date)
+  // A broken or blocked cover falls back to the initial instead of a broken-image icon.
+  const [coverFailed, setCoverFailed] = useState(false)
   return (
     <LinkBox
       as="li"
@@ -29,9 +32,10 @@ export function TripRow({ trip }: { trip: TripRead }) {
         overflow="hidden"
         bg="brand.subtle"
       >
-        {trip.cover_photo_url ? (
+        {trip.cover_photo_url && !coverFailed ? (
           <Image
             src={trip.cover_photo_url}
+            onError={() => setCoverFailed(true)}
             alt=""
             width={264}
             height={176}

@@ -49,28 +49,28 @@ export function ScoutLane({
       data-status={step.status}
     >
       <HStack justify="space-between" gap="2">
-        <HStack gap="2">
-          <Icon as={icon} color="fg.muted" aria-hidden="true" />
+        <HStack gap="2" minW="0">
+          <Icon as={icon} color="fg.muted" aria-hidden="true" flexShrink={0} />
           <Text fontWeight="600" fontSize="sm">
             {label}
           </Text>
         </HStack>
-        <HStack gap="1.5">
-          {elapsed && (
-            <Text
-              fontFamily="mono"
-              fontSize="xs"
-              color="fg.muted"
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              {elapsed}
-            </Text>
-          )}
-          <StepStatusIcon status={step.status} />
-          <Text srOnly>{STATUS_TEXT[step.status]}</Text>
-        </HStack>
+        <StepStatusIcon status={step.status} />
+        <Text srOnly>{STATUS_TEXT[step.status]}</Text>
       </HStack>
       <Text fontSize="xs" color="fg.muted" lineClamp={2}>
+        {elapsed && (
+          <Text
+            as="span"
+            fontFamily="mono"
+            color="fg"
+            whiteSpace="nowrap"
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            {elapsed}
+            {" · "}
+          </Text>
+        )}
         {step.message || (step.status === "pending" ? "Waiting to start" : "Researching…")}
       </Text>
     </Stack>

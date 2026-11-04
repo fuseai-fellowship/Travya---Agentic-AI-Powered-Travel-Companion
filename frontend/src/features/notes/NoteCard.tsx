@@ -1,5 +1,5 @@
 import { Box, Heading, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
-import { LuPin, LuPinOff } from "react-icons/lu"
+import { LuPin } from "react-icons/lu"
 import type { NoteRead } from "@/client/types.gen"
 import { Markdown } from "@/components/Markdown"
 import { formatRelative } from "@/lib/format"
@@ -57,7 +57,10 @@ export function NoteCard({
           aria-pressed={note.is_pinned}
           onClick={() => onTogglePin(note)}
         >
-          {note.is_pinned ? <LuPin /> : <LuPinOff />}
+          <LuPin
+            fill={note.is_pinned ? "currentColor" : "none"}
+            opacity={note.is_pinned ? 1 : 0.55}
+          />
         </IconButton>
       </HStack>
       {note.content && (

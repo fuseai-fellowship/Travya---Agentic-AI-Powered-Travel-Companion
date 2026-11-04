@@ -85,7 +85,7 @@ export function AgentTimeline({
         >
           Research, in parallel
         </Text>
-        <SimpleGrid as="ul" columns={{ base: 2, xl: 4 }} gap="2" listStyleType="none">
+        <SimpleGrid as="ul" columns={2} gap="2" listStyleType="none">
           {SCOUTS.map((id) => (
             <ScoutLane
               key={id}

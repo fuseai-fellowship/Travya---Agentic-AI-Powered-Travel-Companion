@@ -104,9 +104,9 @@ export function formatBytes(bytes: number): string {
 
 export function formatElapsed(ms: number): string {
   const seconds = ms / 1000
-  if (seconds < 10) return `${seconds.toFixed(1)} s`
-  if (seconds < 60) return `${Math.round(seconds)} s`
-  return `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`
+  if (seconds < 10) return `${seconds.toFixed(1)}\u00a0s`
+  if (seconds < 60) return `${Math.round(seconds)}\u00a0s`
+  return `${Math.floor(seconds / 60)}\u00a0min ${Math.round(seconds % 60)}\u00a0s`
 }
 
 const RELATIVE = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })

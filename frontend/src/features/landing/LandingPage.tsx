@@ -61,7 +61,7 @@ export function LandingPage() {
           <Grid
             templateColumns={{ base: "1fr", lg: "1fr 1.05fr" }}
             gap={{ base: "10", lg: "14" }}
-            alignItems="center"
+            alignItems="start"
           >
             <Stack gap="6">
               <Heading
