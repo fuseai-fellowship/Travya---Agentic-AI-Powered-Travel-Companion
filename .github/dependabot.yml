@@ -1,39 +1,60 @@
+# Weekly, grouped updates into dev. Majors arrive as separate PRs; minor and patch bumps are grouped.
 version: 2
 updates:
-  # GitHub Actions
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
-      interval: daily
+      interval: weekly
+      day: monday
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
     commit-message:
-      prefix: ⬆
-  # Python uv
+      prefix: ci
+      include: scope
+    labels: [dependencies, ci]
+
   - package-ecosystem: uv
     directory: /backend
+    target-branch: dev
     schedule:
-      interval: daily
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
     commit-message:
-      prefix: ⬆
-  # npm
+      prefix: build
+      include: scope
+    labels: [dependencies, backend]
+
   - package-ecosystem: npm
     directory: /frontend
+    target-branch: dev
     schedule:
-      interval: daily
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
     commit-message:
-      prefix: ⬆
-  # Docker
+      prefix: build
+      include: scope
+    labels: [dependencies, frontend]
+
   - package-ecosystem: docker
-    directories:
-      - /backend
-      - /frontend
+    directories: [/backend, /frontend, /infra/firebase]
+    target-branch: dev
     schedule:
       interval: weekly
+      day: monday
+    groups:
+      base-images-minor-patch:
+        update-types: [minor, patch]
     commit-message:
-      prefix: ⬆
-  # Docker Compose
-  - package-ecosystem: docker-compose
-    directory: /
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: ⬆
+      prefix: build
+      include: scope
+    labels: [dependencies, docker]
