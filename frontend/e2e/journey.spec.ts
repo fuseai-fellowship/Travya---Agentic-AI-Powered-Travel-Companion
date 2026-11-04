@@ -52,7 +52,7 @@ test.describe("demo journey @desktop", () => {
       const log = page.getByRole("log", { name: "Conversation" })
       await expect(log).toContainText("What should I pack for Kathmandu?")
       // Feedback buttons appear once the streamed reply has been saved.
-      await expect(log.getByRole("button", { name: "Helpful answer" })).toBeVisible({
+      await expect(log.getByRole("button", { name: "Helpful answer", exact: true })).toBeVisible({
         timeout: 60_000,
       })
     })

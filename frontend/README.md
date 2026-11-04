@@ -17,24 +17,24 @@ npm run dev                  # http://localhost:5173
 The backend and the Auth emulator come from the root `compose.yaml` (`make up`), or run the API
 alone with `OFFLINE_INTEGRATIONS=true` for deterministic data without API keys.
 
-| Variable | Purpose |
-|---|---|
-| `VITE_API_URL` | API origin, e.g. `http://localhost:8000` |
-| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` | Firebase web app config (public values) |
-| `VITE_FIREBASE_AUTH_EMULATOR_URL` | Auth emulator URL; empty or unset uses real Firebase |
+| Variable                                                                         | Purpose                                              |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `VITE_API_URL`                                                                   | API origin, e.g. `http://localhost:8000`             |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` | Firebase web app config (public values)              |
+| `VITE_FIREBASE_AUTH_EMULATOR_URL`                                                | Auth emulator URL; empty or unset uses real Firebase |
 
 All `VITE_*` values are inlined into the public bundle at build time.
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `dev`, `build`, `preview` | Vite dev server, type-checked production build, local preview |
-| `lint`, `format` | Biome check, Biome check with fixes |
-| `typecheck` | `tsc` for the app and for the Node-side config/e2e files |
-| `test` | Vitest + Testing Library + MSW |
-| `e2e` | Playwright against a running stack (`PLAYWRIGHT_BASE_URL` or `E2E_BASE_URL`; otherwise starts `npm run dev`) |
-| `generate-client` | Regenerates `src/client/` from `openapi.json` (run `make openapi` first when the API changes) |
+| Script                    | What it does                                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `dev`, `build`, `preview` | Vite dev server, type-checked production build, local preview                                                |
+| `lint`, `format`          | Biome check, Biome check with fixes                                                                          |
+| `typecheck`               | `tsc` for the app and for the Node-side config/e2e files                                                     |
+| `test`                    | Vitest + Testing Library + MSW                                                                               |
+| `e2e`                     | Playwright against a running stack (`PLAYWRIGHT_BASE_URL` or `E2E_BASE_URL`; otherwise starts `npm run dev`) |
+| `generate-client`         | Regenerates `src/client/` from `openapi.json` (run `make openapi` first when the API changes)                |
 
 End-to-end tests need browsers once: `npx playwright install chromium`. In CI they run in the
 `e2e` compose service against the production images (`make e2e`).

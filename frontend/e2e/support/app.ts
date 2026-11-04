@@ -18,7 +18,7 @@ export async function createDraftTrip(page: Page, sample = "lisbon") {
 
 /** Main navigation: the sidebar on desktop, the bottom tab bar on mobile. */
 export function nav(page: Page, name: "Trips" | "Assistant" | "Notes" | "Settings") {
-  return page.getByRole("navigation", { name: "Main" }).getByRole("link", { name })
+  return page.getByRole("navigation", { name: "Main" }).getByRole("link", { name, exact: true })
 }
 
 /** WCAG 2.2 AA scan; serious and critical violations fail the test. */
