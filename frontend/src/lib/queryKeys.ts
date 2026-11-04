@@ -11,19 +11,25 @@ function keyOf(query: Query): GeneratedKey {
   return typeof first === "object" && first !== null ? (first as GeneratedKey) : {}
 }
 
-/** Invalidates every query generated for the given operation ids (e.g. "notesListNotes"). */
+/**
+ * Cancels in-flight fetches, then invalidates. Without the cancel, TanStack Query keeps the result
+ * of a first load that was already running (it only restarts fetches that have data), so a list
+ * fetched while the server was still saving would stay stale.
+ */
+async function refresh(queryClient: QueryClient, predicate: (query: Query) => boolean) {
+  await queryClient.cancelQueries({ predicate })
+  await queryClient.invalidateQueries({ predicate })
+}
+
+/** Refetches every query generated for the given operation ids (e.g. "notesListNotes"). */
 export function invalidateOperations(queryClient: QueryClient, ...ids: string[]) {
-  return queryClient.invalidateQueries({
-    predicate: (query) => ids.includes(keyOf(query)._id ?? ""),
-  })
+  return refresh(queryClient, (query) => ids.includes(keyOf(query)._id ?? ""))
 }
 
 /** Everything about one trip (detail, itinerary, bookings, map, weather, photos) plus trip lists. */
 export function invalidateTrip(queryClient: QueryClient, tripId: string) {
-  return queryClient.invalidateQueries({
-    predicate: (query) => {
-      const key = keyOf(query)
-      return key.path?.trip_id === tripId || key._id === "tripsListTrips"
-    },
+  return refresh(queryClient, (query) => {
+    const key = keyOf(query)
+    return key.path?.trip_id === tripId || key._id === "tripsListTrips"
   })
 }
