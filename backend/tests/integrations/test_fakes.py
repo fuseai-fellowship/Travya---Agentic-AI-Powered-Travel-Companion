@@ -142,7 +142,8 @@ async def test_fake_guides_and_photos() -> None:
 
     fake_photos = FakePhotos()
     photos = await fake_photos.search("Lisbon Old Town", limit=3)
-    assert photos[0].url == "https://picsum.photos/seed/lisbon-old-town-0/800/533"
+    assert photos[0].url.startswith("data:image/svg+xml,")
+    assert len(photos[0].url) < 1000  # fits TripPhoto.url
     assert len({p.url for p in photos}) == 3
     await fake_photos.track_download(photos[0])
     assert fake_photos.tracked == [photos[0]]

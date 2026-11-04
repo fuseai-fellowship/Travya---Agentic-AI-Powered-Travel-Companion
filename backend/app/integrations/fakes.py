@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime, timedelta
 from itertools import pairwise
 from math import cos, pi, radians, sin, sqrt
 from typing import NamedTuple
+from urllib.parse import quote
 
 from app.core.errors import NotFound
 from app.integrations.geo import haversine_m
@@ -255,21 +256,37 @@ class FakePhotos:
         slug = re.sub(r"[^a-z0-9]+", "-", query.casefold()).strip("-") or "travel"
         return [
             Photo(
-                url=f"https://picsum.photos/seed/{slug}-{i}/800/533",
-                thumb_url=f"https://picsum.photos/seed/{slug}-{i}/400/267",
+                url=_placeholder(f"{slug}-{i}", query),
+                thumb_url=_placeholder(f"{slug}-{i}", query),
                 width=800,
                 height=533,
                 alt=f"{query} (sample photo {i + 1})",
-                author_name="Lorem Picsum",
-                author_url="https://picsum.photos",
-                source="picsum",
-                source_url="https://picsum.photos",
+                author_name="Travya sample image",
+                author_url=None,
+                source="sample",
+                source_url="https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion",
             )
             for i in range(limit)
         ]
 
     async def track_download(self, photo: Photo) -> None:
         self.tracked.append(photo)
+
+
+def _placeholder(seed: str, label: str) -> str:
+    """An inline SVG gradient, so offline demos need no image host (and pass the CSP)."""
+    digest = hashlib.sha256(seed.encode()).hexdigest()
+    a, b = f"#{digest[:6]}", f"#{digest[6:12]}"
+    text = re.sub(r"[^A-Za-z0-9 ,.-]", "", label)[:32]
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='533'>"
+        f"<defs><linearGradient id='g' x2='1' y2='1'><stop offset='0' stop-color='{a}'/>"
+        f"<stop offset='1' stop-color='{b}'/></linearGradient></defs>"
+        "<rect width='800' height='533' fill='url(#g)'/>"
+        "<text x='40' y='490' font-family='sans-serif' font-size='36' fill='white'>"
+        f"{text}</text></svg>"
+    )
+    return "data:image/svg+xml," + quote(svg, safe=" ='/:,.-#")
 
 
 class MemoryStorage:
