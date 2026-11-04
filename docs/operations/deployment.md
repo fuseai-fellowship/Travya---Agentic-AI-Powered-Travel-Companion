@@ -50,7 +50,7 @@ flowchart TB
 | Artifact Registry `travya` | Cleanup policy keeps the 2 newest versions | Stays under the 0.5 GB free storage |
 | Cloud Storage | Private, uniform access, public access prevention, no soft delete, objects deleted after 365 days | Regional bucket in us-central1 |
 | Secret Manager | `gemini-api-key`, `database-url`, `redis-url`, `unsplash-access-key`, `ors-api-key`, `sentry-dsn` | A handful of secrets |
-| Neon | Postgres 17 with the `vector` extension, `?sslmode=require` | Free plan; compute suspends when idle |
+| Neon | Postgres 17; the baseline migration enables `vector`; `?sslmode=require` | Free plan; compute suspends when idle |
 | Upstash | Redis over TLS (`rediss://`) | Free plan |
 | Cloudflare Pages | Project `travya`, direct upload | Free plan |
 | Billing budget | $1 per month, alerts at 50, 90 and 100 % | Early warning if anything starts to cost |
@@ -66,13 +66,9 @@ wired secrets. Terraform ignores image changes, so deploys and `terraform apply`
 2. **Firebase.** In the Firebase console enable the Email/Password, Google and Anonymous sign-in
    providers, add the Pages domain to the authorised domains, and register a web app to get its API
    key.
-3. **Neon.** Create the database and enable pgvector:
-
-    ```sql
-    CREATE EXTENSION IF NOT EXISTS vector;
-    ```
-
-    The connection string becomes `postgresql+psycopg://USER:PASSWORD@HOST/DB?sslmode=require`.
+3. **Neon.** Create the database. The connection string becomes
+   `postgresql+psycopg://USER:PASSWORD@HOST/DB?sslmode=require`. Nothing else is needed: the baseline
+   migration enables pgvector and creates the `adk` schema on the first deploy.
 
 4. **Terraform state and first apply** (from `infra/terraform/terraform.tfvars.example`; copy it to
    `terraform.tfvars` and set `project_id` and `billing_account_id`):
@@ -151,11 +147,13 @@ flowchart LR
     rp -- "merge" --> tag
 ```
 
-- **Pull requests** into `dev` or `main` run `ci.yml` and CodeQL. `ci.yml` detects what changed and
-  runs only the relevant jobs: backend (Ruff, mypy, migrations on an empty database, pytest with
-  coverage), frontend (Biome, `tsc`, Vitest, build), Playwright end to end on the production images,
-  and image builds with Trivy (fails on fixable critical vulnerabilities) and a CycloneDX SBOM. The
-  single required check, `ci-ok`, passes when every job either passed or was skipped.
+- **Pull requests** into `dev` or `main` run `ci.yml` and CodeQL. `ci.yml` always runs a gitleaks
+  scan of the new commits, and otherwise detects what changed and runs only the relevant jobs:
+  backend (Ruff, mypy, a check that the committed `frontend/openapi.json` matches the code, migrations
+  on an empty database, pytest with coverage), frontend (Biome, `tsc`, Vitest, build), Playwright end
+  to end on the production images, and image builds with Trivy (fails on fixable critical
+  vulnerabilities) and a CycloneDX SBOM. The single required check, `ci-ok`, passes when every job
+  either passed or was skipped.
 - **`main` accepts PRs only from `dev`, `hotfix/*` and release-please branches** (`release-guard`
   job). Releases use merge commits so `dev` and `main` keep a shared history.
 - **Deploy** runs on every push to `main`. The image is built once, used first by the migration job

@@ -42,13 +42,14 @@ gcloud logging read \
 |---|---|
 | `startup` | The app started; shows `environment` and `offline` |
 | `upstream_retry`, `upstream_gave_up`, `upstream_error`, `upstream_http_error` | A third-party call was retried, failed for good, or answered with an error |
-| `router_fallback`, `photos_fallback` | OpenRouteService or Unsplash failed; the keyless fallback was used |
+| `places_fallback`, `router_fallback`, `photos_fallback` | Overpass, OpenRouteService or Unsplash failed or was too slow; the fallback answered |
 | `llm_fallback` | The primary Gemini model was overloaded; the fallback model answered |
-| `scout_failed` | A research scout failed; the plan continued without it |
+| `scout_failed` | A research scout failed or ran out of its 30 s budget; the plan continued without it |
 | `plan_invalid`, `plan_failed` | A planning run ended without a valid plan; the trip status was restored |
 | `chat_failed` | An assistant turn failed |
 | `guide_indexed` | A destination guide was embedded into the knowledge base |
 | `route_failed`, `cover_photo_failed` | Map routes or a cover photo were skipped |
+| `photo_tracking_failed` | Reporting an Unsplash download for a cover photo failed; the trip was still created |
 | `gcs_signing_unavailable` | Downloads fall back to streaming through the API |
 | `unhandled_error` | A 500; the line includes the stack trace |
 
@@ -75,9 +76,9 @@ To change a value in production, add it to `local.plain_env` in `infra/terraform
 a new revision picks it up. A one-off `gcloud run services update travya-api --update-env-vars ...`
 also works but is reverted by the next `terraform apply`.
 
-Size the budget from the model's free-tier daily request quota: one planning run makes up to five
-generation calls (planner, two critic and two reviser calls) plus embedding calls, and a chat turn up to
-eight.
+Size the budget from the models' free-tier daily request quotas: one planning run makes up to six
+generation calls (one planner and two reviser calls on the primary model, three critic calls on the
+light model) plus embedding calls, and a chat turn up to eight.
 
 ## Rotating keys
 
@@ -116,10 +117,11 @@ If a key leaks, revoke it at the provider first; rotation alone leaves the leake
 | `429` with `Retry-After` | A per-user limit | Expected; tune the `RATE_LIMIT_*` values if real users hit it |
 | Planning ends with "Planning failed because an AI or data service is unavailable" | Gemini quota or outage, or an upstream failure outside a scout | Search `plan_failed` and `llm_fallback`; check the AI Studio quota |
 | Planning ends with "The planner returned an incomplete plan" | The final plan failed `TripPlan` validation | Search `plan_invalid`; re-run the plan |
-| A trip stays in `planning` | The client disconnected mid-run, which cancels the stream before the status is restored | Re-plan the trip, or `PATCH` its `status` |
-| Scout says "Could not reach this source" | Overpass, Open-Meteo or Wikivoyage is down or rate-limiting | None needed; the plan continues; check `upstream_gave_up` |
+| Scout says "Could not reach this source" | Open-Meteo, Wikivoyage or Nominatim is down or slow (`TimeoutError` after 30 s) | None needed; the plan continues; check `scout_failed` and `upstream_gave_up` |
+| Places come from Wikipedia instead of OpenStreetMap | Overpass was slow (over 12 s), failing or empty | None needed; check `places_fallback`; the plan credits Wikipedia |
 | Nominatim answers 403 or 429 | Missing or generic `HTTP_USER_AGENT`, or too many requests | Keep an identifying agent with a contact; the 1 request/second limit is per process |
 | Downloads stream through the API instead of a signed URL | The credentials cannot sign (`gcs_signing_unavailable`) | The runtime service account needs Token Creator on itself (Terraform grants it) |
-| Event streams stop after five minutes | Cloud Run's 300 s request timeout | Planning normally ends well before; raise `timeout` in Terraform if needed |
+| Event streams stop after five minutes | Cloud Run's 300 s request timeout | A live plan took about 35 s in testing; a run near the limit points at a slow upstream or model (`llm_fallback`, `scout_failed`) |
+| `llm_fallback` with code 503 or 504 | The primary model is overloaded or timed out | Expected on the free tier; Flash-Lite answers instead. Frequent ones may justify a different `GEMINI_MODEL` |
 | Local `make up`: port 5432 in use | A native Postgres | Compose already publishes on 5433; use that port |
 | Guide search returns nothing after changing `EMBEDDING_DIM` | The `vector(768)` column no longer matches | Keep 768, or migrate the column and re-embed |
