@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     SENTRY_DSN: str | None = None
 
     # Postgres 17 with pgvector. Neon needs `?sslmode=require` in the URL.
-    DATABASE_URL: str = "postgresql+psycopg://travya:travya@localhost:5432/travya"
+    DATABASE_URL: str = "postgresql+psycopg://travya:travya@localhost:5433/travya"
     DB_POOL_SIZE: int = 5
     # Redis (Upstash in production: rediss://...). Without it, limits and cache stay in memory.
     REDIS_URL: str | None = None

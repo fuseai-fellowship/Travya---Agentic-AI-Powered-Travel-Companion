@@ -7,7 +7,7 @@ os.environ["OFFLINE_INTEGRATIONS"] = "true"
 os.environ.pop("GEMINI_API_KEY", None)
 os.environ.pop("REDIS_URL", None)
 os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+psycopg://travya:travya@localhost:5432/travya_test"
+    "TEST_DATABASE_URL", "postgresql+psycopg://travya:travya@localhost:5433/travya_test"
 )
 os.environ["LOCAL_STORAGE_DIR"] = os.environ.get("TEST_STORAGE_DIR", "/tmp/travya-test-storage")
 
