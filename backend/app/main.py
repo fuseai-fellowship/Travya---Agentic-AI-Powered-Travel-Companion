@@ -87,7 +87,7 @@ def create_app() -> FastAPI:
         generate_unique_id_function=_operation_id,
         lifespan=lifespan,
     )
-    install_error_handlers(app)
+    install_error_handlers(app, cors_origins=settings.FRONTEND_ORIGINS)
 
     @app.middleware("http")
     async def security_headers(

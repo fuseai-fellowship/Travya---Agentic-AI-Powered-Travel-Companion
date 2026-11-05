@@ -128,3 +128,40 @@ async def test_limiter_falls_back_when_redis_stalls(monkeypatch: pytest.MonkeyPa
     await limiter.hit("1/minute", "scope", "user")
     with pytest.raises(RateLimited):
         await limiter.hit("1/minute", "scope", "user")
+
+
+async def test_unhandled_errors_keep_cors_headers() -> None:
+    from httpx import ASGITransport, AsyncClient
+
+    from app.core.config import settings
+    from app.main import create_app
+
+    application = create_app()
+
+    async def boom() -> None:
+        raise RuntimeError("unexpected")
+
+    application.add_api_route("/boom", boom)
+    origin = settings.FRONTEND_ORIGINS[0]
+    transport = ASGITransport(app=application, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as http:
+        response = await http.get("/boom", headers={"Origin": origin})
+        foreign = await http.get("/boom", headers={"Origin": "https://evil.example"})
+    assert response.status_code == 500
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.json()["title"] == "Internal server error"
+    assert "access-control-allow-origin" not in foreign.headers
+
+
+async def test_certificate_fetch_failure_is_a_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    from firebase_admin import auth
+
+    from app.core import security
+    from app.core.errors import UpstreamUnavailable
+
+    def unreachable(*_: object, **__: object) -> None:
+        raise auth.CertificateFetchError("Failed to fetch public key certificates", cause=None)
+
+    monkeypatch.setattr(auth, "verify_id_token", unreachable)
+    with pytest.raises(UpstreamUnavailable):
+        await security.verify_id_token("token")

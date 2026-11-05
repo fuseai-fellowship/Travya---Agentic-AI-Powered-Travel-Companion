@@ -15,7 +15,7 @@ import google.auth.exceptions
 from firebase_admin import auth, credentials
 
 from app.core.config import settings
-from app.core.errors import Unauthorized
+from app.core.errors import Unauthorized, UpstreamUnavailable
 from app.core.logging import get_logger
 
 log = get_logger(__name__)
@@ -73,6 +73,12 @@ async def verify_id_token(token: str) -> Principal:
         claims = await anyio.to_thread.run_sync(
             lambda: auth.verify_id_token(token, clock_skew_seconds=10)
         )
+    except auth.CertificateFetchError as exc:
+        # Google's signing certificates are out of reach: our problem, not the user's token.
+        log.warning("firebase_certificates_unavailable", error=str(exc)[:200])
+        raise UpstreamUnavailable(
+            "Sign-in can't be checked right now. Please retry shortly."
+        ) from exc
     except (auth.ExpiredIdTokenError, auth.RevokedIdTokenError) as exc:
         raise Unauthorized("Session expired, please sign in again") from exc
     except (auth.InvalidIdTokenError, ValueError) as exc:
