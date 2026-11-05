@@ -78,3 +78,19 @@ def test_agent_event_sse_shape() -> None:
     payload = event.sse()
     assert payload["event"] == "result"
     assert '"agent":"planner"' in payload["data"]
+
+
+def test_firebase_credential_without_google_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    import google.auth
+    import google.auth.credentials
+    import google.auth.exceptions
+
+    from app.core import security
+
+    def no_adc(*_: object, **__: object) -> None:
+        raise google.auth.exceptions.DefaultCredentialsError("none")
+
+    monkeypatch.setattr(google.auth, "default", no_adc)
+    credential = security._credential()
+    assert isinstance(credential, security._PublicCredential)
+    assert isinstance(credential.get_credential(), google.auth.credentials.AnonymousCredentials)
