@@ -1,4 +1,9 @@
-"""Daily weather from Open-Meteo: forecast inside its 16-day window, last year's weather beyond it."""
+"""Daily weather from Open-Meteo.
+
+Past dates get observed weather (archive), the next ~two weeks the forecast, and later dates the
+same days of last year. When a source refuses (Open-Meteo rate-limits shared IPs), the days are
+estimated from last year or a climate model instead, flagged `is_climate_estimate`.
+"""
 
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -86,14 +91,50 @@ class OpenMeteoWeather:
         if end < start:
             return []
         lat, lon = round(point.lat, 2), round(point.lon, 2)
+        today = self._today()
+        observed_until = today - timedelta(days=ARCHIVE_LAG_DAYS)
         # one day of slack: the window is counted in the destination's time zone
-        horizon = self._today() + timedelta(days=FORECAST_DAYS - 2)
+        horizon = today + timedelta(days=FORECAST_DAYS - 2)
+        one_day = timedelta(days=1)
         days: list[DailyWeather] = []
-        if start <= horizon:
-            days += await self._forecast(lat, lon, start, min(end, horizon))
+        if start <= observed_until:
+            days += await self._observed_or_estimate(lat, lon, start, min(end, observed_until))
+        if start <= horizon and end > observed_until:
+            first = max(start, observed_until + one_day)
+            days += await self._forecast_or_estimate(lat, lon, first, min(end, horizon))
         if end > horizon:
-            days += await self._climate(lat, lon, max(start, horizon + timedelta(days=1)), end)
+            days += await self._climate(lat, lon, max(start, horizon + one_day), end)
         return days
+
+    async def _forecast_or_estimate(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[DailyWeather]:
+        try:
+            return await self._forecast(lat, lon, start, end)
+        except UpstreamUnavailable as exc:
+            log.warning("weather_forecast_unavailable", error=str(exc)[:120])
+            return await self._climate(lat, lon, start, end)
+
+    async def _observed_or_estimate(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[DailyWeather]:
+        try:
+            return await self._observed(lat, lon, start, end)
+        except UpstreamUnavailable as exc:
+            log.warning("weather_archive_unavailable", error=str(exc)[:120])
+            return await self._climate_model(lat, lon, start, end)
+
+    @cache(
+        ttl=CLIMATE_TTL, key="open-meteo:observed:{lat}:{lon}:{start}:{end}", condition=non_empty
+    )
+    async def _observed(self, lat: float, lon: float, start: date, end: date) -> list[DailyWeather]:
+        data = await fetch_json(
+            self._http,
+            "GET",
+            self._archive_url,
+            params=_params(lat, lon, start, end, _ARCHIVE_DAILY),
+        )
+        return parse_daily(data)
 
     @cache(
         ttl=FORECAST_TTL, key="open-meteo:forecast:{lat}:{lon}:{start}:{end}", condition=non_empty
@@ -136,7 +177,7 @@ class OpenMeteoWeather:
         ):
             if t_max is None or t_min is None:
                 continue
-            code = _code_from_precipitation(rain or 0.0)
+            code, summary = _from_precipitation(rain or 0.0)
             # Bias-corrected model series can put the daily min above the max; keep them ordered.
             low, high = sorted((t_min, t_max))
             days.append(
@@ -146,7 +187,7 @@ class OpenMeteoWeather:
                     temp_max_c=high,
                     precipitation_mm=rain or 0.0,
                     weather_code=code,
-                    summary=describe(code),
+                    summary=summary,
                     is_climate_estimate=True,
                 )
             )
@@ -175,15 +216,15 @@ class OpenMeteoWeather:
         ]
 
 
-def _code_from_precipitation(mm: float) -> int:
-    """Climate projections carry no weather code; approximate one from daily precipitation."""
+def _from_precipitation(mm: float) -> tuple[int, str]:
+    """Climate projections carry no weather code or cloud cover; describe the rain only."""
     if mm >= 10:
-        return 63  # moderate rain
+        return 63, "Rainy"
     if mm >= 2:
-        return 61  # slight rain
+        return 61, "Some rain"
     if mm >= 0.5:
-        return 51  # light drizzle
-    return 2  # partly cloudy
+        return 51, "Drizzle"
+    return 2, "Mostly dry"
 
 
 def _params(lat: float, lon: float, start: date, end: date, daily: str) -> dict[str, Any]:
