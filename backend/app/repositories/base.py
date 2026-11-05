@@ -11,7 +11,7 @@ from typing import Any, ClassVar
 
 from sqlalchemy import func
 from sqlalchemy.sql import ColumnElement
-from sqlmodel import col, select
+from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.errors import NotFound
@@ -76,9 +76,7 @@ class ScopedRepository[T: Table]:
         await self.session.flush()
 
     async def delete_where(self, *where: ColumnElement[bool]) -> None:
-        for obj in await self.all(*where):
-            await self.session.delete(obj)
-        await self.session.flush()
+        await self.session.exec(delete(self.model).where(self._scope(), *where))
 
 
 def newest_first(model: Any, column: str = "created_at") -> Any:

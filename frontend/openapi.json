@@ -478,6 +478,12 @@
               }
             }
           },
+          "409": {
+            "description": "The demo's shared storage is full"
+          },
+          "413": {
+            "description": "The file is too large or the user's storage quota is used up"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -948,6 +954,9 @@
             "content": {
               "text/event-stream": {}
             }
+          },
+          "409": {
+            "description": "The trip is already being planned"
           },
           "422": {
             "description": "Validation Error",
@@ -2248,38 +2257,17 @@
       "ConversationUpdate": {
         "properties": {
           "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Title"
           },
           "is_archived": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Is Archived"
           },
           "is_favorite": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Is Favorite"
           },
           "trip_id": {
@@ -2660,15 +2648,9 @@
             "title": "Estimated Cost"
           },
           "position": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Position"
+            "type": "integer",
+            "title": "Position",
+            "description": "Omit to add after the day's items"
           }
         },
         "type": "object",
@@ -2813,26 +2795,12 @@
       "ItineraryItemUpdate": {
         "properties": {
           "day": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "Day"
           },
           "position": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
             "title": "Position"
           },
           "start_time": {
@@ -2860,16 +2828,9 @@
             "title": "End Time"
           },
           "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Title"
           },
           "description": {
@@ -2885,14 +2846,7 @@
             "title": "Description"
           },
           "category": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ItemCategory"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/ItemCategory"
           },
           "place_name": {
             "anyOf": [
@@ -3043,15 +2997,8 @@
             "title": "Home City"
           },
           "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Z]{3}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
             "title": "Currency"
           }
         },
@@ -3214,58 +3161,30 @@
       "NoteUpdate": {
         "properties": {
           "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Title"
           },
           "content": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 10000
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 10000,
             "title": "Content"
           },
           "color": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "yellow",
-                  "pink",
-                  "blue",
-                  "green",
-                  "purple",
-                  "orange"
-                ]
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "yellow",
+              "pink",
+              "blue",
+              "green",
+              "purple",
+              "orange"
             ],
             "title": "Color"
           },
           "is_pinned": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Is Pinned"
           },
           "trip_id": {
@@ -3620,7 +3539,9 @@
           },
           "interests": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
             },
             "type": "array",
             "maxItems": 10,
@@ -3637,6 +3558,44 @@
               }
             ],
             "title": "Notes"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
           }
         },
         "type": "object",
@@ -3714,7 +3673,9 @@
           },
           "interests": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
             },
             "type": "array",
             "maxItems": 10,
@@ -3996,7 +3957,9 @@
           },
           "interests": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
             },
             "type": "array",
             "maxItems": 10,
@@ -4122,16 +4085,9 @@
       "TripUpdate": {
         "properties": {
           "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Title"
           },
           "origin": {
@@ -4147,40 +4103,19 @@
             "title": "Origin"
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "Start Date"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "End Date"
           },
           "travelers": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 20.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
             "title": "Travelers"
           },
           "budget": {
@@ -4199,40 +4134,21 @@
             "title": "Budget"
           },
           "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Z]{3}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
             "title": "Currency"
           },
           "pace": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TripPace"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/TripPace"
           },
           "interests": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array",
-                "maxItems": 10
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 10,
             "title": "Interests"
           },
           "notes": {
@@ -4248,29 +4164,36 @@
             "title": "Notes"
           },
           "status": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TripStatus"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/TripStatus",
+            "description": "Any status but `planning`, which only the agents set"
           }
         },
         "type": "object",
-        "title": "TripUpdate"
+        "title": "TripUpdate",
+        "description": "Omitted fields stay as they are; only nullable columns accept null."
       },
       "UsageRead": {
         "properties": {
           "llm_runs_remaining_today": {
             "type": "integer",
-            "title": "Llm Runs Remaining Today"
+            "title": "Llm Runs Remaining Today",
+            "description": "About how many plans or chat turns the shared daily budget still allows"
+          },
+          "llm_calls_remaining_today": {
+            "type": "integer",
+            "title": "Llm Calls Remaining Today",
+            "description": "Model calls left in the daily budget"
+          },
+          "llm_calls_per_day": {
+            "type": "integer",
+            "title": "Llm Calls Per Day"
           }
         },
         "type": "object",
         "required": [
-          "llm_runs_remaining_today"
+          "llm_runs_remaining_today",
+          "llm_calls_remaining_today",
+          "llm_calls_per_day"
         ],
         "title": "UsageRead"
       },

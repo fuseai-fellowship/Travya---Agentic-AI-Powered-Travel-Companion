@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from app.schemas.plan import TripPlan
 
+# Non-meal activities per day: what the planner aims for, and what the hard check accepts.
+PACE_TARGETS = {"relaxed": "2–3", "balanced": "3–4", "packed": "5–6"}
 PACE_LIMITS = {"relaxed": (1, 4), "balanced": (2, 6), "packed": (3, 9)}
 BUDGET_TOLERANCE = 1.10
 

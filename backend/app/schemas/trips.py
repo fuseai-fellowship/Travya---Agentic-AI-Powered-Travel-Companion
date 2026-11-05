@@ -1,14 +1,16 @@
 import uuid
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
-from pydantic import Field, model_validator
+from pydantic import MISSING, Field, StringConstraints, model_validator
 
 from app.models import BookingKind, BookingStatus, ItemCategory, TripPace, TripStatus
 from app.schemas.common import ApiModel
 
 MAX_TRIP_DAYS = 21
+# Interests go into every prompt: short labels only.
+Interest = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
 
 
 class TripBase(ApiModel):
@@ -21,32 +23,57 @@ class TripBase(ApiModel):
     budget: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     currency: str = Field(default="USD", pattern=r"^[A-Z]{3}$")
     pace: TripPace = TripPace.balanced
-    interests: list[str] = Field(default_factory=list, max_length=10)
+    interests: list[Interest] = Field(default_factory=list, max_length=10)
     notes: str | None = Field(default=None, max_length=2000)
 
 
+def check_dates(start: date, end: date) -> str | None:
+    """Why the dates are unusable, or None."""
+    if end < start:
+        return "end_date must be on or after start_date"
+    if (end - start).days + 1 > MAX_TRIP_DAYS:
+        return f"Trips can be at most {MAX_TRIP_DAYS} days"
+    return None
+
+
 class TripCreate(TripBase):
+    # From the place suggestion the user picked, so "Paris, Texas" stays in Texas; the
+    # destination is geocoded only when these are missing.
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    country_code: str | None = Field(default=None, pattern=r"^[A-Za-z]{2}$")
+
     @model_validator(mode="after")
     def _dates(self) -> Self:
-        if self.end_date < self.start_date:
-            raise ValueError("end_date must be on or after start_date")
-        if (self.end_date - self.start_date).days + 1 > MAX_TRIP_DAYS:
-            raise ValueError(f"Trips can be at most {MAX_TRIP_DAYS} days")
+        if problem := check_dates(self.start_date, self.end_date):
+            raise ValueError(problem)
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude and longitude go together")
         return self
 
 
 class TripUpdate(ApiModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
+    """Omitted fields stay as they are; only nullable columns accept null."""
+
+    title: str | MISSING = Field(default=MISSING, min_length=1, max_length=200)
     origin: str | None = Field(default=None, max_length=200)
-    start_date: date | None = None
-    end_date: date | None = None
-    travelers: int | None = Field(default=None, ge=1, le=20)
+    start_date: date | MISSING = MISSING
+    end_date: date | MISSING = MISSING
+    travelers: int | MISSING = Field(default=MISSING, ge=1, le=20)
     budget: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
-    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
-    pace: TripPace | None = None
-    interests: list[str] | None = Field(default=None, max_length=10)
+    currency: str | MISSING = Field(default=MISSING, pattern=r"^[A-Z]{3}$")
+    pace: TripPace | MISSING = MISSING
+    interests: list[Interest] | MISSING = Field(default=MISSING, max_length=10)
     notes: str | None = Field(default=None, max_length=2000)
-    status: TripStatus | None = None
+    status: TripStatus | MISSING = Field(
+        default=MISSING, description="Any status but `planning`, which only the agents set"
+    )
+
+    @model_validator(mode="after")
+    def _not_planning(self) -> Self:
+        if self.status == TripStatus.planning:
+            raise ValueError("The planning status is set by the agents")
+        return self
 
 
 class TripRead(TripBase):
@@ -79,17 +106,19 @@ class ItineraryItemBase(ApiModel):
 
 
 class ItineraryItemCreate(ItineraryItemBase):
-    position: int | None = None
+    position: int | MISSING = Field(
+        default=MISSING, description="Omit to add after the day's items"
+    )
 
 
 class ItineraryItemUpdate(ApiModel):
-    day: date | None = None
-    position: int | None = None
+    day: date | MISSING = MISSING
+    position: int | MISSING = MISSING
     start_time: time | None = None
     end_time: time | None = None
-    title: str | None = Field(default=None, min_length=1, max_length=200)
+    title: str | MISSING = Field(default=MISSING, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
-    category: ItemCategory | None = None
+    category: ItemCategory | MISSING = MISSING
     place_name: str | None = Field(default=None, max_length=300)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)

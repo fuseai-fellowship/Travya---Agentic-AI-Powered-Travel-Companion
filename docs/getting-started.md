@@ -65,8 +65,8 @@ offline assistant reply.
 
 !!! warning "Free-tier quota"
     A planning run costs one planner call, up to two reviser calls and up to three critic calls (on
-    the light model), plus embedding requests for the guide. The global `LLM_DAILY_REQUEST_BUDGET` counts runs, not model
-    calls, and protects the key's daily quota.
+    the light model), plus embedding requests for the guide. The global `LLM_DAILY_REQUEST_BUDGET` counts
+    model calls (whichever model in the chain answers) and protects the key's daily quota.
 
 ## Firebase Auth emulator
 
@@ -168,10 +168,13 @@ local development, as noted.
 |---|---|---|
 | `GEMINI_API_KEY` | unset | Google AI Studio key. Without it the scripted planner and the offline assistant are used. |
 | `GEMINI_MODEL` | `gemini-flash-latest` | Model for every agent |
-| `GEMINI_FALLBACK_MODEL` | `gemini-flash-lite-latest` | Takes over at once when the primary is overloaded (503) or times out, and after a failed retry on 429 or other 5xx; also the critic's model |
+| `GEMINI_BACKUP_API_KEYS` | unset | Comma-separated keys, used only while a key fails for key-level reasons (invalid, expired, leaked, blocked; skipped for 10 minutes), never to get around quota |
+| `GEMINI_FALLBACK_MODELS` | `gemini-3.5-flash-lite,gemini-3.1-flash-lite` | Tried in order when the previous model is overloaded, times out, is out of quota (429) or unavailable (403/404); a model that fails three times in a row goes to the back of the chain for a minute. The light models also run the critic. |
 | `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-001` | Guide embeddings, sent in batches |
 | `EMBEDDING_DIM` | `768` | Must match the `vector(768)` column in `knowledge_chunks` |
-| `LLM_DAILY_REQUEST_BUDGET` | `400` | Global cap on agent runs (plans and chat messages) per day |
+| `LLM_DAILY_REQUEST_BUDGET` | `400` | Global cap on model calls per day (a plan takes 3–6, a chat turn 1–3) |
+| `PLAN_DEADLINE_SECONDS` | `240` | Overall time for one planning run; the latest complete draft is kept when it runs out |
+| `CHAT_DEADLINE_SECONDS` | `120` | Overall time for one chat turn |
 
 ### Abuse controls
 
@@ -197,10 +200,13 @@ Per user, in [`limits`](https://limits.readthedocs.io/) notation (`<count>/<seco
 
 | Variable | Default | Notes |
 |---|---|---|
-| `STORAGE_BACKEND` | `local` | `local` or `gcs` |
+| `STORAGE_BACKEND` | `local` | `local`, `gcs` or `database` (bytes in Postgres, for hosts without object storage) |
 | `LOCAL_STORAGE_DIR` | `./.storage` | Local file root |
 | `GCS_BUCKET` | unset | Required with `gcs` |
 | `MAX_UPLOAD_MB` | `10` | Upload size limit |
+| `STORAGE_QUOTA_MB` | `25` | Stored documents per account |
+| `STORAGE_QUOTA_ANONYMOUS_MB` | `5` | Stored documents per anonymous (demo) account |
+| `STORAGE_TOTAL_MB` | `200` | All documents together; uploads pause (409) beyond it |
 
 ### Frontend build variables
 

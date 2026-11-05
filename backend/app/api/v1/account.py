@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 
 from app.api.deps import (
+    AdkSessionsDep,
     CurrentUser,
     IntegrationsDep,
     LimiterDep,
@@ -13,6 +14,11 @@ from app.api.deps import (
     SessionDep,
     rate_limit,
 )
+from app.core.config import settings
+from app.core.errors import PayloadTooLarge
+from app.core.limits import MB
+from app.core.ratelimit import CALLS_PER_RUN
+from app.integrations.storage import content_disposition
 from app.schemas.common import Page
 from app.schemas.content import (
     DocumentRead,
@@ -51,13 +57,23 @@ async def patch_me(
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, tags=["account"])
-async def delete_me(user: CurrentUser, session: SessionDep, integrations: IntegrationsDep) -> None:
-    await delete_account(session, user, integrations.storage)
+async def delete_me(
+    user: CurrentUser,
+    session: SessionDep,
+    integrations: IntegrationsDep,
+    adk_sessions: AdkSessionsDep,
+) -> None:
+    await delete_account(session, user, integrations.storage, adk_sessions)
 
 
 @router.get("/me/usage", response_model=UsageRead, tags=["account"])
 async def usage(_: CurrentUser, limiter: LimiterDep) -> UsageRead:
-    return UsageRead(llm_runs_remaining_today=await limiter.remaining_llm_budget())
+    remaining = await limiter.remaining_llm_budget()
+    return UsageRead(
+        llm_runs_remaining_today=remaining // CALLS_PER_RUN,
+        llm_calls_remaining_today=remaining,
+        llm_calls_per_day=settings.LLM_DAILY_REQUEST_BUDGET,
+    )
 
 
 def note_service(session: SessionDep, user: CurrentUser) -> NoteService:
@@ -117,13 +133,20 @@ async def list_documents(
     status_code=status.HTTP_201_CREATED,
     tags=["documents"],
     dependencies=[Depends(rate_limit("30/hour", "upload"))],
+    responses={
+        409: {"description": "The demo's shared storage is full"},
+        413: {"description": "The file is too large or the user's storage quota is used up"},
+    },
 )
 async def upload_document(
     documents: Documents,
     file: Annotated[UploadFile, File(description="PDF, PNG, JPEG or WebP")],
     trip_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> DocumentRead:
-    data = await file.read()
+    limit = settings.MAX_UPLOAD_MB * MB
+    if file.size is not None and file.size > limit:
+        raise PayloadTooLarge(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
+    data = await file.read(limit + 1)  # one byte more is enough to know it is too large
     return DocumentRead.model_validate(
         await documents.upload(file.filename or "document", data, trip_id)
     )
@@ -145,7 +168,7 @@ async def download_document(
         await documents.read(document),
         media_type=document.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{document.filename}"',
+            "Content-Disposition": content_disposition(document.filename),
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },

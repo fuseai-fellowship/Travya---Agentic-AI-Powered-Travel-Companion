@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -76,9 +77,10 @@ async def delete_trip(trip_id: uuid.UUID, service: Service) -> None:
     "/{trip_id}/plan",
     summary="Plan the trip with the agents (Server-Sent Events)",
     response_class=EventSourceResponse,
-    dependencies=[Depends(rate_limit(settings.RATE_LIMIT_PLAN, "plan"))],
+    dependencies=[Depends(rate_limit(lambda: settings.RATE_LIMIT_PLAN, "plan"))],
     responses={
-        200: {"content": {"text/event-stream": {}}, "description": "Stream of AgentEvent objects"}
+        200: {"content": {"text/event-stream": {}}, "description": "Stream of AgentEvent objects"},
+        409: {"description": "The trip is already being planned"},
     },
 )
 async def plan_trip(
@@ -90,11 +92,12 @@ async def plan_trip(
     limiter: LimiterDep,
 ) -> EventSourceResponse:
     planner = PlanningService(session, user, integrations, limiter)
-    trip = await planner.start(trip_id)
+    claim = await planner.start(trip_id)
 
     async def events() -> AsyncIterator[ServerSentEvent]:
-        async for event in planner.stream(trip, data.instructions):
-            yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
+        async with aclosing(planner.stream(claim, data.instructions)) as stream:
+            async for event in stream:
+                yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
 
     return EventSourceResponse(events(), ping=15, headers={"X-Accel-Buffering": "no"})
 

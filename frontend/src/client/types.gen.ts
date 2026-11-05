@@ -149,15 +149,15 @@ export type ConversationUpdate = {
     /**
      * Title
      */
-    title?: string | null;
+    title?: string;
     /**
      * Is Archived
      */
-    is_archived?: boolean | null;
+    is_archived?: boolean;
     /**
      * Is Favorite
      */
-    is_favorite?: boolean | null;
+    is_favorite?: boolean;
     /**
      * Trip Id
      */
@@ -371,8 +371,10 @@ export type ItineraryItemCreate = {
     estimated_cost?: number | string | null;
     /**
      * Position
+     *
+     * Omit to add after the day's items
      */
-    position?: number | null;
+    position?: number;
 };
 
 /**
@@ -441,11 +443,11 @@ export type ItineraryItemUpdate = {
     /**
      * Day
      */
-    day?: string | null;
+    day?: string;
     /**
      * Position
      */
-    position?: number | null;
+    position?: number;
     /**
      * Start Time
      */
@@ -457,12 +459,12 @@ export type ItineraryItemUpdate = {
     /**
      * Title
      */
-    title?: string | null;
+    title?: string;
     /**
      * Description
      */
     description?: string | null;
-    category?: ItemCategory | null;
+    category?: ItemCategory;
     /**
      * Place Name
      */
@@ -530,7 +532,7 @@ export type MeUpdate = {
     /**
      * Currency
      */
-    currency?: string | null;
+    currency?: string;
 };
 
 /**
@@ -634,19 +636,19 @@ export type NoteUpdate = {
     /**
      * Title
      */
-    title?: string | null;
+    title?: string;
     /**
      * Content
      */
-    content?: string | null;
+    content?: string;
     /**
      * Color
      */
-    color?: 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange' | null;
+    color?: 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange';
     /**
      * Is Pinned
      */
-    is_pinned?: boolean | null;
+    is_pinned?: boolean;
     /**
      * Trip Id
      */
@@ -878,6 +880,18 @@ export type TripCreate = {
      * Notes
      */
     notes?: string | null;
+    /**
+     * Latitude
+     */
+    latitude?: number | null;
+    /**
+     * Longitude
+     */
+    longitude?: number | null;
+    /**
+     * Country Code
+     */
+    country_code?: string | null;
 };
 
 /**
@@ -1096,12 +1110,14 @@ export type TripStatus = 'draft' | 'planning' | 'planned' | 'booked' | 'complete
 
 /**
  * TripUpdate
+ *
+ * Omitted fields stay as they are; only nullable columns accept null.
  */
 export type TripUpdate = {
     /**
      * Title
      */
-    title?: string | null;
+    title?: string;
     /**
      * Origin
      */
@@ -1109,15 +1125,15 @@ export type TripUpdate = {
     /**
      * Start Date
      */
-    start_date?: string | null;
+    start_date?: string;
     /**
      * End Date
      */
-    end_date?: string | null;
+    end_date?: string;
     /**
      * Travelers
      */
-    travelers?: number | null;
+    travelers?: number;
     /**
      * Budget
      */
@@ -1125,17 +1141,20 @@ export type TripUpdate = {
     /**
      * Currency
      */
-    currency?: string | null;
-    pace?: TripPace | null;
+    currency?: string;
+    pace?: TripPace;
     /**
      * Interests
      */
-    interests?: Array<string> | null;
+    interests?: Array<string>;
     /**
      * Notes
      */
     notes?: string | null;
-    status?: TripStatus | null;
+    /**
+     * Any status but `planning`, which only the agents set
+     */
+    status?: TripStatus;
 };
 
 /**
@@ -1144,8 +1163,20 @@ export type TripUpdate = {
 export type UsageRead = {
     /**
      * Llm Runs Remaining Today
+     *
+     * About how many plans or chat turns the shared daily budget still allows
      */
     llm_runs_remaining_today: number;
+    /**
+     * Llm Calls Remaining Today
+     *
+     * Model calls left in the daily budget
+     */
+    llm_calls_remaining_today: number;
+    /**
+     * Llm Calls Per Day
+     */
+    llm_calls_per_day: number;
 };
 
 /**
@@ -1491,6 +1522,14 @@ export type DocumentsUploadDocumentData = {
 
 export type DocumentsUploadDocumentErrors = {
     /**
+     * The demo's shared storage is full
+     */
+    409: unknown;
+    /**
+     * The file is too large or the user's storage quota is used up
+     */
+    413: unknown;
+    /**
      * Validation Error
      */
     422: HttpValidationError;
@@ -1762,6 +1801,10 @@ export type TripsPlanTripData = {
 };
 
 export type TripsPlanTripErrors = {
+    /**
+     * The trip is already being planned
+     */
+    409: unknown;
     /**
      * Validation Error
      */

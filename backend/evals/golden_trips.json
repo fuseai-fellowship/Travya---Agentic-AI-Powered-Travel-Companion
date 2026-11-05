@@ -4,5 +4,6 @@
   {"id": "lisbon-food", "destination": "Lisbon, Portugal", "origin": "Paris", "days": 4, "travelers": 2, "budget": 1600, "currency": "EUR", "pace": "balanced", "interests": ["food", "photography"]},
   {"id": "kyoto-temples", "destination": "Kyoto, Japan", "origin": "Tokyo", "days": 3, "travelers": 1, "budget": 120000, "currency": "JPY", "pace": "packed", "interests": ["culture", "history"]},
   {"id": "new-york-weekend", "destination": "New York City, USA", "origin": "Boston", "days": 2, "travelers": 3, "budget": 1500, "currency": "USD", "pace": "packed", "interests": ["shopping", "nightlife", "food"]},
-  {"id": "reykjavik-relaxed", "destination": "Reykjavik, Iceland", "origin": "London", "days": 4, "travelers": 2, "budget": null, "currency": "EUR", "pace": "relaxed", "interests": ["nature", "relaxation"]}
+  {"id": "reykjavik-relaxed", "destination": "Reykjavik, Iceland", "origin": "London", "days": 4, "travelers": 2, "budget": null, "currency": "EUR", "pace": "relaxed", "interests": ["nature", "relaxation"]},
+  {"id": "japan-three-weeks", "destination": "Tokyo, Japan", "origin": "Seoul", "days": 21, "travelers": 2, "budget": 9000, "currency": "USD", "pace": "packed", "interests": ["culture", "food", "nature"]}
 ]

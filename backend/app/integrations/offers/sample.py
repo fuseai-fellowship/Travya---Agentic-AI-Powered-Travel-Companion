@@ -142,7 +142,8 @@ class SampleOffers:
         for tier, stars, kinds, budget_share, usd_range in _HOTEL_TIERS:
             jitter = Decimal(str(round(rng.uniform(0.92, 1.08), 3)))
             if nightly_budget is not None:
-                nightly = _money(nightly_budget * budget_share * jitter)
+                # The budget is the whole group's per night; the rate is per room.
+                nightly = _money(nightly_budget * budget_share * jitter / rooms)
             else:
                 nightly = _money(Decimal(rng.uniform(*usd_range)) * _usd_rate(currency))
             name = f"{destination} {rng.choice(_HOTEL_WORDS)} {rng.choice(kinds)}"

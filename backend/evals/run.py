@@ -60,7 +60,8 @@ async def run_case(case: dict[str, Any], start: date) -> dict[str, Any]:
             )
             planner = PlanningService(session, user, integrations, Limiter("async+memory://"))
             started = time.perf_counter()
-            events = [e async for e in planner.stream(trip, None)]
+            claim = await planner.start(trip.id)
+            events = [e async for e in planner.stream(claim, None)]
             seconds = time.perf_counter() - started
             await session.refresh(trip)
             items = await ItineraryRepository(session, trip.id).all()

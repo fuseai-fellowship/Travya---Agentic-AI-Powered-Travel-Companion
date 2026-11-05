@@ -60,8 +60,11 @@ async def test_llm_budget_is_global(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ratelimit.settings, "LLM_DAILY_REQUEST_BUDGET", 1)
     limiter = Limiter("async+memory://")
+    await limiter.check_llm_budget()
     await limiter.spend_llm_budget()
     assert await limiter.remaining_llm_budget() == 0
+    with pytest.raises(BudgetExhausted):
+        await limiter.check_llm_budget()
     with pytest.raises(BudgetExhausted):
         await limiter.spend_llm_budget()
 
@@ -70,7 +73,8 @@ def test_guide_chunking_and_keys() -> None:
     text = "\n".join(f"Paragraph {i} " + "x" * 300 for i in range(6))
     chunks = _chunks("See", text)
     assert len(chunks) >= 2 and all(c.startswith("See: ") for c in chunks)
-    assert destination_key("  Kathmandu,  Nepal ") == "kathmandu"
+    assert destination_key("  Kathmandu,  Nepal ") == "kathmandu, nepal"
+    assert destination_key("Paris, Texas") != destination_key("Paris")
 
 
 def test_agent_event_sse_shape() -> None:
@@ -94,3 +98,114 @@ def test_firebase_credential_without_google_credentials(monkeypatch: pytest.Monk
     credential = security._credential()
     assert isinstance(credential, security._PublicCredential)
     assert isinstance(credential.get_credential(), google.auth.credentials.AnonymousCredentials)
+
+
+async def test_limiter_falls_back_to_memory_when_redis_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core import ratelimit
+
+    monkeypatch.setattr(ratelimit.settings, "LLM_DAILY_REQUEST_BUDGET", 5)
+    limiter = Limiter("async+redis://localhost:1")  # nothing listens there
+    await limiter.hit("1/minute", "scope", "user")
+    with pytest.raises(RateLimited):
+        await limiter.hit("1/minute", "scope", "user")
+    await limiter.spend_llm_budget()
+    assert await limiter.remaining_llm_budget() == 4
+
+
+async def test_limiter_falls_back_when_redis_stalls(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from app.core import ratelimit
+
+    async def stall(*_: object) -> bool:
+        await asyncio.sleep(5)
+        return True
+
+    monkeypatch.setattr(ratelimit, "STORAGE_TIMEOUT_S", 0.05)
+    limiter = Limiter("async+memory://")
+    monkeypatch.setattr(limiter._shared.moving, "hit", stall)
+    await limiter.hit("1/minute", "scope", "user")
+    with pytest.raises(RateLimited):
+        await limiter.hit("1/minute", "scope", "user")
+
+
+async def test_unhandled_errors_keep_cors_headers() -> None:
+    from httpx import ASGITransport, AsyncClient
+
+    from app.core.config import settings
+    from app.main import create_app
+
+    application = create_app()
+
+    async def boom() -> None:
+        raise RuntimeError("unexpected")
+
+    application.add_api_route("/boom", boom)
+    origin = settings.FRONTEND_ORIGINS[0]
+    transport = ASGITransport(app=application, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as http:
+        response = await http.get("/boom", headers={"Origin": origin})
+        foreign = await http.get("/boom", headers={"Origin": "https://evil.example"})
+    assert response.status_code == 500
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.json()["title"] == "Internal server error"
+    assert "access-control-allow-origin" not in foreign.headers
+
+
+async def test_certificate_fetch_failure_is_a_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    from firebase_admin import auth
+
+    from app.core import security
+    from app.core.errors import UpstreamUnavailable
+
+    def unreachable(*_: object, **__: object) -> None:
+        raise auth.CertificateFetchError("Failed to fetch public key certificates", cause=None)
+
+    monkeypatch.setattr(auth, "verify_id_token", unreachable)
+    with pytest.raises(UpstreamUnavailable):
+        await security.verify_id_token("token")
+
+
+def test_updates_reject_null_for_required_fields() -> None:
+    from pydantic import ValidationError
+
+    from app.schemas.content import ConversationUpdate, MeUpdate, NoteUpdate
+    from app.schemas.trips import ItineraryItemUpdate, TripUpdate
+
+    for model, field in [
+        (TripUpdate, "title"),
+        (TripUpdate, "start_date"),
+        (TripUpdate, "interests"),
+        (ItineraryItemUpdate, "position"),
+        (ItineraryItemUpdate, "day"),
+        (NoteUpdate, "is_pinned"),
+        (ConversationUpdate, "is_archived"),
+        (MeUpdate, "currency"),
+    ]:
+        with pytest.raises(ValidationError):
+            model.model_validate({field: None})
+    assert TripUpdate().model_dump(exclude_unset=True) == {}
+    assert TripUpdate(origin=None, budget=None).model_dump(exclude_unset=True) == {
+        "origin": None,
+        "budget": None,
+    }
+    with pytest.raises(ValidationError, match="set by the agents"):
+        TripUpdate.model_validate({"status": "planning"})
+
+
+def test_sentry_sends_no_locals_bodies_or_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app import main
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(main.settings, "SENTRY_DSN", "https://public@example.ingest.sentry.io/1")
+    monkeypatch.setattr(main.sentry_sdk, "init", lambda **kwargs: captured.update(kwargs))
+    main.init_sentry()
+    assert captured["include_local_variables"] is False
+    assert captured["max_request_body_size"] == "never"
+    scrubber = captured["event_scrubber"]
+    event = {"extra": {"key": "AIza-secret", "nested": {"api_key": "AIza-other"}, "trip": "ok"}}
+    scrubber.scrub_event(event)  # type: ignore[attr-defined]
+    assert "AIza" not in str(event)
+    assert event["extra"]["trip"] == "ok"

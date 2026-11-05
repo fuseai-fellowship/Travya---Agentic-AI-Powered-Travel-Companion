@@ -3,11 +3,14 @@
 import hashlib
 import uuid
 
-from sqlmodel import col
+import anyio
+from sqlalchemy import ColumnElement
+from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.core.errors import InvalidInput
+from app.core.errors import InvalidInput, PayloadTooLarge, QuotaExceeded, StorageFull
+from app.core.limits import MB
 from app.integrations.ports import ObjectStorage
 from app.models import Document, User
 from app.repositories import DocumentRepository, TripRepository, newest_first
@@ -47,28 +50,56 @@ class DocumentService:
         return await self.documents.all(*where, order_by=[newest_first(Document)])
 
     async def upload(self, filename: str, data: bytes, trip_id: uuid.UUID | None) -> Document:
-        if len(data) > settings.MAX_UPLOAD_MB * 1024 * 1024:
-            raise InvalidInput(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
+        if len(data) > settings.MAX_UPLOAD_MB * MB:
+            raise PayloadTooLarge(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
         content_type = sniff_content_type(data)
         if content_type is None:
             raise InvalidInput("Only PDF, PNG, JPEG and WebP files are accepted")
         if trip_id is not None:
             await TripRepository(self.session, self.user.id).get(trip_id)
+        await self._check_quota(len(data))
         key = f"documents/{self.user.id}/{uuid.uuid4()}"
         await self.storage.put(key, data, content_type)
-        document = await self.documents.add(
-            Document(
-                user_id=self.user.id,
-                trip_id=trip_id,
-                filename=safe_filename(filename),
-                content_type=content_type,
-                size_bytes=len(data),
-                sha256=hashlib.sha256(data).hexdigest(),
-                storage_key=key,
+        try:
+            document = await self.documents.add(
+                Document(
+                    user_id=self.user.id,
+                    trip_id=trip_id,
+                    filename=safe_filename(filename),
+                    content_type=content_type,
+                    size_bytes=len(data),
+                    sha256=hashlib.sha256(data).hexdigest(),
+                    storage_key=key,
+                )
             )
-        )
-        await self.session.commit()
+            await self.session.commit()
+        except BaseException:
+            # Bytes without a document row would escape the quota.
+            with anyio.CancelScope(shield=True):
+                await self.session.rollback()
+                await self.storage.delete(key)
+            raise
         return document
+
+    async def _check_quota(self, size: int) -> None:
+        """Per-user and global byte caps; the user's row lock serialises their own uploads."""
+        await self.session.exec(select(User.id).where(User.id == self.user.id).with_for_update())
+        quota_mb = (
+            settings.STORAGE_QUOTA_ANONYMOUS_MB
+            if self.user.is_anonymous
+            else settings.STORAGE_QUOTA_MB
+        )
+        if await self._stored_bytes(col(Document.user_id) == self.user.id) + size > quota_mb * MB:
+            hint = " Sign in with an account for more space." if self.user.is_anonymous else ""
+            raise QuotaExceeded(
+                f"Your documents can take up at most {quota_mb} MB. Delete some files first.{hint}"
+            )
+        if await self._stored_bytes() + size > settings.STORAGE_TOTAL_MB * MB:
+            raise StorageFull("Uploads are paused because the demo's shared storage is full.")
+
+    async def _stored_bytes(self, *where: ColumnElement[bool]) -> int:
+        total = func.coalesce(func.sum(col(Document.size_bytes)), 0)
+        return int((await self.session.exec(select(total).where(*where))).one())
 
     async def get(self, document_id: uuid.UUID) -> Document:
         return await self.documents.get(document_id)

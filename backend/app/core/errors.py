@@ -3,6 +3,8 @@
 Services raise these; routers never build error responses by hand, and stack traces never reach clients.
 """
 
+from collections.abc import Sequence
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -41,6 +43,21 @@ class Conflict(DomainError):
     title = "Conflict"
 
 
+class PayloadTooLarge(DomainError):
+    status = 413
+    title = "Content too large"
+
+
+class QuotaExceeded(DomainError):
+    status = 413
+    title = "Storage quota exceeded"
+
+
+class StorageFull(DomainError):
+    status = 409
+    title = "Storage full"
+
+
 class InvalidInput(DomainError):
     status = 422
     title = "Invalid input"
@@ -75,7 +92,20 @@ def _problem(status: int, title: str, detail: str, request: Request) -> dict[str
     }
 
 
-def install_error_handlers(app: FastAPI) -> None:
+def _cors_headers(request: Request, origins: Sequence[str]) -> dict[str, str]:
+    """CORSMiddleware sits inside Starlette's ServerErrorMiddleware, so a 500 never passes
+    through it; without these headers the browser reports a network error instead."""
+    origin = request.headers.get("origin")
+    if not origin or origin not in origins:
+        return {}
+    return {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Expose-Headers": "X-Request-ID, Retry-After",
+        "Vary": "Origin",
+    }
+
+
+def install_error_handlers(app: FastAPI, *, cors_origins: Sequence[str] = ()) -> None:
     @app.exception_handler(DomainError)
     async def _domain(request: Request, exc: DomainError) -> JSONResponse:
         headers = {}
@@ -105,5 +135,6 @@ def install_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             _problem(500, "Internal server error", "Something went wrong on our side.", request),
             status_code=500,
+            headers=_cors_headers(request, cors_origins),
             media_type="application/problem+json",
         )

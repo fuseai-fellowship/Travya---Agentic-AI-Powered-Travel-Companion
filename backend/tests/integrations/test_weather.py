@@ -141,13 +141,19 @@ def test_wmo_summaries() -> None:
     assert len(WMO_SUMMARIES) == 28
 
 
+DAILY_LIMIT = {
+    "error": True,
+    "reason": "Daily API request limit exceeded. Please try again tomorrow.",
+}
+
+
 @respx.mock
 async def test_climate_falls_back_to_climate_model_when_archive_refuses(
-    http: httpx.AsyncClient,
+    http: httpx.AsyncClient, sleeps: list[float]
 ) -> None:
     from app.integrations.weather.open_meteo import ARCHIVE_URL, CLIMATE_URL
 
-    respx.get(ARCHIVE_URL).mock(return_value=httpx.Response(429, json={"reason": "limit"}))
+    archive = respx.get(ARCHIVE_URL).mock(return_value=httpx.Response(429, json=DAILY_LIMIT))
     respx.get(CLIMATE_URL).mock(
         return_value=httpx.Response(
             200,
@@ -167,4 +173,59 @@ async def test_climate_falls_back_to_climate_model_when_archive_refuses(
     assert all(d.is_climate_estimate for d in days)
     assert days[0].precipitation_mm == 12.0
     assert days[0].weather_code == 63
-    assert days[1].weather_code == 2
+    assert (days[1].weather_code, days[1].summary) == (2, "Mostly dry")
+    # A daily quota will not reset within the back-off: no retries.
+    assert archive.call_count == 1
+    assert sleeps == []
+
+
+async def test_forecast_refused_falls_back_to_last_years_weather(
+    http: httpx.AsyncClient, respx_mock: respx.MockRouter, sleeps: list[float]
+) -> None:
+    start, end = TODAY + timedelta(days=2), TODAY + timedelta(days=4)
+    forecast = respx_mock.get(FORECAST).respond(429, json=DAILY_LIMIT)
+    archive = respx_mock.get(ARCHIVE).respond(
+        json=_daily(_span(date(2025, 11, 7), date(2025, 11, 9)), probability=False)
+    )
+
+    days = await _weather(http).daily(POKHARA, start, end)
+
+    assert forecast.call_count == 1
+    assert archive.calls.last.request.url.params["start_date"] == "2025-11-07"
+    assert [d.day for d in days] == _span(start, end)
+    assert all(d.is_climate_estimate for d in days)
+    assert sleeps == []
+
+
+async def test_past_trip_uses_observed_weather(
+    http: httpx.AsyncClient, respx_mock: respx.MockRouter
+) -> None:
+    start, end = date(2026, 6, 1), date(2026, 6, 3)
+    forecast = respx_mock.get(FORECAST).respond(400, json={"reason": "out of range"})
+    archive = respx_mock.get(ARCHIVE).respond(json=_daily(_span(start, end), probability=False))
+
+    days = await _weather(http).daily(POKHARA, start, end)
+
+    assert forecast.call_count == 0
+    params = archive.calls.last.request.url.params
+    assert (params["start_date"], params["end_date"]) == ("2026-06-01", "2026-06-03")
+    assert [d.day for d in days] == _span(start, end)
+    assert not any(d.is_climate_estimate for d in days)
+
+
+async def test_trip_ending_this_week_splits_observed_and_forecast(
+    http: httpx.AsyncClient, respx_mock: respx.MockRouter
+) -> None:
+    start, end = TODAY - timedelta(days=9), TODAY + timedelta(days=1)
+    archive = respx_mock.get(ARCHIVE).respond(
+        json=_daily(_span(start, TODAY - timedelta(days=7)), probability=False)
+    )
+    forecast = respx_mock.get(FORECAST).respond(
+        json=_daily(_span(TODAY - timedelta(days=6), end), probability=True)
+    )
+
+    days = await _weather(http).daily(POKHARA, start, end)
+
+    assert archive.calls.last.request.url.params["end_date"] == "2026-10-29"
+    assert forecast.calls.last.request.url.params["start_date"] == "2026-10-30"
+    assert [d.day for d in days] == _span(start, end)

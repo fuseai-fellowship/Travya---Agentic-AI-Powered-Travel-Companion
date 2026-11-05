@@ -24,9 +24,13 @@ from app.services.knowledge import KnowledgeService
 
 log = get_logger(__name__)
 
+# Keys match the interests the web app offers (tripSchema.ts INTERESTS), plus "photography".
 INTEREST_CATEGORIES: dict[str, list[PoiCategory]] = {
     "culture": ["museum", "attraction", "religious"],
     "history": ["museum", "attraction", "religious"],
+    "art": ["museum", "attraction"],
+    "architecture": ["attraction", "religious"],
+    "viewpoints": ["viewpoint"],
     "food": ["restaurant", "cafe"],
     "nature": ["park", "viewpoint"],
     "adventure": ["viewpoint", "park", "attraction"],
@@ -145,13 +149,14 @@ def build_scouts(integrations: Integrations, knowledge: KnowledgeService) -> lis
 
     async def guide(trip: dict[str, Any]) -> Finding:
         destination = trip["destination"]
-        if not await knowledge.ensure_indexed(destination):
+        guide_url = await knowledge.ensure_indexed(destination)
+        if not guide_url:
             return f"No travel guide found for {destination}.", {"guide": []}
         query = (
             f"Best things to do, food, getting around and safety for a {trip['pace']} trip; interests: "
             + (", ".join(trip.get("interests") or []) or "sightseeing")
         )
-        snippets = await knowledge.search(destination, query, k=8)
+        snippets = await knowledge.search(guide_url, query, k=8)
         data = [
             {"title": s.title, "text": s.text, "url": s.url, "source": s.source} for s in snippets
         ]

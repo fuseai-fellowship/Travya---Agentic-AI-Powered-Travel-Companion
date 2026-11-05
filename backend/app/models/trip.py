@@ -70,6 +70,8 @@ class Trip(Table, table=True):
     cover_photo_url: str | None = Field(default=None, max_length=1000)
     plan: dict[str, Any] | None = Field(default=None, sa_type=JSONB)
     planned_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    # Set while the agents run; a run older than the stale window is treated as dead.
+    planning_started_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     created_at: datetime = created_at_field()
     updated_at: datetime = updated_at_field()
 

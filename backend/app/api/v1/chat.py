@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -90,7 +91,7 @@ async def list_messages(
     "/{conversation_id}/messages",
     summary="Send a message and stream the assistant's reply (Server-Sent Events)",
     response_class=EventSourceResponse,
-    dependencies=[Depends(rate_limit(settings.RATE_LIMIT_CHAT, "chat"))],
+    dependencies=[Depends(rate_limit(lambda: settings.RATE_LIMIT_CHAT, "chat"))],
     responses={
         200: {"content": {"text/event-stream": {}}, "description": "Stream of AgentEvent objects"}
     },
@@ -101,7 +102,8 @@ async def send_message(
     conversation = await service.start(conversation_id, data.content)
 
     async def events() -> AsyncIterator[ServerSentEvent]:
-        async for event in service.reply(conversation, data.content):
-            yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
+        async with aclosing(service.reply(conversation, data.content)) as stream:
+            async for event in stream:
+                yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
 
     return EventSourceResponse(events(), ping=15, headers={"X-Accel-Buffering": "no"})

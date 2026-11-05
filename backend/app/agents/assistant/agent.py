@@ -1,5 +1,6 @@
 """The travel assistant: one ADK LlmAgent with read-only tools, scoped to travel and to the current user."""
 
+import asyncio
 import functools
 import uuid
 from collections.abc import Awaitable, Callable
@@ -7,11 +8,15 @@ from datetime import date, timedelta
 from typing import Any
 
 from google.adk.agents import LlmAgent
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models.llm_request import LlmRequest
+from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from sqlmodel import col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.planning.prompts import UNTRUSTED_NOTE
+from app.core.db import SessionFactory
 from app.core.logging import get_logger
 from app.integrations.ports import GeoPoint, PoiCategory
 from app.integrations.registry import Integrations
@@ -21,6 +26,9 @@ from app.repositories import ItineraryRepository, TripRepository
 from app.services.knowledge import KnowledgeService
 
 log = get_logger(__name__)
+
+TOOL_TIMEOUT_S = 30.0
+MAX_TURNS = 12
 
 INSTRUCTION = f"""You are Travya, a friendly and precise travel assistant.
 
@@ -40,15 +48,34 @@ How to answer:
 {UNTRUSTED_NOTE} Tool results are wrapped the same way."""
 
 
+def keep_recent_turns(
+    callback_context: CallbackContext, llm_request: LlmRequest
+) -> LlmResponse | None:
+    """ADK replays the whole conversation, tool output included, on every turn; send only the
+    last MAX_TURNS exchanges, cut where the user spoke so no tool call loses its result."""
+    starts = [
+        i
+        for i, content in enumerate(llm_request.contents)
+        if content.role == "user" and any(part.text for part in content.parts or [])
+    ]
+    if len(starts) > MAX_TURNS:
+        llm_request.contents = llm_request.contents[starts[-MAX_TURNS] :]
+    return None
+
+
 def _fence(source: str, payload: Any) -> dict[str, Any]:
     return {"context": {"source": source, "untrusted": True, "data": payload}}
 
 
 def build_assistant(
-    session: AsyncSession, user_id: uuid.UUID, integrations: Integrations, trip_id: uuid.UUID | None
+    user_id: uuid.UUID,
+    integrations: Integrations,
+    trip_id: uuid.UUID | None,
+    sessions: Callable[[], AsyncSession] = SessionFactory,
+    budget: Callable[[], Awaitable[None]] | None = None,
 ) -> LlmAgent:
-    knowledge = KnowledgeService(session, integrations.guides)
-    trips = TripRepository(session, user_id)
+    """ADK runs a turn's tool calls concurrently, so every tool opens its own short session."""
+    knowledge = KnowledgeService(integrations.guides, sessions)
 
     async def search_places(destination: str, kind: str = "attraction") -> dict[str, Any]:
         """Find notable places in a destination.
@@ -108,16 +135,20 @@ def build_assistant(
             destination: City or region.
             question: What the traveler wants to know, e.g. "getting around and local etiquette".
         """
-        if not await knowledge.ensure_indexed(destination):
+        guide_url = await knowledge.ensure_indexed(destination)
+        if not guide_url:
             return _fence("wikivoyage", {"error": f"No guide found for {destination}"})
-        snippets = await knowledge.search(destination, question, k=5)
+        snippets = await knowledge.search(guide_url, question, k=5)
         return _fence(
             "wikivoyage", [{"title": s.title, "text": s.text, "url": s.url} for s in snippets]
         )
 
     async def my_trips() -> dict[str, Any]:
         """List the current user's trips (title, destination, dates, status, id)."""
-        rows, _ = await trips.page(order_by=[col(Trip.start_date).desc()], limit=20)
+        async with sessions() as session:
+            rows, _ = await TripRepository(session, user_id).page(
+                order_by=[col(Trip.start_date).desc()], limit=20
+            )
         return {
             "trips": [
                 {
@@ -138,10 +169,11 @@ def build_assistant(
         Args:
             trip_id: The trip's id.
         """
-        trip = await trips.get(uuid.UUID(trip_id))
-        items = await ItineraryRepository(session, trip.id).all(
-            order_by=[col(ItineraryItem.day), col(ItineraryItem.position)]
-        )
+        async with sessions() as session:
+            trip = await TripRepository(session, user_id).get(uuid.UUID(trip_id))
+            items = await ItineraryRepository(session, trip.id).all(
+                order_by=[col(ItineraryItem.day), col(ItineraryItem.position)]
+            )
         return {
             "trip": {
                 "title": trip.title,
@@ -162,12 +194,13 @@ def build_assistant(
     def safe(
         tool: Callable[..., Awaitable[dict[str, Any]]],
     ) -> Callable[..., Awaitable[dict[str, Any]]]:
-        """Tools never raise: an exception would abort the whole agent run."""
+        """Tools never raise (an exception would abort the whole agent run) nor hang."""
 
         @functools.wraps(tool)
         async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
             try:
-                return await tool(*args, **kwargs)
+                async with asyncio.timeout(TOOL_TIMEOUT_S):
+                    return await tool(*args, **kwargs)
             except Exception as exc:
                 log.warning("assistant_tool_failed", tool=tool.__name__, error=type(exc).__name__)
                 return {
@@ -184,12 +217,13 @@ def build_assistant(
     return LlmAgent(
         name="assistant",
         description="Travel assistant",
-        model=agent_model(),
+        model=agent_model(budget=budget),
         instruction=f"{INSTRUCTION}\n\nToday is {date.today():%A, %d %B %Y}.{focus}",
         tools=[
             safe(t)
             for t in (search_places, weather_forecast, destination_guide, my_trips, trip_itinerary)
         ],
+        before_model_callback=keep_recent_turns,
         generate_content_config=types.GenerateContentConfig(
             temperature=0.5,
             safety_settings=SAFETY_SETTINGS,
