@@ -78,3 +78,42 @@ async def test_itinerary_crud_and_day_bounds(alice: AsyncClient, trip: dict[str,
     assert [i["title"] for i in (await alice.get(base)).json()] == ["Lunch", "Patan Durbar Square"]
     assert (await alice.delete(f"{base}/{item['id']}")).status_code == 204
     assert len((await alice.get(base)).json()) == 1
+
+
+@pytest.mark.parametrize(
+    ("change", "status", "message"),
+    [
+        ({"end_date": "2030-01-01"}, 422, "at most 21 days"),
+        ({"start_date": "2027-03-13"}, 422, "on or after start_date"),
+        ({"start_date": None}, 422, "valid date"),
+        ({"title": None}, 422, "valid string"),
+        ({"status": "planning"}, 422, "set by the agents"),
+    ],
+)
+async def test_update_validation(
+    alice: AsyncClient,
+    trip: dict[str, object],
+    change: dict[str, object],
+    status: int,
+    message: str,
+) -> None:
+    response = await alice.patch(f"/trips/{trip['id']}", json=change)
+    assert response.status_code == status
+    assert message in response.text
+
+
+async def test_changing_dates_keeps_items_visible(
+    alice: AsyncClient, trip: dict[str, object]
+) -> None:
+    await alice.post(f"/trips/{trip['id']}/plan", json={})
+    base = f"/trips/{trip['id']}/itinerary"
+    assert any(i["day"] == "2027-03-12" for i in (await alice.get(base)).json())
+    # The agents' items on the dropped day go; re-planning brings them back.
+    shorter = await alice.patch(f"/trips/{trip['id']}", json={"end_date": "2027-03-11"})
+    assert shorter.status_code == 200
+    assert all(i["day"] <= "2027-03-11" for i in (await alice.get(base)).json())
+    # The user's own items block the change until they are moved.
+    await alice.post(base, json={"day": "2027-03-11", "title": "Cooking class"})
+    blocked = await alice.patch(f"/trips/{trip['id']}", json={"end_date": "2027-03-10"})
+    assert blocked.status_code == 409
+    assert (await alice.get(f"/trips/{trip['id']}")).json()["end_date"] == "2027-03-11"

@@ -165,3 +165,30 @@ async def test_certificate_fetch_failure_is_a_503(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(auth, "verify_id_token", unreachable)
     with pytest.raises(UpstreamUnavailable):
         await security.verify_id_token("token")
+
+
+def test_updates_reject_null_for_required_fields() -> None:
+    from pydantic import ValidationError
+
+    from app.schemas.content import ConversationUpdate, MeUpdate, NoteUpdate
+    from app.schemas.trips import ItineraryItemUpdate, TripUpdate
+
+    for model, field in [
+        (TripUpdate, "title"),
+        (TripUpdate, "start_date"),
+        (TripUpdate, "interests"),
+        (ItineraryItemUpdate, "position"),
+        (ItineraryItemUpdate, "day"),
+        (NoteUpdate, "is_pinned"),
+        (ConversationUpdate, "is_archived"),
+        (MeUpdate, "currency"),
+    ]:
+        with pytest.raises(ValidationError):
+            model.model_validate({field: None})
+    assert TripUpdate().model_dump(exclude_unset=True) == {}
+    assert TripUpdate(origin=None, budget=None).model_dump(exclude_unset=True) == {
+        "origin": None,
+        "budget": None,
+    }
+    with pytest.raises(ValidationError, match="set by the agents"):
+        TripUpdate.model_validate({"status": "planning"})

@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.errors import Conflict, InvalidInput
@@ -36,6 +36,7 @@ from app.schemas.trips import (
     ItineraryItemUpdate,
     TripCreate,
     TripUpdate,
+    check_dates,
 )
 from app.services.documents import DocumentService
 
@@ -135,11 +136,26 @@ class TripService:
         changes = data.model_dump(exclude_unset=True)
         start = changes.get("start_date", trip.start_date)
         end = changes.get("end_date", trip.end_date)
-        if end < start:
-            raise InvalidInput("end_date must be on or after start_date")
+        if problem := check_dates(start, end):
+            raise InvalidInput(problem)
+        if (start, end) != (trip.start_date, trip.end_date):
+            await self._fit_items(trip, start, end)
         trip = await self.trips.update(trip, changes)
         await self.session.commit()
         return trip
+
+    async def _fit_items(self, trip: Trip, start: date, end: date) -> None:
+        """New dates must not hide items: the agents' are dropped (re-planning restores them),
+        the user's own block the change until they are moved."""
+        items = ItineraryRepository(self.session, trip.id)
+        outside = or_(col(ItineraryItem.day) < start, col(ItineraryItem.day) > end)
+        stranded = await items.all(outside, col(ItineraryItem.source) == "user")
+        if stranded:
+            raise Conflict(
+                f"{len(stranded)} of your own itinerary items fall outside the new dates. "
+                "Move or delete them first."
+            )
+        await items.delete_where(outside, col(ItineraryItem.source) == "agent")
 
     async def delete(self, trip_id: uuid.UUID) -> None:
         trip = await self.trips.get(trip_id)
