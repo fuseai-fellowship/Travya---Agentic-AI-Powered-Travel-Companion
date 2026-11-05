@@ -124,9 +124,7 @@ class ChatService:
             text = OFFLINE_REPLY
             yield AgentEvent(agent="assistant", kind="token", message=text)
         else:
-            agent = build_assistant(
-                self.session, self.user.id, self.integrations, conversation.trip_id
-            )
+            agent = build_assistant(self.user.id, self.integrations, conversation.trip_id)
             runner = Runner(app_name=APP_NAME, agent=agent, session_service=self.adk_sessions)
             user_id, session_id = str(self.user.id), str(conversation.id)
             if not await self.adk_sessions.get_session(

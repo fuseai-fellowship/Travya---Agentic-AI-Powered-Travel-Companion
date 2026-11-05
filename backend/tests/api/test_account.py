@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
 
@@ -116,3 +118,26 @@ async def test_storage_quotas(
     assert (await guest.post("/documents", files=small)).status_code == 413
     assert (await client_for(BOB).post("/documents", files=small)).status_code == 201
     assert (await guest.get("/documents")).json() == []
+
+
+async def test_assistant_db_tools_run_concurrently(
+    app: Any, alice: AsyncClient, trip: dict[str, object]
+) -> None:
+    """ADK runs a turn's function calls with asyncio.gather; each needs its own session."""
+    import asyncio
+    import uuid
+
+    from app.agents.assistant.agent import build_assistant
+
+    me = (await alice.get("/me")).json()
+    llm = build_assistant(uuid.UUID(me["id"]), app.state.integrations, None)
+    tools = {tool.__name__: tool for tool in llm.tools}
+    results = await asyncio.gather(
+        tools["my_trips"](),
+        tools["trip_itinerary"](trip_id=str(trip["id"])),
+        tools["destination_guide"](destination="Kathmandu", question="food"),
+        tools["my_trips"](),
+    )
+    assert all("error" not in result for result in results), results
+    assert results[0]["trips"][0]["id"] == trip["id"]
+    assert results[1]["trip"]["destination"] == "Kathmandu, Nepal"

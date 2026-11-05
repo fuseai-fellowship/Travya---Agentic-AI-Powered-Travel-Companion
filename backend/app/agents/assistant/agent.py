@@ -1,5 +1,6 @@
 """The travel assistant: one ADK LlmAgent with read-only tools, scoped to travel and to the current user."""
 
+import asyncio
 import functools
 import uuid
 from collections.abc import Awaitable, Callable
@@ -12,6 +13,7 @@ from sqlmodel import col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.planning.prompts import UNTRUSTED_NOTE
+from app.core.db import SessionFactory
 from app.core.logging import get_logger
 from app.integrations.ports import GeoPoint, PoiCategory
 from app.integrations.registry import Integrations
@@ -21,6 +23,8 @@ from app.repositories import ItineraryRepository, TripRepository
 from app.services.knowledge import KnowledgeService
 
 log = get_logger(__name__)
+
+TOOL_TIMEOUT_S = 30.0
 
 INSTRUCTION = f"""You are Travya, a friendly and precise travel assistant.
 
@@ -45,10 +49,13 @@ def _fence(source: str, payload: Any) -> dict[str, Any]:
 
 
 def build_assistant(
-    session: AsyncSession, user_id: uuid.UUID, integrations: Integrations, trip_id: uuid.UUID | None
+    user_id: uuid.UUID,
+    integrations: Integrations,
+    trip_id: uuid.UUID | None,
+    sessions: Callable[[], AsyncSession] = SessionFactory,
 ) -> LlmAgent:
-    knowledge = KnowledgeService(session, integrations.guides)
-    trips = TripRepository(session, user_id)
+    """ADK runs a turn's tool calls concurrently, so every tool opens its own short session."""
+    knowledge = KnowledgeService(integrations.guides, sessions)
 
     async def search_places(destination: str, kind: str = "attraction") -> dict[str, Any]:
         """Find notable places in a destination.
@@ -117,7 +124,10 @@ def build_assistant(
 
     async def my_trips() -> dict[str, Any]:
         """List the current user's trips (title, destination, dates, status, id)."""
-        rows, _ = await trips.page(order_by=[col(Trip.start_date).desc()], limit=20)
+        async with sessions() as session:
+            rows, _ = await TripRepository(session, user_id).page(
+                order_by=[col(Trip.start_date).desc()], limit=20
+            )
         return {
             "trips": [
                 {
@@ -138,10 +148,11 @@ def build_assistant(
         Args:
             trip_id: The trip's id.
         """
-        trip = await trips.get(uuid.UUID(trip_id))
-        items = await ItineraryRepository(session, trip.id).all(
-            order_by=[col(ItineraryItem.day), col(ItineraryItem.position)]
-        )
+        async with sessions() as session:
+            trip = await TripRepository(session, user_id).get(uuid.UUID(trip_id))
+            items = await ItineraryRepository(session, trip.id).all(
+                order_by=[col(ItineraryItem.day), col(ItineraryItem.position)]
+            )
         return {
             "trip": {
                 "title": trip.title,
@@ -162,12 +173,13 @@ def build_assistant(
     def safe(
         tool: Callable[..., Awaitable[dict[str, Any]]],
     ) -> Callable[..., Awaitable[dict[str, Any]]]:
-        """Tools never raise: an exception would abort the whole agent run."""
+        """Tools never raise (an exception would abort the whole agent run) nor hang."""
 
         @functools.wraps(tool)
         async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
             try:
-                return await tool(*args, **kwargs)
+                async with asyncio.timeout(TOOL_TIMEOUT_S):
+                    return await tool(*args, **kwargs)
             except Exception as exc:
                 log.warning("assistant_tool_failed", tool=tool.__name__, error=type(exc).__name__)
                 return {

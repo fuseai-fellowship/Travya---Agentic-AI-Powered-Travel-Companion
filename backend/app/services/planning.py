@@ -268,7 +268,7 @@ class PlanningService:
             yield AgentEvent(
                 agent="travya", kind="started", message=f"Planning your trip to {trip.destination}"
             )
-            knowledge = KnowledgeService(self.session, self.integrations.guides)
+            knowledge = KnowledgeService(self.integrations.guides)
             pipeline = build_planning_pipeline(self.integrations, knowledge)
             runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
             adk_session = await _sessions.create_session(
