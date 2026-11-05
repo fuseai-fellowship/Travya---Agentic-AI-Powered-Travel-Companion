@@ -352,7 +352,8 @@ re-normalised for cosine distance. Offline, they are deterministic SHA-256 based
 
 | Control | Where |
 |---|---|
-| Global daily budget: one unit per planning run and per chat message, `503 Demo limit reached` when spent | `core/ratelimit.py` `spend_llm_budget`, `LLM_DAILY_REQUEST_BUDGET` |
+| Global daily budget: one unit per model call, checked before a run starts (`503 Demo limit reached`) and spent by `FallbackGemini` | `core/ratelimit.py` `spend_llm_budget`, `llm/client.py`, `LLM_DAILY_REQUEST_BUDGET` |
+| Overall deadline per plan (240 s) and chat turn (120 s); a model that keeps failing is tried last for a minute | `agents/deadline.py`, `llm/client.py` |
 | Per-user limits: 6 plans per hour, 40 chat messages per hour, 120 requests per minute | `RATE_LIMIT_*`, `api/deps.py` |
 | Research spends no tokens, has a 30 s budget per scout, and is cached in Redis for hours to days | `scouts.py`, `integrations/caching.py` |
 | Prompts never accumulate history (`include_contents="none"`) and research is size-capped | `pipeline.py`, `prompts.py` |

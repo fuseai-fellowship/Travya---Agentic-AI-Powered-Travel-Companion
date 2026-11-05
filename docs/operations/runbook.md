@@ -63,7 +63,7 @@ without personal data, with 10 % trace sampling.
 | `RATE_LIMIT_DEFAULT` | `120/minute` | Per user, every authenticated request (moving window) |
 | `RATE_LIMIT_PLAN` | `6/hour` | Per user, planning runs |
 | `RATE_LIMIT_CHAT` | `40/hour` | Per user, chat messages |
-| `LLM_DAILY_REQUEST_BUDGET` | `400` | All users together, planning runs plus chat messages, fixed 24-hour window |
+| `LLM_DAILY_REQUEST_BUDGET` | `400` | All users together, one unit per model call, fixed 24-hour window |
 
 Upload (30 per hour), photo refresh (10 per hour) and autocomplete (120 per minute) limits are set in
 the routers.
