@@ -9,7 +9,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
 [![React 19](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](frontend/)
 
-**Live demo:** <https://travya.pages.dev> (coming soon) · **Docs:** <https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/>
+**Live demo:** <https://travya.pages.dev> (coming soon) · **Docs:** <https://travya-docs.pages.dev/>
 
 ![The agent timeline and live map while Travya plans a trip](docs/assets/screenshot-planning.png)
 
@@ -57,7 +57,7 @@ flowchart LR
     saved --> confirm --> booked
 ```
 
-The planner is an ADK 2.x `Workflow` graph: the scouts fan out from `START`, a join node waits for all four, and the quality gate routes to the reviser or to the end. The scouts are plain code and spend no tokens. Third-party text reaches the model only inside fenced, untrusted `<context>` blocks, output must match a Pydantic schema, and no agent can book: confirming is a separate API call made by the user. Details: [Agents](https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/architecture/agents/).
+The planner is an ADK 2.x `Workflow` graph: the scouts fan out from `START`, a join node waits for all four, and the quality gate routes to the reviser or to the end. The scouts are plain code and spend no tokens. Third-party text reaches the model only inside fenced, untrusted `<context>` blocks, output must match a Pydantic schema, and no agent can book: confirming is a separate API call made by the user. Details: [Agents](https://travya-docs.pages.dev/architecture/agents/).
 
 ## Architecture
 
@@ -160,7 +160,7 @@ Tests and linters run on the host (needs [uv](https://docs.astral.sh/uv/) and No
 
 ## Documentation
 
-The [documentation site](https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/) is built from [`docs/`](docs):
+The [documentation site](https://travya-docs.pages.dev/) is built from [`docs/`](docs):
 
 - [Getting started](docs/getting-started.md): setup, environment variables, offline mode, tests
 - Architecture: [overview](docs/architecture/overview.md), [agents](docs/architecture/agents.md), [data model](docs/architecture/data-model.md), [integrations](docs/architecture/integrations.md)

@@ -48,4 +48,4 @@ read by `app/core/config.py`.
 - [Data model](../docs/architecture/data-model.md)
 - [Integrations](../docs/architecture/integrations.md)
 - [API reference](../docs/api.md)
-- Published site: <https://fuseai-fellowship.github.io/Travya---Agentic-AI-Powered-Travel-Companion/>
+- Published site: <https://travya-docs.pages.dev/>

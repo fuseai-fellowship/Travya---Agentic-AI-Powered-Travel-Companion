@@ -103,16 +103,17 @@ wired secrets. Terraform ignores image changes, so deploys and `terraform apply`
 
     The service and the job start on a placeholder image; the first deploy replaces it.
 
-7. **Cloudflare.** Create a Pages project named `travya` for direct upload, and an API token that can
-   edit Cloudflare Pages.
+7. **Cloudflare.** Create two Pages projects for direct upload, `travya` (the app) and `travya-docs`
+   (this site; GitHub Pages is disabled for the organisation), and an API token that can edit
+   Cloudflare Pages.
 8. **GitHub.** In the `production` environment (or as repository variables) set `GCP_PROJECT_ID`,
    `GCP_REGION`, `WIF_PROVIDER`, `DEPLOY_SA`, `CF_ACCOUNT_ID`, `VITE_FIREBASE_API_KEY`,
    `VITE_FIREBASE_AUTH_DOMAIN`, and optionally `VITE_FIREBASE_PROJECT_ID` (defaults to the GCP project)
    and `VITE_API_URL` (defaults to the Cloud Run URL). Add the secret `CLOUDFLARE_API_TOKEN`, and
    optionally `RELEASE_PLEASE_TOKEN` (a fine-grained token with contents and pull-request write access)
-   so that release PRs trigger CI.
-9. **Repository settings.** Require the `ci-ok` check on `dev` and `main`, and set Pages to deploy from
-   GitHub Actions for this documentation site.
+   plus the variable `RELEASE_PLEASE=true` to turn on automated release PRs; the organisation does
+   not let the workflow token open pull requests, so release-please is skipped without them.
+9. **Repository settings.** Require the `ci-ok` check on `dev` and `main`.
 10. **First deploy.** Merge a release PR into `main`, or run the workflow by hand:
     `gh workflow run deploy.yml --ref main`.
 
@@ -160,8 +161,9 @@ flowchart LR
   and then by the new revision, so the code that migrated the schema is the code that serves it. The
   smoke test retries `/api/v1/health/ready` for about a minute. The web build pins the CSP
   `connect-src` in `_headers` to the API's origin before upload.
-- **Docs** (`docs.yml`) build with `mkdocs build --strict` on PRs that touch them and publish to GitHub
-  Pages from `main`.
+- **Docs** (`docs.yml`) build with `mkdocs build --strict` on PRs that touch them and publish to the
+  `travya-docs` Cloudflare Pages project from `main`. Until the Cloudflare variables exist, the deploy
+  job is skipped rather than failing; the same holds for the app deploy and release-please.
 - **Dependabot** opens grouped weekly updates against `dev`; **OpenSSF Scorecard** runs weekly and on
   pushes to `dev`.
 
