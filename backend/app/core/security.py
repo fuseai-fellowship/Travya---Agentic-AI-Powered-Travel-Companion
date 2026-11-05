@@ -56,7 +56,10 @@ async def verify_id_token(token: str) -> Principal:
 
 
 async def delete_firebase_user(uid: str) -> None:
+    """Best effort: hosts without Google credentials leave this to the client (Firebase deleteUser)."""
     try:
         await anyio.to_thread.run_sync(lambda: auth.delete_user(uid))
     except auth.UserNotFoundError:
         log.info("firebase_user_already_deleted", uid=uid)
+    except Exception as exc:
+        log.warning("firebase_user_not_deleted", uid=uid, error=type(exc).__name__)

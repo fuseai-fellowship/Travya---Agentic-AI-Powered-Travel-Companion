@@ -14,7 +14,7 @@ async def test_requires_authentication(anonymous: AsyncClient) -> None:
 
 
 async def test_health_is_public(anonymous: AsyncClient) -> None:
-    assert (await anonymous.get("/health/live")).json() == {"status": "ok"}
+    assert (await anonymous.get("/health/live")).json() == {"status": "ok", "build": "dev"}
     assert (await anonymous.get("/health/ready")).json() == {"status": "ok"}
 
 

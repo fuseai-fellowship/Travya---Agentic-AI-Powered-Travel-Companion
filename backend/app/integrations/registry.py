@@ -39,6 +39,7 @@ from app.integrations.ports import (
 from app.integrations.routing import FallbackRouter
 from app.integrations.routing.ors import OrsRouter
 from app.integrations.routing.osrm import OsrmRouter
+from app.integrations.storage.database import DatabaseStorage
 from app.integrations.storage.gcs import GcsStorage
 from app.integrations.storage.local import LocalStorage
 from app.integrations.weather.open_meteo import OpenMeteoWeather
@@ -93,6 +94,8 @@ def build_integrations(settings: Settings, http: httpx.AsyncClient) -> Integrati
 
 
 def _storage(settings: Settings) -> ObjectStorage:
+    if settings.STORAGE_BACKEND == "database":
+        return DatabaseStorage()
     if settings.STORAGE_BACKEND == "gcs":
         if not settings.GCS_BUCKET:
             raise ValueError("STORAGE_BACKEND=gcs needs GCS_BUCKET")
