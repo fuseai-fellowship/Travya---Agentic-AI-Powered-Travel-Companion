@@ -32,8 +32,12 @@ class Settings(BaseSettings):
 
     # Gemini (Google AI Studio free tier)
     GEMINI_API_KEY: SecretStr | None = None
+    # Extra keys, comma-separated. Used only when a key is revoked or invalid (401/403), never to
+    # get around a project's rate limits.
+    GEMINI_BACKUP_API_KEYS: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-flash-latest"
-    GEMINI_FALLBACK_MODEL: str = "gemini-flash-lite-latest"
+    # Tried in order when the previous model is overloaded (503/504) or times out.
+    GEMINI_FALLBACK_MODELS: str = "gemini-3.5-flash-lite,gemini-3.1-flash-lite"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # batches; -2 merges inputs
     EMBEDDING_DIM: int = 768
     LLM_DAILY_REQUEST_BUDGET: int = Field(
@@ -58,6 +62,16 @@ class Settings(BaseSettings):
     GCS_BUCKET: str | None = None
     MAX_UPLOAD_MB: int = 10
 
+    def gemini_api_keys(self) -> list[str]:
+        """Primary key first, then backups; blanks and duplicates removed."""
+        raw = [self.GEMINI_API_KEY.get_secret_value()] if self.GEMINI_API_KEY else []
+        if self.GEMINI_BACKUP_API_KEYS:
+            raw += self.GEMINI_BACKUP_API_KEYS.get_secret_value().split(",")
+        return list(dict.fromkeys(k.strip() for k in raw if k.strip()))
+
+    def gemini_fallback_models(self) -> list[str]:
+        return [m.strip() for m in self.GEMINI_FALLBACK_MODELS.split(",") if m.strip()]
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT in ("staging", "production")
@@ -69,7 +83,7 @@ class Settings(BaseSettings):
         missing = [
             name
             for name, value in (
-                ("GEMINI_API_KEY", self.GEMINI_API_KEY),
+                ("GEMINI_API_KEY", self.gemini_api_keys()),
                 ("REDIS_URL", self.REDIS_URL),
                 ("GCS_BUCKET", self.GCS_BUCKET if self.STORAGE_BACKEND == "gcs" else "n/a"),
             )
