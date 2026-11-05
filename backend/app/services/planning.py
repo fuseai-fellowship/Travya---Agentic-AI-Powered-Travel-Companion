@@ -19,8 +19,10 @@ from pydantic import ValidationError
 from sqlmodel import col, or_, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.agents.deadline import deadline_in, until
 from app.agents.events import AGENT_LABELS, AgentEvent
 from app.agents.planning.pipeline import build_planning_pipeline
+from app.core.config import settings
 from app.core.db import SessionFactory
 from app.core.errors import BudgetExhausted, Conflict
 from app.core.logging import get_logger
@@ -41,6 +43,7 @@ _sessions = InMemorySessionService()  # planning runs are one-shot; nothing to r
 MAX_MONEY = Decimal("9999999999.99")  # NUMERIC(12, 2)
 UNAVAILABLE = "Planning failed because an AI or data service is unavailable. Please retry shortly."
 INCOMPLETE = "The planner returned an incomplete plan. Please try again."
+TOO_SLOW = "The AI models are slow right now and planning ran out of time. Please retry shortly."
 
 
 class PlanningFailed(Exception):
@@ -288,22 +291,28 @@ class PlanningService:
             seen: set[str] = set()
             scouts_left = {"weather_scout", "places_scout", "guide_scout", "offers_scout"}
             failures: dict[str, str] = {}  # error code → message
-            async with aclosing(
-                runner.run_async(
-                    user_id=user_id,
-                    session_id=adk_session.id,
-                    new_message=types.Content(
-                        role="user", parts=[types.Part(text="Plan this trip.")]
-                    ),
-                )
-            ) as events:
-                async for event in events:
-                    if event.error_code or event.error_message:
-                        failures[event.error_code or "error"] = event.error_message or ""
-                    for out in self._translate(event, seen):
-                        yield out
-                        for following in self._next_stage(out, scouts_left, seen):
-                            yield following
+            deadline = deadline_in(settings.PLAN_DEADLINE_SECONDS)
+            try:
+                async with aclosing(
+                    runner.run_async(
+                        user_id=user_id,
+                        session_id=adk_session.id,
+                        new_message=types.Content(
+                            role="user", parts=[types.Part(text="Plan this trip.")]
+                        ),
+                    )
+                ) as events:
+                    async for event in until(events, deadline):
+                        if event.error_code or event.error_message:
+                            failures[event.error_code or "error"] = event.error_message or ""
+                        for out in self._translate(event, seen):
+                            yield out
+                            for following in self._next_stage(out, scouts_left, seen):
+                                yield following
+            except TimeoutError:
+                # Keep the latest complete draft if there is one; _plan decides.
+                log.warning("plan_deadline", trip_id=str(trip.id))
+                failures["deadline"] = ""
             final = await _sessions.get_session(
                 app_name=APP_NAME, user_id=user_id, session_id=adk_session.id
             )
@@ -354,6 +363,8 @@ class PlanningService:
             budget = BudgetExhausted.__name__
             if budget in failures:
                 raise PlanningFailed(failures[budget] or BUDGET_MESSAGE, code=budget) from exc
+            if "deadline" in failures:
+                raise PlanningFailed(TOO_SLOW, code="deadline") from exc
             if failures:
                 raise PlanningFailed(UNAVAILABLE) from exc
             # Field paths only: the values are model output built from the user's trip.

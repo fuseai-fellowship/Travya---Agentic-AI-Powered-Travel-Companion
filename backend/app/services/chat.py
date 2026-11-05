@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from datetime import UTC, datetime
 
 from google.adk.agents.run_config import RunConfig, StreamingMode  # type: ignore[attr-defined]
@@ -12,6 +13,7 @@ from sqlmodel import col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.assistant.agent import build_assistant
+from app.agents.deadline import deadline_in, until
 from app.agents.events import AgentEvent
 from app.core.config import settings
 from app.core.errors import BudgetExhausted
@@ -139,30 +141,49 @@ class ChatService:
                 await self.adk_sessions.create_session(
                     app_name=APP_NAME, user_id=user_id, session_id=session_id
                 )
+            deadline = deadline_in(settings.CHAT_DEADLINE_SECONDS)
             try:
-                async for event in runner.run_async(
-                    user_id=user_id,
-                    session_id=session_id,
-                    new_message=types.Content(role="user", parts=[types.Part(text=content)]),
-                    run_config=RunConfig(streaming_mode=StreamingMode.SSE, max_llm_calls=8),
-                ):
-                    for call in event.get_function_calls():
-                        tools_used.append(call.name or "")
-                        label = TOOL_LABELS.get(call.name or "", "Using a tool")
-                        yield AgentEvent(agent="assistant", kind="progress", message=f"{label}…")
-                    if event.partial and event.content and event.content.parts:
-                        chunk = "".join(p.text or "" for p in event.content.parts if not p.thought)
-                        if chunk:
-                            text += chunk
-                            yield AgentEvent(agent="assistant", kind="token", message=chunk)
-                    elif (
-                        event.is_final_response()
-                        and event.content
-                        and event.content.parts
-                        and not text
-                    ):
-                        text = "".join(p.text or "" for p in event.content.parts if not p.thought)
-                        yield AgentEvent(agent="assistant", kind="token", message=text)
+                async with aclosing(
+                    runner.run_async(
+                        user_id=user_id,
+                        session_id=session_id,
+                        new_message=types.Content(role="user", parts=[types.Part(text=content)]),
+                        run_config=RunConfig(streaming_mode=StreamingMode.SSE, max_llm_calls=8),
+                    )
+                ) as events:
+                    async for event in until(events, deadline):
+                        for call in event.get_function_calls():
+                            tools_used.append(call.name or "")
+                            label = TOOL_LABELS.get(call.name or "", "Using a tool")
+                            yield AgentEvent(
+                                agent="assistant", kind="progress", message=f"{label}…"
+                            )
+                        if event.partial and event.content and event.content.parts:
+                            chunk = "".join(
+                                p.text or "" for p in event.content.parts if not p.thought
+                            )
+                            if chunk:
+                                text += chunk
+                                yield AgentEvent(agent="assistant", kind="token", message=chunk)
+                        elif (
+                            event.is_final_response()
+                            and event.content
+                            and event.content.parts
+                            and not text
+                        ):
+                            text = "".join(
+                                p.text or "" for p in event.content.parts if not p.thought
+                            )
+                            yield AgentEvent(agent="assistant", kind="token", message=text)
+            except TimeoutError:
+                log.warning("chat_deadline", conversation_id=str(conversation.id))
+                yield AgentEvent(
+                    agent="assistant",
+                    kind="error",
+                    message="The assistant took too long to answer. Please try again.",
+                    data={"error": "deadline"},
+                )
+                return
             except BudgetExhausted as exc:
                 yield AgentEvent(
                     agent="assistant",

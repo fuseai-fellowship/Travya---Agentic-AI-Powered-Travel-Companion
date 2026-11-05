@@ -44,6 +44,11 @@ class Settings(BaseSettings):
         default=400, description="Global cap on model calls per day (a plan takes 3-6)"
     )
 
+    # Overall time for one planning run or chat turn, so a stream always ends with an answer
+    # (under Cloud Run's 300 s request timeout).
+    PLAN_DEADLINE_SECONDS: float = 240.0
+    CHAT_DEADLINE_SECONDS: float = 120.0
+
     # Abuse controls (per user)
     RATE_LIMIT_DEFAULT: str = "120/minute"
     RATE_LIMIT_PLAN: str = "6/hour"

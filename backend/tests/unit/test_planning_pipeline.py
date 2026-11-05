@@ -1,6 +1,8 @@
 """The LLM planning graph end to end with a scripted model: long trips, revisions as patches."""
 
+import asyncio
 import json
+import uuid
 from collections.abc import AsyncGenerator
 from datetime import date, timedelta
 from typing import Any
@@ -19,8 +21,9 @@ from app.agents.planning.checks import check_plan
 from app.agents.planning.offline import scripted_plan
 from app.agents.planning.pipeline import build_planning_pipeline, merge_revision
 from app.agents.planning.prompts import critic_instruction, plan_digest, reviser_instruction
-from app.integrations.fakes import FakeGeocoder, FakePlaces, FakeWeather
+from app.integrations.fakes import FakeAutocomplete, FakeGeocoder, FakePlaces, FakeWeather
 from app.integrations.offers.sample import SampleOffers
+from app.models import TripStatus
 from app.services.planning import PlanningService
 
 START = date(2027, 5, 1)
@@ -67,6 +70,8 @@ class ScriptedLlm(BaseLlm):
         )
         self._prompts.append((role, system))
         text = self._script[role].pop(0)
+        if text == "HANG":
+            await asyncio.sleep(30)
         yield LlmResponse(content=types.Content(role="model", parts=[types.Part(text=text)]))
 
 
@@ -175,3 +180,112 @@ def test_merge_revision_keeps_unrevised_days() -> None:
     merged = merge_revision(plan, {"days": [], "summary": ""}, TRIP)
     assert merged == plan
     assert merge_revision(plan, None, TRIP) == plan
+
+
+class Recorder:
+    def __init__(self) -> None:
+        self.saved: dict[str, Any] = {}
+        self.restored: list[TripStatus] = []
+
+
+@pytest.fixture
+def service(online: ScriptedLlm, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Recorder]:
+    """PlanningService.stream with the database calls recorded instead."""
+    from app.core.ratelimit import Limiter
+    from app.models import Trip, TripPace, User
+    from app.services import planning
+    from app.services.trips import TripService
+
+    record = Recorder()
+
+    async def save(
+        self: object, trip_id: object, items: list[Any], quotes: list[Any], plan: Any
+    ) -> None:
+        record.saved = {"items": items, "quotes": quotes, "plan": plan}
+
+    async def restore(trip_id: object, status: TripStatus) -> None:
+        record.restored.append(status)
+
+    monkeypatch.setattr(TripService, "replace_agent_output", save)
+    monkeypatch.setattr(planning.PlanningService, "_restore", staticmethod(restore))
+    monkeypatch.setattr(planning, "KnowledgeService", lambda guides: NoGuides())
+    monkeypatch.setattr(planning.settings, "PLAN_DEADLINE_SECONDS", 0.5)
+    integrations: Any = type(
+        "Integrations",
+        (),
+        {
+            "geocoder": FakeGeocoder(),
+            "autocomplete": FakeAutocomplete(),
+            "places": FakePlaces(),
+            "weather": FakeWeather(),
+            "offers": SampleOffers(),
+            "guides": None,
+        },
+    )()
+    trip = Trip(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Three weeks",
+        destination="Lisbon",
+        start_date=START,
+        end_date=START + timedelta(days=DAYS - 1),
+        latitude=38.72,
+        longitude=-9.14,
+        pace=TripPace.packed,
+        currency="EUR",
+    )
+    user = User(id=uuid.uuid4(), firebase_uid="u")
+    planner = planning.PlanningService(None, user, integrations, Limiter("async+memory://"))  # type: ignore[arg-type]
+    return planner.stream(planning.PlanClaim(trip, TripStatus.draft), None), record
+
+
+async def test_deadline_keeps_the_latest_complete_draft(
+    online: ScriptedLlm, service: tuple[Any, Recorder]
+) -> None:
+    stream, record = service
+    draft = long_plan()
+    draft["days"][2]["activities"] = draft["days"][2]["activities"][:1]
+    online._script = {
+        "planner": [json.dumps(draft)],
+        "critic": [json.dumps({"approved": False, "issues": ["2027-05-03 is thin."]})],
+        "reviser": ["HANG"],
+    }
+    events = [e async for e in stream]
+    assert events[-1].kind == "done"
+    assert any(e.message == "Placing stops on the map" for e in events)
+    assert len(record.saved["plan"]["days"]) == DAYS
+    assert record.saved["items"]
+    assert record.restored == []
+
+
+async def test_deadline_without_a_draft_is_a_clean_error(
+    online: ScriptedLlm, service: tuple[Any, Recorder]
+) -> None:
+    stream, record = service
+    online._script = {"planner": ["HANG"]}
+    events = [e async for e in stream]
+    assert (events[-1].agent, events[-1].kind) == ("travya", "error")
+    assert "ran out of time" in events[-1].message
+    assert events[-1].data == {"error": "deadline"}
+    assert record.saved == {}
+    assert record.restored == [TripStatus.draft]
+
+
+async def test_until_stops_at_the_deadline() -> None:
+    from app.agents.deadline import deadline_in, until
+
+    async def ticks() -> AsyncGenerator[int]:
+        for i in range(10):
+            await asyncio.sleep(0.02 if i < 3 else 5)
+            yield i
+
+    received = []
+
+    async def consume() -> None:
+        async for tick in until(ticks(), deadline_in(0.3)):
+            received.append(tick)
+            await asyncio.sleep(0)  # the consumer's own awaits are never cancelled
+
+    with pytest.raises(TimeoutError):
+        await consume()
+    assert received == [0, 1, 2]
