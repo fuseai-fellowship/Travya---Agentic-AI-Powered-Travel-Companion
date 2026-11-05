@@ -134,7 +134,7 @@ describe("RealRunVideo", () => {
     expect(video?.getAttribute("preload")).toBe("metadata")
     expect(video?.getAttribute("poster")).toBeTruthy()
     expect(container.querySelector('track[kind="captions"]')).not.toBeNull()
-    expect(screen.getByRole("button", { name: "Play the 20-second video" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Play 20 s video" })).toBeInTheDocument()
   })
 
   it("shows only the poster under reduced motion", async () => {

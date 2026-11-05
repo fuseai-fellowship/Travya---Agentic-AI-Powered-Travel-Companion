@@ -134,7 +134,7 @@ const config = defineConfig({
         brand: {
           solid: { value: { base: "{colors.brand.500}", _dark: "#56B4E9" } },
           contrast: { value: { base: "#FFFFFF", _dark: "{colors.night}" } },
-          fg: { value: { base: "{colors.brand.600}", _dark: "#7CC4EE" } },
+          fg: { value: { base: "#00568A", _dark: "#7CC4EE" } }, // ≥4.5:1 over contour hairlines too
           muted: { value: { base: "{colors.brand.100}", _dark: "{colors.brand.900}" } },
           subtle: { value: { base: "{colors.brand.50}", _dark: "{colors.brand.950}" } },
           emphasized: { value: { base: "{colors.brand.200}", _dark: "{colors.brand.800}" } },

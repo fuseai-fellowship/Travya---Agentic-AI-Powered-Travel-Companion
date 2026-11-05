@@ -79,10 +79,9 @@ export function RealRunVideo() {
             colorPalette="brand"
             variant={playing ? "surface" : "solid"}
             onClick={toggle}
-            aria-label={playing ? "Pause the video" : "Play the 20-second video"}
           >
-            {playing ? <LuPause /> : <LuPlay />}
-            {playing ? "Pause" : "Play, 20 s"}
+            {playing ? <LuPause aria-hidden /> : <LuPlay aria-hidden />}
+            {playing ? "Pause video" : "Play 20 s video"}
           </Button>
         )}
       </Box>
