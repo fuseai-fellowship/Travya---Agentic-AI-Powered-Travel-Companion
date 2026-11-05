@@ -139,3 +139,32 @@ def test_wmo_summaries() -> None:
     assert describe(65) == "Heavy rain"
     assert describe(1234) == "Unknown"
     assert len(WMO_SUMMARIES) == 28
+
+
+@respx.mock
+async def test_climate_falls_back_to_climate_model_when_archive_refuses(
+    http: httpx.AsyncClient,
+) -> None:
+    from app.integrations.weather.open_meteo import ARCHIVE_URL, CLIMATE_URL
+
+    respx.get(ARCHIVE_URL).mock(return_value=httpx.Response(429, json={"reason": "limit"}))
+    respx.get(CLIMATE_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "daily": {
+                    "time": ["2027-03-01", "2027-03-02"],
+                    "temperature_2m_max": [14.6, 20.0],
+                    "temperature_2m_min": [15.1, 11.0],
+                    "precipitation_sum": [12.0, 0.1],
+                }
+            },
+        )
+    )
+    weather = OpenMeteoWeather(http, today=lambda: date(2026, 11, 6))
+    days = await weather.daily(GeoPoint(lat=38.7, lon=-9.1), date(2027, 3, 1), date(2027, 3, 2))
+    assert [(d.temp_min_c, d.temp_max_c) for d in days] == [(14.6, 15.1), (11.0, 20.0)]
+    assert all(d.is_climate_estimate for d in days)
+    assert days[0].precipitation_mm == 12.0
+    assert days[0].weather_code == 63
+    assert days[1].weather_code == 2
