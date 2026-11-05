@@ -24,7 +24,7 @@ concurrency:
 env:
   API_SERVICE: travya-api
   MIGRATE_JOB: travya-migrate
-  PAGES_PROJECT: travya
+  PAGES_PROJECT: travya-app
 
 jobs:
   ci:

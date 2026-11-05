@@ -19,7 +19,7 @@ billing_account_id = "000000-000000-000000"
 # region               = "us-central1"
 # budget_amount        = 1
 # budget_currency_code = "USD"
-# frontend_origins     = ["https://travya.pages.dev"]
+# frontend_origins     = ["https://travya-app.pages.dev"]
 # gemini_model         = "gemini-flash-latest"
 # github_repository    = "fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion"
 

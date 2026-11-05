@@ -9,7 +9,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
 [![React 19](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](frontend/)
 
-**Live demo:** <https://travya.pages.dev> (coming soon) · **Docs:** <https://travya-docs.pages.dev/>
+**Live demo:** <https://travya-app.pages.dev> (coming soon) · **Docs:** <https://travya-docs.pages.dev/>
 
 ![The agent timeline and live map while Travya plans a trip](docs/assets/screenshot-planning.png)
 

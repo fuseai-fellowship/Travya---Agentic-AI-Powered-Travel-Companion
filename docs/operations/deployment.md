@@ -103,7 +103,7 @@ wired secrets. Terraform ignores image changes, so deploys and `terraform apply`
 
     The service and the job start on a placeholder image; the first deploy replaces it.
 
-7. **Cloudflare.** Create two Pages projects for direct upload, `travya` (the app) and `travya-docs`
+7. **Cloudflare.** Create two Pages projects for direct upload, `travya-app` (the app) and `travya-docs`
    (this site; GitHub Pages is disabled for the organisation), and an API token that can edit
    Cloudflare Pages.
 8. **GitHub.** In the `production` environment (or as repository variables) set `GCP_PROJECT_ID`,
@@ -117,7 +117,7 @@ wired secrets. Terraform ignores image changes, so deploys and `terraform apply`
 10. **First deploy.** Merge a release PR into `main`, or run the workflow by hand:
     `gh workflow run deploy.yml --ref main`.
 
-If the web app is served from a different origin than `https://travya.pages.dev`, set
+If the web app is served from a different origin than `https://travya-app.pages.dev`, set
 `frontend_origins` in `terraform.tfvars`: it drives both the API's CORS allowlist and the bucket's CORS.
 
 ## Branches, CI and delivery

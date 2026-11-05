@@ -41,7 +41,7 @@ variable "github_ref" {
 variable "frontend_origins" {
   description = "Browser origins of the web app (CORS on the API and on the documents bucket)."
   type        = list(string)
-  default     = ["https://travya.pages.dev"]
+  default     = ["https://travya-app.pages.dev"]
 }
 
 variable "api_image" {
