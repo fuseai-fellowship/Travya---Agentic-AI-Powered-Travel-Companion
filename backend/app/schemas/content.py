@@ -1,8 +1,8 @@
 import uuid
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 from app.models import FeedbackTarget, MessageRole
 from app.schemas.common import ApiModel
@@ -84,7 +84,7 @@ class MessageRead(ApiModel):
 
 
 class ChatRequest(ApiModel):
-    content: str = Field(min_length=1, max_length=4000)
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)]
 
 
 class DocumentRead(ApiModel):

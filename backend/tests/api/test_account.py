@@ -141,3 +141,30 @@ async def test_assistant_db_tools_run_concurrently(
     assert all("error" not in result for result in results), results
     assert results[0]["trips"][0]["id"] == trip["id"]
     assert results[1]["trip"]["destination"] == "Kathmandu, Nepal"
+
+
+async def test_resending_an_unanswered_message_does_not_duplicate_it(
+    alice: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from collections.abc import AsyncGenerator
+
+    from app.agents.events import AgentEvent
+    from app.services.chat import ChatService
+
+    async def failing(*_: object) -> AsyncGenerator[AgentEvent]:
+        yield AgentEvent(agent="assistant", kind="error", message="The assistant is unavailable")
+
+    conversation = (await alice.post("/conversations", json={})).json()
+    url = f"/conversations/{conversation['id']}/messages"
+    monkeypatch.setattr(ChatService, "reply", failing)
+    assert parse_sse((await alice.post(url, json={"content": "Best momo?"})).text)[-1]["kind"] == (
+        "error"
+    )
+    monkeypatch.undo()
+    assert parse_sse((await alice.post(url, json={"content": "Best momo?"})).text)[-1]["kind"] == (
+        "done"
+    )
+    messages = (await alice.get(url)).json()["items"]
+    assert [m["role"] for m in messages] == ["user", "assistant"]
+    assert messages[1]["meta"] == {"tools": []}
+    assert (await alice.post(url, json={"content": "   "})).status_code == 422

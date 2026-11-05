@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -101,7 +102,8 @@ async def send_message(
     conversation = await service.start(conversation_id, data.content)
 
     async def events() -> AsyncIterator[ServerSentEvent]:
-        async for event in service.reply(conversation, data.content):
-            yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
+        async with aclosing(service.reply(conversation, data.content)) as stream:
+            async for event in stream:
+                yield ServerSentEvent(data=event.model_dump_json(), event=event.kind)
 
     return EventSourceResponse(events(), ping=15, headers={"X-Accel-Buffering": "no"})
