@@ -8,7 +8,6 @@ import asyncio
 from contextlib import suppress
 from datetime import timedelta
 from typing import Any
-from urllib.parse import quote
 
 import google.auth
 from google.api_core.exceptions import NotFound as GcsNotFound
@@ -17,18 +16,11 @@ from google.cloud import storage
 
 from app.core.errors import NotFound
 from app.core.logging import get_logger
-from app.integrations.storage import validate_key
+from app.integrations.storage import content_disposition, validate_key
 
 log = get_logger(__name__)
 
 _SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
-
-
-def content_disposition(filename: str) -> str:
-    """Attachment header with an ASCII fallback and the UTF-8 name (RFC 6266)."""
-    cleaned = "".join(ch for ch in filename if ch.isprintable() and ch not in '"\\/') or "download"
-    fallback = cleaned.encode("ascii", "replace").decode().replace("?", "_")
-    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(cleaned)}"
 
 
 class GcsStorage:

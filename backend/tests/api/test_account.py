@@ -73,7 +73,16 @@ async def test_document_upload_validation_and_download(
     assert renamed_exe.status_code == 422
     download = await alice.get(f"/documents/{document['id']}/download")
     assert download.content == b"%PDF-1.7 hello"
-    assert download.headers["content-disposition"] == 'attachment; filename="e-ticket.pdf"'
+    assert download.headers["content-disposition"] == (
+        "attachment; filename=\"e-ticket.pdf\"; filename*=UTF-8''e-ticket.pdf"
+    )
+    unicode = await alice.post(
+        "/documents", files={"file": ("日本.pdf", b"%PDF-1.7 tokyo", "application/pdf")}
+    )
+    assert unicode.json()["filename"] == "日本.pdf"
+    tokyo = await alice.get(f"/documents/{unicode.json()['id']}/download")
+    assert tokyo.status_code == 200
+    assert tokyo.headers["content-disposition"].endswith("UTF-8''%E6%97%A5%E6%9C%AC.pdf")
 
 
 async def test_delete_account_removes_everything(

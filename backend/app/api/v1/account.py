@@ -16,6 +16,7 @@ from app.api.deps import (
 )
 from app.core.config import settings
 from app.core.ratelimit import CALLS_PER_RUN
+from app.integrations.storage import content_disposition
 from app.schemas.common import Page
 from app.schemas.content import (
     DocumentRead,
@@ -158,7 +159,7 @@ async def download_document(
         await documents.read(document),
         media_type=document.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{document.filename}"',
+            "Content-Disposition": content_disposition(document.filename),
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
