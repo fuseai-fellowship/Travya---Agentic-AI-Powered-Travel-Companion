@@ -31,13 +31,11 @@ export function MessageBubble({
   author,
   content,
   tools = [],
-  streaming = false,
 }: {
   id?: string
   author: "user" | "assistant"
   content: string
   tools?: string[]
-  streaming?: boolean
 }) {
   const mine = author === "user"
   return (
@@ -52,15 +50,10 @@ export function MessageBubble({
         bg={mine ? "brand.solid" : "bg.panel"}
         color={mine ? "brand.contrast" : "fg"}
         borderWidth={mine ? "0" : "1px"}
-        aria-busy={streaming}
       >
-        {mine ? (
-          <Text whiteSpace="pre-wrap">{content}</Text>
-        ) : (
-          <Markdown>{content || "…"}</Markdown>
-        )}
+        {mine ? <Text whiteSpace="pre-wrap">{content}</Text> : <Markdown>{content}</Markdown>}
       </Box>
-      {!mine && id && !streaming && <Feedback messageId={id} />}
+      {!mine && id && <Feedback messageId={id} />}
     </Stack>
   )
 }

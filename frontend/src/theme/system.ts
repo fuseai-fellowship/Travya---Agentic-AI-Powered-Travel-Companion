@@ -19,6 +19,12 @@ const config = defineConfig({
     },
   },
   theme: {
+    keyframes: {
+      "travya-pulse": {
+        "0%, 80%, 100%": { opacity: 0.25 },
+        "40%": { opacity: 1 },
+      },
+    },
     tokens: {
       fonts: {
         heading: { value: "'Fraunces Variable', Georgia, 'Times New Roman', serif" },
