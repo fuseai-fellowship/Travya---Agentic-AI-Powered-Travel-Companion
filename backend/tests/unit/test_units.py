@@ -192,3 +192,19 @@ def test_updates_reject_null_for_required_fields() -> None:
     }
     with pytest.raises(ValidationError, match="set by the agents"):
         TripUpdate.model_validate({"status": "planning"})
+
+
+def test_sentry_sends_no_locals_bodies_or_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app import main
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(main.settings, "SENTRY_DSN", "https://public@example.ingest.sentry.io/1")
+    monkeypatch.setattr(main.sentry_sdk, "init", lambda **kwargs: captured.update(kwargs))
+    main.init_sentry()
+    assert captured["include_local_variables"] is False
+    assert captured["max_request_body_size"] == "never"
+    scrubber = captured["event_scrubber"]
+    event = {"extra": {"key": "AIza-secret", "nested": {"api_key": "AIza-other"}, "trip": "ok"}}
+    scrubber.scrub_event(event)  # type: ignore[attr-defined]
+    assert "AIza" not in str(event)
+    assert event["extra"]["trip"] == "ok"

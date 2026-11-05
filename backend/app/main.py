@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from google.adk.sessions import DatabaseSessionService
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sqlalchemy import text
 
 from app.api.v1 import router as v1_router
@@ -33,6 +34,7 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 }
 DOCS_PATHS = ("/api/v1/docs", "/api/v1/redoc")
+SENTRY_DENYLIST = ["key", "keys", "api_key", "api_keys", "token", "id_token", "credentials"]
 
 
 async def _adk_session_service() -> DatabaseSessionService:
@@ -43,16 +45,28 @@ async def _adk_session_service() -> DatabaseSessionService:
     return DatabaseSessionService(db_engine=adk_engine)
 
 
+def init_sentry() -> None:
+    """Errors only, without the data around them: frame locals can hold a Gemini key (`key`)
+    and request bodies hold users' trips and chats."""
+    if not settings.SENTRY_DSN:
+        return
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        include_local_variables=False,
+        max_request_body_size="never",
+        event_scrubber=EventScrubber(
+            denylist=[*DEFAULT_DENYLIST, *SENTRY_DENYLIST], recursive=True
+        ),
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
-    if settings.SENTRY_DSN:
-        sentry_sdk.init(
-            dsn=settings.SENTRY_DSN,
-            environment=settings.ENVIRONMENT,
-            traces_sample_rate=0.1,
-            send_default_pii=False,
-        )
+    init_sentry()
     configure_tracing()
     init_firebase()
     cache.setup(settings.REDIS_URL or "mem://")
