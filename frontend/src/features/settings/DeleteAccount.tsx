@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { accountDeleteMeMutation } from "@/client/@tanstack/react-query.gen"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
-import { signOutUser } from "@/features/auth/actions"
+import { deleteFirebaseUser } from "@/features/auth/actions"
 import { notifySuccess } from "@/lib/notify"
 
 export function DeleteAccount() {
@@ -15,7 +15,7 @@ export function DeleteAccount() {
     meta: { errorTitle: "Couldn't delete your account" },
     onSuccess: async () => {
       await navigate({ to: "/" })
-      await signOutUser().catch(() => undefined)
+      await deleteFirebaseUser()
       notifySuccess("Account deleted", "Your trips, notes, conversations and files are gone.")
     },
   })
