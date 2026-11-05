@@ -10,11 +10,14 @@ import { useDebouncedValue } from "@/lib/hooks"
 export function DestinationInput({
   value,
   onChange,
+  onSelect,
   onBlur,
   invalid,
 }: {
   value: string
   onChange: (value: string) => void
+  /** The suggestion the user picked, so the trip keeps its coordinates ("Paris, Texas"). */
+  onSelect?: (place: PlaceSuggestion | null) => void
   onBlur?: () => void
   invalid?: boolean
 }) {
@@ -40,6 +43,7 @@ export function DestinationInput({
       collection={collection}
       inputValue={value}
       onInputValueChange={(details) => onChange(details.inputValue)}
+      onValueChange={(details) => onSelect?.(details.items[0] ?? null)}
       allowCustomValue
       openOnClick={false}
       selectionBehavior="replace"

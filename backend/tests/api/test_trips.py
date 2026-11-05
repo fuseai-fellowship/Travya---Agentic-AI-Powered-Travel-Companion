@@ -118,3 +118,36 @@ async def test_changing_dates_keeps_items_visible(
     blocked = await alice.patch(f"/trips/{trip['id']}", json={"end_date": "2027-03-10"})
     assert blocked.status_code == 409
     assert (await alice.get(f"/trips/{trip['id']}")).json()["end_date"] == "2027-03-11"
+
+
+async def test_create_keeps_the_chosen_place(
+    alice: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.integrations.fakes import FakeAutocomplete, FakeGeocoder
+
+    async def down(*_: object, **__: object) -> list[object]:
+        raise RuntimeError("geocoder blocked")
+
+    monkeypatch.setattr(FakeGeocoder, "search", down)
+    texas = TRIP | {
+        "destination": "Paris",
+        "latitude": 33.66,
+        "longitude": -95.55,
+        "country_code": "us",
+    }
+    created = (await alice.post("/trips", json=texas)).json()
+    assert (created["latitude"], created["longitude"], created["country_code"]) == (
+        33.66,
+        -95.55,
+        "US",
+    )
+    # Without coordinates: Nominatim is down, Photon answers.
+    fallback = (await alice.post("/trips", json=TRIP | {"destination": "Kathmandu"})).json()
+    assert (fallback["latitude"], fallback["country_code"]) == (pytest.approx(27.7172), "NP")
+    # Neither answers: the trip is still created, without coordinates.
+    monkeypatch.setattr(FakeAutocomplete, "suggest", down)
+    response = await alice.post("/trips", json=TRIP)
+    assert response.status_code == 201
+    assert response.json()["latitude"] is None
+    half = await alice.post("/trips", json=TRIP | {"latitude": 1.0})
+    assert half.status_code == 422

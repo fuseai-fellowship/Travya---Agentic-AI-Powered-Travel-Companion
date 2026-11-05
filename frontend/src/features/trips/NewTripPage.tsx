@@ -13,9 +13,11 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 import { Controller, type Path, useForm } from "react-hook-form"
 import { LuSparkles } from "react-icons/lu"
 import { tripsCreateTripMutation } from "@/client/@tanstack/react-query.gen"
+import type { PlaceSuggestion } from "@/client/types.gen"
 import { startPlan } from "@/features/planner/planStore"
 import { ApiError } from "@/lib/errors"
 import { addDays } from "@/lib/format"
@@ -44,6 +46,7 @@ export function NewTripPage() {
     defaultValues: sample ? sampleFormValues(sample) : emptyFormValues(),
   })
   const { register, control, handleSubmit, watch, setError, formState } = form
+  const [place, setPlace] = useState<PlaceSuggestion | null>(null)
   const { errors } = formState
   const start = watch("start_date")
   const currency = watch("currency")
@@ -51,7 +54,19 @@ export function NewTripPage() {
   const submit = (plan: boolean) =>
     handleSubmit(async (values) => {
       try {
-        const trip = await create.mutateAsync({ body: toTripCreate(values) })
+        const body = toTripCreate(values)
+        // Coordinates only while the destination is still the picked suggestion's name.
+        const chosen = place?.name === body.destination ? place : null
+        const trip = await create.mutateAsync({
+          body: chosen
+            ? {
+                ...body,
+                latitude: chosen.lat,
+                longitude: chosen.lon,
+                country_code: chosen.country_code,
+              }
+            : body,
+        })
         void invalidateOperations(queryClient, "tripsListTrips")
         if (plan) startPlan(queryClient, trip.id)
         await navigate({ to: "/trips/$tripId", params: { tripId: trip.id } })
@@ -87,6 +102,7 @@ export function NewTripPage() {
                   <DestinationInput
                     value={field.value}
                     onChange={field.onChange}
+                    onSelect={setPlace}
                     onBlur={field.onBlur}
                     invalid={!!fieldState.error}
                   />

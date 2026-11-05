@@ -37,10 +37,18 @@ def check_dates(start: date, end: date) -> str | None:
 
 
 class TripCreate(TripBase):
+    # From the place suggestion the user picked, so "Paris, Texas" stays in Texas; the
+    # destination is geocoded only when these are missing.
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    country_code: str | None = Field(default=None, pattern=r"^[A-Za-z]{2}$")
+
     @model_validator(mode="after")
     def _dates(self) -> Self:
         if problem := check_dates(self.start_date, self.end_date):
             raise ValueError(problem)
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude and longitude go together")
         return self
 
 
@@ -98,7 +106,9 @@ class ItineraryItemBase(ApiModel):
 
 
 class ItineraryItemCreate(ItineraryItemBase):
-    position: int | None = None
+    position: int | MISSING = Field(
+        default=MISSING, description="Omit to add after the day's items"
+    )
 
 
 class ItineraryItemUpdate(ApiModel):

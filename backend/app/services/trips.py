@@ -7,12 +7,13 @@ from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from pydantic import MISSING
 from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.errors import Conflict, InvalidInput
 from app.core.logging import get_logger
-from app.integrations.ports import DailyWeather, GeoPoint
+from app.integrations.ports import DailyWeather, GeoPoint, Place
 from app.integrations.registry import Integrations
 from app.models import (
     Booking,
@@ -67,11 +68,12 @@ class TripService:
 
     async def create(self, data: TripCreate) -> Trip:
         trip = Trip(owner_id=self.user.id, **data.model_dump())
-        matches = await self.integrations.geocoder.search(data.destination, limit=1)
-        if matches:
-            place = matches[0]
+        if (trip.latitude is None or trip.longitude is None) and (
+            place := await self._locate(data.destination)
+        ):
             trip.latitude, trip.longitude = place.lat, place.lon
-            trip.country_code = (place.country_code or "").upper()[:2] or None
+            trip.country_code = place.country_code
+        trip.country_code = (trip.country_code or "").upper()[:2] or None
         try:
             photos = await self.integrations.photos.search(data.destination, limit=1)
         except Exception as exc:  # a cover photo is decoration; never block trip creation
@@ -88,6 +90,20 @@ class TripService:
             except Exception as exc:
                 log.warning("photo_tracking_failed", error=type(exc).__name__)
         return trip
+
+    async def _locate(self, destination: str) -> Place | None:
+        """Nominatim, then Photon; a trip without coordinates is still a trip."""
+        try:
+            if matches := await self.integrations.geocoder.search(destination, limit=1):
+                return matches[0]
+        except Exception as exc:
+            log.warning("destination_geocode_failed", error=type(exc).__name__)
+        try:
+            matches = await self.integrations.autocomplete.suggest(destination, limit=1)
+        except Exception as exc:
+            log.warning("destination_suggest_failed", error=type(exc).__name__)
+            return None
+        return matches[0] if matches else None
 
     async def page(
         self, *, status: TripStatus | None, query: str | None, limit: int, offset: int
@@ -186,7 +202,7 @@ class TripService:
         self._check_day(trip, data.day)
         repo = ItineraryRepository(self.session, trip.id)
         position = data.position
-        if position is None:
+        if position is MISSING:
             same_day = await repo.all(col(ItineraryItem.day) == data.day)
             position = max((i.position for i in same_day), default=-1) + 1
         item = await repo.add(
