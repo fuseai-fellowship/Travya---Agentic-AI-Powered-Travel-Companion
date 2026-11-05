@@ -106,10 +106,14 @@ describe("app smoke", () => {
     api()
     mount("/")
     expect(
-      await screen.findByRole("heading", { level: 1, name: /team of AI agents/i }),
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "A trip plan that checks its own work.",
+      }),
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /open your trips/i })).toHaveAttribute("href", "/trips")
-    expect(screen.getByText(/Tilak Parajuli and Bigya/)).toBeInTheDocument()
+    // Signed in (the smoke user): the primary action opens the app instead of the demo.
+    expect(screen.getByRole("link", { name: "Open your trips" })).toHaveAttribute("href", "/trips")
+    expect(screen.getByRole("figure", { name: /Recorded planning run: Kyoto/ })).toBeInTheDocument()
   })
 
   it("shows sample trips when there are none", async () => {
