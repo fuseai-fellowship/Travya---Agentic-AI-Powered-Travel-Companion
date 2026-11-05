@@ -32,6 +32,10 @@ FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c68
 ENV API_ORIGIN=http://localhost:8000 \
     AUTH_EMULATOR_ORIGIN="" \
     NGINX_ENVSUBST_FILTER=_ORIGIN\$
+# Pick up Alpine security fixes released after the base image was built (Trivy gates CRITICALs).
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080
