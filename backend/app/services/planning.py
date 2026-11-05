@@ -269,7 +269,8 @@ class PlanningService:
                 agent="travya", kind="started", message=f"Planning your trip to {trip.destination}"
             )
             knowledge = KnowledgeService(self.integrations.guides)
-            pipeline = build_planning_pipeline(self.integrations, knowledge)
+            days = (trip.end_date - trip.start_date).days + 1
+            pipeline = build_planning_pipeline(self.integrations, knowledge, days=days)
             runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
             adk_session = await _sessions.create_session(
                 app_name=APP_NAME,
@@ -392,7 +393,7 @@ class PlanningService:
     @staticmethod
     def _translate(event: Event, seen: set[str]) -> list[AgentEvent]:
         author = event.author or "travya"
-        if author in ("user", "trip_planner", "research_done"):
+        if author in ("user", "trip_planner", "research_done", "apply_revision"):
             return []
         label = AGENT_LABELS.get(author, author)
         out: list[AgentEvent] = []
@@ -415,16 +416,20 @@ class PlanningService:
         if not event.is_final_response() or event.partial:
             return out
         delta = event.actions.state_delta if event.actions else {}
-        if author in ("planner", "reviser") and isinstance(delta.get("plan"), dict):
+        if author == "planner" and isinstance(delta.get("plan"), dict):
             days = delta["plan"].get("days", [])
             count = sum(len(d.get("activities", [])) for d in days)
-            verb = "Revised" if author == "reviser" else "Drafted"
             out.append(
                 AgentEvent(
                     agent=author,
                     kind="result",
-                    message=f"{verb} {len(days)} days with {count} activities.",
+                    message=f"Drafted {len(days)} days with {count} activities.",
                 )
+            )
+        elif author == "reviser" and isinstance(delta.get("revision"), dict):
+            days = delta["revision"].get("days", [])
+            out.append(
+                AgentEvent(agent=author, kind="result", message=f"Revised {len(days)} day(s).")
             )
         elif author == "critic" and isinstance(delta.get("critique"), dict):
             issues = delta["critique"].get("issues", [])

@@ -56,6 +56,28 @@ class TripPlan(BaseModel):
     )
 
 
+class PlanRevision(BaseModel):
+    """The reviser's answer: only the changed days, so revising a long trip stays small."""
+
+    days: list[PlannedDay] = Field(
+        description="Only the days that change, each complete with all its activities"
+    )
+    summary: str = Field(description="Three to four sentences describing the revised trip")
+    estimated_total: float | None = Field(
+        default=None, description="Total estimated cost of the whole revised trip"
+    )
+    budget_breakdown: BudgetBreakdown = Field(
+        default_factory=lambda: BudgetBreakdown(),
+        description="Estimated cost per category for the whole revised trip",
+    )
+    packing_tips: list[str] = Field(
+        default_factory=list, max_length=8, description="Empty to keep the current tips"
+    )
+    local_tips: list[str] = Field(
+        default_factory=list, max_length=8, description="Empty to keep the current tips"
+    )
+
+
 class Critique(BaseModel):
     approved: bool = Field(description="True when the plan needs no changes")
     issues: list[str] = Field(
