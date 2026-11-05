@@ -1,0 +1,76 @@
+[
+  {
+    "id": "kathmandu-culture",
+    "ok": true,
+    "seconds": 44.1,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 15,
+    "mapped_share": 0.47,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "pokhara-nature",
+    "ok": true,
+    "seconds": 40.2,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 0,
+    "items": 16,
+    "mapped_share": 0.56,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "lisbon-food",
+    "ok": true,
+    "seconds": 30.8,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 15,
+    "mapped_share": 0.53,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "kyoto-temples",
+    "ok": true,
+    "seconds": 43.0,
+    "hard_check_issues": [
+      "2026-11-15 has 2 non-meal activities; a packed pace needs 3\u20139."
+    ],
+    "critic_approved": false,
+    "revisions": 2,
+    "items": 16,
+    "mapped_share": 0.62,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "new-york-weekend",
+    "ok": true,
+    "seconds": 40.2,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 2,
+    "items": 10,
+    "mapped_share": 0.9,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "reykjavik-relaxed",
+    "ok": true,
+    "seconds": 14.8,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 0,
+    "items": 20,
+    "mapped_share": 0.5,
+    "sources": 3,
+    "error": null
+  }
+]

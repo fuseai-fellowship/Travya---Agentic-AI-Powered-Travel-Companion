@@ -1,0 +1,143 @@
+name: deploy
+
+# Production deploy. One backend image per commit (tagged with the git SHA) runs the migration job and
+# then serves the API; the frontend is built once and uploaded to Cloudflare Pages.
+# Service configuration (env, secrets, scaling, probes) is owned by infra/terraform; this workflow only
+# changes the image.
+#
+# Repository/environment variables: GCP_PROJECT_ID, GCP_REGION, WIF_PROVIDER, DEPLOY_SA, CF_ACCOUNT_ID,
+#   VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, optional VITE_API_URL.
+# Secrets: CLOUDFLARE_API_TOKEN.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  API_SERVICE: travya-api
+  MIGRATE_JOB: travya-migrate
+  PAGES_PROJECT: travya-app
+
+jobs:
+  ci:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+    with:
+      full: true
+    permissions:
+      contents: read
+      pull-requests: read
+
+  api:
+    name: API (Cloud Run)
+    needs: ci
+    # Skipped (not failed) until the one-time hosting setup has created the repository variables.
+    if: github.ref == 'refs/heads/main' && vars.GCP_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      REGION: ${{ vars.GCP_REGION }}
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/travya/api:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build and push the API image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          target: prod
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha,scope=api
+      - name: Run database migrations (Cloud Run job)
+        run: |
+          gcloud run jobs update "$MIGRATE_JOB" --image "$IMAGE" --region "$REGION" --quiet
+          gcloud run jobs execute "$MIGRATE_JOB" --region "$REGION" --wait --quiet
+      - name: Deploy the API
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3.0.1
+        with:
+          service: ${{ env.API_SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}
+          skip_default_labels: true
+      - name: Smoke test (readiness checks the database)
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 "${URL}/api/v1/health/ready"
+
+  web:
+    name: Web (Cloudflare Pages)
+    needs: api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ steps.pages.outputs.deployment-url }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      API_URL: ${{ vars.VITE_API_URL || needs.api.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Build
+        env:
+          VITE_API_URL: ${{ env.API_URL }}
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || vars.GCP_PROJECT_ID }}
+        run: npm run build
+      - name: Pin the CSP connect-src to the API origin
+        run: |
+          origin=$(printf '%s' "$API_URL" | sed -E 's#^(https://[^/]+).*#\1#')
+          case "$origin" in https://*) ;; *) echo "::error::API URL must be https (got '$API_URL')"; exit 1 ;; esac
+          sed -i "s#https://\*\.run\.app#${origin}#" dist/_headers
+          grep -q "connect-src 'self' ${origin} " dist/_headers
+      - name: Deploy to Cloudflare Pages
+        id: pages
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CF_ACCOUNT_ID }}
+          wranglerVersion: "4.157.0"
+          command: pages deploy frontend/dist --project-name=${{ env.PAGES_PROJECT }} --branch=main --commit-hash=${{ github.sha }}

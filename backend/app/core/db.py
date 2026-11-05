@@ -1,26 +1,23 @@
-from sqlmodel import Session, create_engine, select
-from app import crud
+"""Async SQLAlchemy engine and sessions (psycopg 3)."""
+
+from collections.abc import AsyncIterator
+
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core.config import settings
-from app.models import User, UserCreate
 
-from sqlmodel import Session
+engine: AsyncEngine = create_async_engine(
+    settings.DATABASE_URL,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_POOL_SIZE,
+    pool_pre_ping=True,
+    pool_recycle=300,  # Neon closes idle connections when compute scales to zero
+)
 
-# No Vertex AI initialization for local mock
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
-
-def init_db(session: Session) -> None:
-    user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
-    ).first()
-    if not user:
-        user_in = UserCreate(
-            email=settings.FIRST_SUPERUSER,
-            password=settings.FIRST_SUPERUSER_PASSWORD,
-            is_superuser=True,
-        )
-        user = crud.create_user(session=session, user_create=user_in)
+SessionFactory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-def get_db():
-    with Session(engine) as session:
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async with SessionFactory() as session:
         yield session

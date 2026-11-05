@@ -1,29 +1,30 @@
-# Security Policy
+# Security policy
 
-Security is very important for this project and its community. 🔒
+## Reporting a vulnerability
 
-Learn more about it below. 👇
+Please report vulnerabilities privately through GitHub:
+**Security → Report a vulnerability** on this repository
+([direct link](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion/security/advisories/new)).
 
-## Versions
+Do not open a public issue, pull request or discussion for a security problem.
 
-The latest version or release is supported.
+Include what you can of:
 
-You are encouraged to write tests for your application and update your versions frequently after ensuring that your tests are passing. This way you will benefit from the latest features, bug fixes, and **security fixes**.
+- the affected endpoint, page or file, and the version or commit;
+- steps to reproduce or a proof of concept;
+- the impact you expect (data exposure, account takeover, cost abuse of the LLM budget, ...).
 
-## Reporting a Vulnerability
+You can expect an acknowledgement within 7 days and a status update within 14 days. Fixes ship from
+`main`; there are no maintained older release lines.
 
-If you think you found a vulnerability, and even if you are not sure about it, please report it right away by sending an email to: security@tiangolo.com. Please try to be as explicit as possible, describing all the steps and example code to reproduce the security issue.
+## Scope
 
-I (the author, [@tiangolo](https://twitter.com/tiangolo)) will review it thoroughly and get back to you.
+In scope: the code in this repository and the hosted deployment linked from the README.
+Out of scope: third-party services the app calls (Firebase, Gemini, OpenStreetMap services, Unsplash),
+denial of service by volume, and findings that need a compromised device or account.
 
-## Public Discussions
+## Handling secrets
 
-Please restrain from publicly discussing a potential security vulnerability. 🙊
-
-It's better to discuss privately and try to find a solution first, to limit the potential impact as much as possible.
-
----
-
-Thanks for your help!
-
-The community and I thank you for that. 🙇
+No secret belongs in this repository. Production secrets live in Google Secret Manager, deploys
+authenticate with Workload Identity Federation, and `gitleaks` runs in pre-commit. If you find a
+credential in the code or its history, report it as above so it can be revoked.

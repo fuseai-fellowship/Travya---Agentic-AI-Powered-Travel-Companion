@@ -1,0 +1,45 @@
+"""All tables, imported here so Alembic sees the full metadata."""
+
+from app.models.content import (
+    Conversation,
+    Document,
+    Feedback,
+    FeedbackTarget,
+    KnowledgeChunk,
+    Message,
+    MessageRole,
+    Note,
+)
+from app.models.trip import (
+    Booking,
+    BookingKind,
+    BookingStatus,
+    ItemCategory,
+    ItineraryItem,
+    Trip,
+    TripPace,
+    TripPhoto,
+    TripStatus,
+)
+from app.models.user import User
+
+__all__ = [
+    "Booking",
+    "BookingKind",
+    "BookingStatus",
+    "Conversation",
+    "Document",
+    "Feedback",
+    "FeedbackTarget",
+    "ItemCategory",
+    "ItineraryItem",
+    "KnowledgeChunk",
+    "Message",
+    "MessageRole",
+    "Note",
+    "Trip",
+    "TripPace",
+    "TripPhoto",
+    "TripStatus",
+    "User",
+]

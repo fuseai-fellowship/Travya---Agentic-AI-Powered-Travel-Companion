@@ -1,0 +1,74 @@
+[
+  {
+    "id": "kathmandu-culture",
+    "ok": true,
+    "seconds": 32.0,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 15,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "pokhara-nature",
+    "ok": true,
+    "seconds": 21.6,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 0,
+    "items": 15,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "lisbon-food",
+    "ok": true,
+    "seconds": 39.4,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 17,
+    "mapped_share": 0.91,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "kyoto-temples",
+    "ok": true,
+    "seconds": 48.7,
+    "hard_check_issues": [],
+    "critic_approved": false,
+    "revisions": 2,
+    "items": 17,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "new-york-weekend",
+    "ok": true,
+    "seconds": 23.4,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 11,
+    "mapped_share": 1.0,
+    "sources": 3,
+    "error": null
+  },
+  {
+    "id": "reykjavik-relaxed",
+    "ok": true,
+    "seconds": 32.8,
+    "hard_check_issues": [],
+    "critic_approved": true,
+    "revisions": 1,
+    "items": 20,
+    "mapped_share": 0.88,
+    "sources": 3,
+    "error": null
+  }
+]

@@ -1,0 +1,110 @@
+site_name: Travya
+site_description: Agentic AI travel planner on Google ADK, Gemini and open map data
+site_author: Tilak Parajuli
+site_url: https://travya-docs.pages.dev/
+repo_url: https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion
+repo_name: fuseai-fellowship/Travya
+edit_uri: edit/dev/docs/
+copyright: Copyright &copy; Tilak Parajuli and contributors. Code under the MIT License.
+
+# requirements.txt only installs the docs toolchain; it is not a page.
+exclude_docs: |
+  requirements.txt
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to system preference
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  # The default fence format (fence_code_format) is what Material's mermaid integration expects.
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Agents: architecture/agents.md
+      - Data model: architecture/data-model.md
+      - Integrations: architecture/integrations.md
+  - API: api.md
+  - Evals: evals.md
+  - Security: security.md
+  - Operations:
+      - Deployment: operations/deployment.md
+      - Runbook: operations/runbook.md
+  - Decisions:
+      - decisions/index.md
+      - 0001 Google ADK Workflow graph: decisions/0001-google-adk-multi-agent.md
+      - 0002 pgvector over FAISS: decisions/0002-pgvector-over-faiss.md
+      - 0003 Firebase Authentication: decisions/0003-firebase-authentication.md
+      - 0004 Cloud Run on the free tier: decisions/0004-cloud-run-free-tier.md
+      - 0005 Open map data: decisions/0005-open-map-data.md
+      - 0006 Simulated bookings, human in the loop: decisions/0006-simulated-bookings-human-in-the-loop.md
+      - 0007 Ports and adapters: decisions/0007-ports-and-adapters.md
+  - Project:
+      - Contributing: contributing.md
+      - Research: research.md
+      - Credits: credits.md

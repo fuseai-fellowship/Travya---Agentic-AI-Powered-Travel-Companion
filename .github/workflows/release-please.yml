@@ -1,0 +1,35 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release PR and tag
+    # The organisation does not let the workflow token open pull requests, so this needs a
+    # RELEASE_PLEASE_TOKEN secret; set the repository variable RELEASE_PLEASE=true once it exists.
+    if: vars.RELEASE_PLEASE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      # Pull requests opened with GITHUB_TOKEN do not trigger workflows, so the release PR would never
+      # get a ci-ok status. RELEASE_PLEASE_TOKEN (fine-grained PAT: contents + pull requests write on this
+      # repo) fixes that; without it the action still works and ci must be run on the PR by hand.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

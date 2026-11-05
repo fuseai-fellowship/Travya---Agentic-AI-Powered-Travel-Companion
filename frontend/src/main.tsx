@@ -1,61 +1,28 @@
-import {
-  MutationCache,
-  QueryCache,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query"
-import { RouterProvider, createRouter } from "@tanstack/react-router"
-import React, { StrictMode } from "react"
-import ReactDOM from "react-dom/client"
-import { routeTree } from "./routeTree.gen"
+import "@fontsource-variable/fraunces"
+import "@fontsource-variable/geist"
+import "@fontsource-variable/geist-mono"
 
-import { ApiError, OpenAPI } from "./client"
-import { CustomProvider } from "./components/ui/provider"
-import { AuthProvider } from "./contexts/AuthContext"
-import { TravelProvider } from "./contexts/TravelContext"
-import "./styles/globals.css"
-import "./styles/components.css"
+import { RouterProvider } from "@tanstack/react-router"
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import { Providers } from "@/app/providers"
+import { createQueryClient } from "@/app/queryClient"
+import { createAppRouter } from "@/app/router"
+import { setupApiClient } from "@/lib/api"
+import { currentUser } from "@/lib/firebase"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL
-OpenAPI.TOKEN = async () => {
-  return localStorage.getItem("access_token") || ""
-}
+setupApiClient()
 
-const handleApiError = (error: Error) => {
-  if (error instanceof ApiError && [401, 403].includes(error.status)) {
-    localStorage.removeItem("access_token")
-    window.location.href = "/login"
-  }
-}
-const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: handleApiError,
-  }),
-  mutationCache: new MutationCache({
-    onError: handleApiError,
-  }),
-})
+const queryClient = createQueryClient()
+const router = createAppRouter({ queryClient, getUser: currentUser })
 
-const router = createRouter({ 
-  routeTree,
-  defaultPreload: 'intent',
-  defaultPreloadStaleTime: 0,
-  context: {
-    queryClient: undefined!,
-  },
-})
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router
-  }
-}
+const root = document.getElementById("root")
+if (!root) throw new Error("Missing #root element")
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+createRoot(root).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <CustomProvider>
-        <RouterProvider router={router} context={{ queryClient }} />
-      </CustomProvider>
-    </QueryClientProvider>
+    <Providers queryClient={queryClient}>
+      <RouterProvider router={router} />
+    </Providers>
   </StrictMode>,
 )

@@ -1,27 +1,62 @@
-from datetime import datetime, timedelta, timezone
+"""Firebase Authentication: the backend only verifies ID tokens.
+
+Sign-up, sign-in, password reset, email verification and anonymous "try demo" sessions are handled
+by Firebase. Locally the Auth emulator is used (FIREBASE_AUTH_EMULATOR_HOST), so no real project is needed.
+"""
+
+from dataclasses import dataclass
 from typing import Any
 
-import jwt
-from passlib.context import CryptContext
+import anyio
+import firebase_admin
+from firebase_admin import auth
 
 from app.core.config import settings
+from app.core.errors import Unauthorized
+from app.core.logging import get_logger
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-ALGORITHM = "HS256"
-
-
-def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+log = get_logger(__name__)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+@dataclass(frozen=True, slots=True)
+class Principal:
+    uid: str
+    email: str | None
+    name: str | None
+    is_anonymous: bool
+    is_admin: bool
 
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+def init_firebase() -> None:
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(options={"projectId": settings.FIREBASE_PROJECT_ID})
+
+
+def _principal_from_claims(claims: dict[str, Any]) -> Principal:
+    provider = claims.get("firebase", {}).get("sign_in_provider")
+    return Principal(
+        uid=claims["uid"],
+        email=claims.get("email"),
+        name=claims.get("name"),
+        is_anonymous=provider == "anonymous",
+        is_admin=bool(claims.get("admin")),
+    )
+
+
+async def verify_id_token(token: str) -> Principal:
+    try:
+        claims = await anyio.to_thread.run_sync(
+            lambda: auth.verify_id_token(token, clock_skew_seconds=10)
+        )
+    except (auth.ExpiredIdTokenError, auth.RevokedIdTokenError) as exc:
+        raise Unauthorized("Session expired, please sign in again") from exc
+    except (auth.InvalidIdTokenError, ValueError) as exc:
+        raise Unauthorized("Invalid credentials") from exc
+    return _principal_from_claims(claims)
+
+
+async def delete_firebase_user(uid: str) -> None:
+    try:
+        await anyio.to_thread.run_sync(lambda: auth.delete_user(uid))
+    except auth.UserNotFoundError:
+        log.info("firebase_user_already_deleted", uid=uid)

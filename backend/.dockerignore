@@ -1,8 +1,18 @@
-# Python
-__pycache__
-app.egg-info
-*.pyc
-.mypy_cache
+# Keep the build context to what the image needs: pyproject.toml, uv.lock, README.md, app/, alembic/, alembic.ini.
+.venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
-htmlcov
-.venv
+.coverage.*
+coverage.xml
+htmlcov/
+.storage/
+tests/
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore

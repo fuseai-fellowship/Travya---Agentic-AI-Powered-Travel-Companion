@@ -1,0 +1,6 @@
+# Cloudflare Pages redirects.
+#
+# SPA fallback: Pages serves index.html for unknown paths on its own as long as the build has no
+# top-level 404.html. Do not add `/* /index.html 200`: Pages flags it as an infinite loop and ignores it.
+#
+# Add real redirects below, one per line: `<from> <to> [status]`.

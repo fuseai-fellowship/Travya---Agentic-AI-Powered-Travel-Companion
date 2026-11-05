@@ -1,0 +1,148 @@
+# Production-like local stack: prod image targets, wired to local Postgres, Redis and the Firebase Auth emulator.
+# No ports are published here; compose.override.yaml (loaded automatically) switches to dev targets,
+# mounts the source and publishes ports on 127.0.0.1. CI and `make e2e` use this file alone:
+#   docker compose -p travya-e2e -f compose.yaml --profile e2e run --rm e2e
+name: travya
+
+x-api-build: &api-build
+  context: ./backend
+  target: prod
+
+# Infrastructure addresses are fixed for the compose network; keys and tunables come from .env.
+x-api-env: &api-env
+  ENVIRONMENT: local
+  DATABASE_URL: postgresql+psycopg://travya:travya@db:5432/travya
+  REDIS_URL: redis://redis:6379/0
+  FIREBASE_PROJECT_ID: demo-travya
+  FIREBASE_AUTH_EMULATOR_HOST: auth:9099
+  FRONTEND_ORIGINS: '["http://localhost:5173","http://localhost:8080","http://web:8080"]'
+  STORAGE_BACKEND: local
+  LOCAL_STORAGE_DIR: /tmp/travya-storage
+  OFFLINE_INTEGRATIONS: ${OFFLINE_INTEGRATIONS:-true}
+
+x-api-env-file: &api-env-file
+  - path: .env
+    required: false
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: travya
+      POSTGRES_PASSWORD: travya
+      POSTGRES_DB: travya
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travya -d travya"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    # Cache and rate-limit counters only: no persistence.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  auth:
+    build: ./infra/firebase
+    image: travya-auth-emulator:local
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9099/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  migrate:
+    build: *api-build
+    image: travya-api:local
+    command: ["alembic", "upgrade", "head"]
+    env_file: *api-env-file
+    environment: *api-env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  api:
+    build: *api-build
+    image: travya-api:local
+    env_file: *api-env-file
+    environment: *api-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      target: prod
+      # In-network addresses: the browser that uses this build runs in the e2e container.
+      args:
+        VITE_API_URL: http://api:8000
+        VITE_FIREBASE_API_KEY: demo-api-key
+        VITE_FIREBASE_AUTH_DOMAIN: demo-travya.firebaseapp.com
+        VITE_FIREBASE_PROJECT_ID: demo-travya
+        VITE_FIREBASE_AUTH_EMULATOR_URL: http://auth:9099
+    image: travya-web:local
+    environment:
+      API_ORIGIN: http://api:8000
+      AUTH_EMULATOR_ORIGIN: http://auth:9099
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  e2e:
+    profiles: [e2e]
+    # Must match the @playwright/test version in frontend/package-lock.json.
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
+    working_dir: /app
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npm run e2e"]
+    environment:
+      CI: "true"
+      PLAYWRIGHT_BASE_URL: http://web:8080
+      E2E_API_URL: http://api:8000
+      FIREBASE_AUTH_EMULATOR_HOST: auth:9099
+      FIREBASE_PROJECT_ID: demo-travya
+    volumes:
+      - ./frontend:/app
+      - e2e-node-modules:/app/node_modules
+    init: true
+    shm_size: 1gb
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  e2e-node-modules:
