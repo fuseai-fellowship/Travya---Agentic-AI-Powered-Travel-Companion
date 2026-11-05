@@ -1,6 +1,7 @@
 import {
   confirmPasswordReset,
   createUserWithEmailAndPassword,
+  deleteUser,
   EmailAuthProvider,
   GoogleAuthProvider,
   linkWithCredential,
@@ -62,3 +63,14 @@ export async function upgradeWithGoogle() {
 }
 
 export const signOutUser = () => signOut(auth)
+
+/** Removes the Firebase sign-in itself once the API has deleted the data; falls back to signing out. */
+export async function deleteFirebaseUser() {
+  const user = auth.currentUser
+  if (!user) return
+  try {
+    await deleteUser(user)
+  } catch {
+    await signOut(auth)
+  }
+}

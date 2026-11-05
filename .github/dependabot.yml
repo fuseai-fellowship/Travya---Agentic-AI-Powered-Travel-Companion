@@ -31,7 +31,7 @@ updates:
     labels: [dependencies, backend]
 
   - package-ecosystem: npm
-    directory: /frontend
+    directories: [/frontend, /infra/firebase]
     target-branch: dev
     schedule:
       interval: weekly

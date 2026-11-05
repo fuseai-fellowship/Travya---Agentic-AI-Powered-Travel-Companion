@@ -9,6 +9,7 @@ from app.models.content import (
     Message,
     MessageRole,
     Note,
+    StoredObject,
 )
 from app.models.trip import (
     Booking,
@@ -37,6 +38,7 @@ __all__ = [
     "Message",
     "MessageRole",
     "Note",
+    "StoredObject",
     "Trip",
     "TripPace",
     "TripPhoto",

@@ -6,6 +6,23 @@ on Cloudflare Pages, authentication on Firebase, trip documents on Cloud Storage
 `.github/workflows/deploy.yml` only ships new images. The reasoning is in
 [ADR 0004](../decisions/0004-cloud-run-free-tier.md).
 
+
+## Hosting on Hugging Face Spaces (no card)
+
+This is the default route. One-time setup:
+
+1. Create a Hugging Face account and a **write** access token.
+2. Create a Docker Space `<user>/travya` (public, CPU basic). Add **secrets** `GEMINI_API_KEY`,
+   `DATABASE_URL` (Neon, `postgresql+psycopg://…?sslmode=require`), `REDIS_URL` (Upstash, `rediss://…`)
+   and optionally `UNSPLASH_ACCESS_KEY`; add **variables** `ENVIRONMENT=production`, `LOG_JSON=true`,
+   `STORAGE_BACKEND=database`, `RUN_MIGRATIONS_ON_START=true`, `FIREBASE_PROJECT_ID` and
+   `FRONTEND_ORIGINS=["https://travya-app.pages.dev"]`.
+3. In GitHub set the variable `HF_SPACE=<user>/travya` and the secret `HF_TOKEN`, plus the web
+   variables below. The next push to `main` (or `gh workflow run deploy.yml --ref main`) uploads
+   `backend/` to the Space, waits until it serves the new revision, then builds and publishes the web app.
+
+The Cloud Run route below needs a Google Cloud billing account.
+
 ## Production architecture
 
 ```mermaid

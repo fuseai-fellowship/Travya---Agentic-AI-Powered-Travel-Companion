@@ -1,0 +1,8 @@
+{
+  "name": "travya-auth-emulator",
+  "private": true,
+  "description": "Firebase Auth emulator for local development and e2e tests (locked with package-lock.json)",
+  "dependencies": {
+    "firebase-tools": "15.34.2"
+  }
+}
