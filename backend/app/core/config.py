@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     ORS_API_KEY: SecretStr | None = None
 
     # File storage for trip documents
-    STORAGE_BACKEND: Literal["local", "gcs"] = "local"
+    STORAGE_BACKEND: Literal["local", "gcs", "database"] = "local"
     LOCAL_STORAGE_DIR: str = "./.storage"
     GCS_BUCKET: str | None = None
     MAX_UPLOAD_MB: int = 10

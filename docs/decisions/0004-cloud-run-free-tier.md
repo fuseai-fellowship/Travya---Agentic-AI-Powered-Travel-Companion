@@ -1,4 +1,4 @@
-# 0004. Host on Cloud Run and managed free tiers
+# 0004. Host on free tiers: Hugging Face Spaces or Cloud Run
 
 - Status: accepted
 - Date: 2026-11-04
@@ -45,3 +45,22 @@ bursty.
 - **GKE**: far more than one container needs, and not free.
 - **Serverless functions** (Vercel, Netlify): short execution limits that do not suit long SSE
   streams or the Python agent runtime.
+
+## Update: Hugging Face Spaces as the default host
+
+Google Cloud requires a non-prepaid card to attach billing, and Cloud Run cannot run without billing.
+To keep the demo free and card-free, the API now deploys to a **Hugging Face Docker Space** by default:
+
+- The deploy workflow uploads `backend/` to the Space with the `hf` CLI; the Space builds the same
+  `backend/Dockerfile` (prod stage) and serves it on port 8000. A `BUILD_SHA` file lets the workflow
+  wait until `/api/v1/health/live` reports the new revision.
+- There is no separate migration job, so the container runs `alembic upgrade head` on start
+  (`RUN_MIGRATIONS_ON_START=true`, `backend/start.sh`).
+- Spaces have no durable disk, so uploaded documents are stored in Postgres
+  (`STORAGE_BACKEND=database`, `integrations/storage/database.py`), behind the same storage port.
+- Firebase user records are deleted by the client after the API has removed the user's data, since
+  the Space has no Google credentials.
+- Trade-off: a free Space sleeps after 48 hours without traffic and takes a minute or two to wake;
+  it has more CPU and memory than Cloud Run's free allowance.
+
+Both routes stay in `deploy.yml`; each deploy job is skipped until its variables exist.

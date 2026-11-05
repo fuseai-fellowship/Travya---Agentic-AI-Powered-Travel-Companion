@@ -19,7 +19,7 @@ The project was built by Tilak Parajuli during the FuseAI Fellowship, with early
 | Data | Postgres 17 with pgvector, Redis for rate limits and the HTTP cache |
 | Auth | Firebase Authentication (email/password, Google, anonymous demo) |
 | Web | React 19, Vite, TanStack Router and Query, Chakra UI v3, MapLibre with OpenFreeMap tiles |
-| Hosting | Cloud Run, Neon, Upstash, Cloudflare Pages, Firebase: free tiers, $1 budget alert |
+| Hosting | Hugging Face Spaces (or Cloud Run), Neon, Upstash, Cloudflare Pages, Firebase: free tiers, no card needed |
 
 ## Where to start
 

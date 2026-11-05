@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, Index, SmallInteger, Text, UniqueConstraint
+from sqlalchemy import Column, Index, LargeBinary, SmallInteger, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field
 
@@ -78,6 +78,17 @@ class Document(Table, table=True):
     size_bytes: int
     sha256: str = Field(max_length=64)
     storage_key: str = Field(max_length=300, unique=True)
+    created_at: datetime = created_at_field()
+
+
+class StoredObject(Table, table=True):
+    """Uploaded file bytes when STORAGE_BACKEND=database (hosts without object storage)."""
+
+    __tablename__ = "stored_objects"
+
+    key: str = Field(primary_key=True, max_length=300)
+    content_type: str = Field(max_length=100)
+    data: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
     created_at: datetime = created_at_field()
 
 
