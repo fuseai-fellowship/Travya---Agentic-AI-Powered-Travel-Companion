@@ -39,7 +39,8 @@ jobs:
   api:
     name: API (Cloud Run)
     needs: ci
-    if: github.ref == 'refs/heads/main'
+    # Skipped (not failed) until the one-time hosting setup has created the repository variables.
+    if: github.ref == 'refs/heads/main' && vars.GCP_PROJECT_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
