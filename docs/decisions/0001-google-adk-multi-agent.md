@@ -56,7 +56,7 @@ are deprecated in ADK 2.x and are not used.
 - The offline planner plugs into the same graph, so CI exercises the real structure, events and
   persistence.
 - ADK is young and changes quickly (the 2.x move to workflow graphs is one example); the version is
-  pinned in `uv.lock` and updated through Dependabot with the test suite as the guard.
+  pinned in `uv.lock` and upgraded deliberately (`uv lock --upgrade`) with the test suite as the guard.
 - Session state is an untyped dictionary. Validation happens at the edges: `TripPlan` on the way out,
   typed adapter models on the way in.
 - ADK owns tables outside the application's models (the `adk` schema), which must be considered in
