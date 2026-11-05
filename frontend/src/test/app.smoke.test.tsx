@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { HttpResponse, http } from "msw"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import { Providers } from "@/app/providers"
@@ -121,6 +122,43 @@ describe("app smoke", () => {
         expect.stringContaining("sample="),
       )
     }
+  })
+
+  it("doesn't call an emptied later page 'your first trip'", async () => {
+    api()
+    server.use(
+      http.get(`${API}/trips`, () =>
+        HttpResponse.json({ items: [], total: 20, limit: 20, offset: 20 }),
+      ),
+    )
+    mount("/trips?page=2")
+    expect(await screen.findByText("Nothing on this page")).toBeInTheDocument()
+    expect(screen.queryByText("Plan your first trip")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Back to the first page" })).toBeInTheDocument()
+  })
+
+  it("starts a blank trip from the profile's home city and currency", async () => {
+    api()
+    server.use(
+      http.get(`${API}/me`, () =>
+        HttpResponse.json({ ...fixtures.me, home_city: "Pokhara", currency: "EUR" }),
+      ),
+    )
+    mount("/trips/new")
+    const origin = await screen.findByRole("textbox", { name: /Travelling from/ })
+    await waitFor(() => expect(origin).toHaveValue("Pokhara"))
+    expect(screen.getByRole("combobox", { name: "Currency" })).toHaveValue("EUR")
+  })
+
+  it("asks before a demo account signs out", async () => {
+    api()
+    mount("/trips")
+    const user = userEvent.setup()
+    const [menu] = await screen.findAllByRole("button", { name: /Account menu for/ })
+    await user.click(menu as HTMLElement)
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }))
+    const dialog = await screen.findByRole("alertdialog", { name: "Sign out of the demo?" })
+    expect(dialog).toHaveTextContent("add an email or Google sign-in in Settings")
   })
 
   it("lists trips", async () => {

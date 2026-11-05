@@ -10,8 +10,10 @@ import { createQueryClient } from "@/app/queryClient"
 import { createAppRouter } from "@/app/router"
 import { setupApiClient } from "@/lib/api"
 import { currentUser } from "@/lib/firebase"
+import { recoverFromStaleChunks } from "@/lib/staleChunks"
 
 setupApiClient()
+recoverFromStaleChunks()
 
 const queryClient = createQueryClient()
 const router = createAppRouter({ queryClient, getUser: currentUser })

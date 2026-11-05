@@ -8,11 +8,13 @@ export interface DayGroup {
   items: ItineraryItemRead[]
 }
 
-function compareItems(a: ItineraryItemRead, b: ItineraryItemRead): number {
-  if (a.position !== b.position) return a.position - b.position
+/** By start time (untimed items last), then by the planner's order, then by title. */
+export function compareItems(a: ItineraryItemRead, b: ItineraryItemRead): number {
   const at = a.start_time ?? "99"
   const bt = b.start_time ?? "99"
-  return at < bt ? -1 : at > bt ? 1 : a.title.localeCompare(b.title)
+  if (at !== bt) return at < bt ? -1 : 1
+  if (a.position !== b.position) return a.position - b.position
+  return a.title.localeCompare(b.title)
 }
 
 /** Every day of the trip in order (empty days included), each with its items sorted. */
