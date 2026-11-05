@@ -1,6 +1,7 @@
-import "@fontsource-variable/fraunces"
-import "@fontsource-variable/geist"
-import "@fontsource-variable/geist-mono"
+import "@fontsource-variable/overpass"
+import "@fontsource-variable/overpass-mono"
+import "@fontsource-variable/noto-sans-devanagari"
+import "./theme/fonts.css"
 
 import { RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"

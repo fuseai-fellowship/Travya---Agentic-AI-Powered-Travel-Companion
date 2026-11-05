@@ -37,12 +37,20 @@ export function AgentTimeline({
   clock,
   onRetry,
   onStop,
+  compact = false,
+  highlight = null,
+  headingAs = "h2",
 }: {
   state: TimelineState
   /** Overrides the wall clock, e.g. with a replay's own time. */
   clock?: number
   onRetry?: () => void
   onStop?: () => void
+  /** Tighter spacing and one line per message (the landing page replay). */
+  compact?: boolean
+  /** An agent to outline, e.g. while its node is hovered in the pipeline diagram. */
+  highlight?: string | null
+  headingAs?: "h2" | "h3"
 }) {
   const running = state.status === "running"
   const wallClock = useNow(running && clock === undefined)
@@ -53,9 +61,17 @@ export function AgentTimeline({
   )
 
   return (
-    <Stack gap="5" aria-busy={running}>
-      <HStack justify="space-between" align="baseline" gap="3">
-        <Heading as="h2" size="lg">
+    <Stack gap={compact ? "3" : "5"} aria-busy={running}>
+      <HStack
+        justify="space-between"
+        align="baseline"
+        gap="3"
+        // In the replay's scrolling log the heading and clock stay in view.
+        {...(compact
+          ? { position: "sticky", top: "-3", zIndex: "1", bg: "bg.panel", py: "1.5", mt: "-1.5" }
+          : {})}
+      >
+        <Heading as={headingAs} size={compact ? "md" : "lg"} lineHeight="1.2">
           {state.status === "done"
             ? state.headline
             : state.status === "error"
@@ -82,14 +98,7 @@ export function AgentTimeline({
       </HStack>
 
       <Box>
-        <Text
-          fontSize="xs"
-          fontWeight="600"
-          color="fg.muted"
-          textTransform="uppercase"
-          letterSpacing="wider"
-          mb="2"
-        >
+        <Text fontSize="sm" color="fg.muted" mb="2">
           Research, in parallel
         </Text>
         <SimpleGrid as="ul" columns={2} gap="2" listStyleType="none">
@@ -100,16 +109,25 @@ export function AgentTimeline({
               icon={SCOUT_ICONS[id]}
               step={state.steps[id]}
               now={now}
+              compact={compact}
+              highlighted={highlight === id}
             />
           ))}
         </SimpleGrid>
       </Box>
 
-      <WeatherStrip days={state.weather} />
+      {!compact && <WeatherStrip days={state.weather} />}
 
       <Stack as="ol" gap="0" listStyleType="none" borderLeftWidth="2px" ms="2">
         {stages.map((id) => (
-          <StageRow key={id} id={id} state={state} now={now} />
+          <StageRow
+            key={id}
+            id={id}
+            state={state}
+            now={now}
+            compact={compact}
+            highlighted={highlight === id}
+          />
         ))}
       </Stack>
 
@@ -130,7 +148,19 @@ export function AgentTimeline({
   )
 }
 
-function StageRow({ id, state, now }: { id: StageId; state: TimelineState; now: number }) {
+function StageRow({
+  id,
+  state,
+  now,
+  compact,
+  highlighted,
+}: {
+  id: StageId
+  state: TimelineState
+  now: number
+  compact: boolean
+  highlighted: boolean
+}) {
   const step = state.steps[id]
   const elapsed = elapsedOf(step, now)
   const muted = step.status === "pending"
@@ -139,9 +169,14 @@ function StageRow({ id, state, now }: { id: StageId; state: TimelineState; now: 
       as="li"
       position="relative"
       ps="5"
-      py="2.5"
+      py={compact ? "1.5" : "2.5"}
       opacity={muted ? 0.6 : 1}
-      transition="opacity 200ms ease-out"
+      borderRadius="sm"
+      outline={highlighted ? "2px solid" : "none"}
+      outlineColor="brand.focusRing"
+      outlineOffset="-2px"
+      data-agent={id}
+      data-status={step.status}
     >
       <Box position="absolute" left="-9px" top="3" bg="bg" lineHeight="0">
         <StepStatusIcon status={step.status} />
@@ -168,17 +203,19 @@ function StageRow({ id, state, now }: { id: StageId; state: TimelineState; now: 
         )}
       </HStack>
       {step.message && (
-        <Text fontSize="sm" color="fg.muted">
+        <Text fontSize="sm" color="fg.muted" lineClamp={compact ? 1 : undefined}>
           {step.message}
         </Text>
       )}
       {id === "critic" && state.issues.length > 0 && (
-        <List.Root gap="1" mt="2" ps="4" fontSize="sm">
+        <List.Root gap="1" mt={compact ? "1" : "2"} ps="4" fontSize={compact ? "xs" : "sm"}>
           {state.issues.map((issue) => (
             <List.Item
               key={`${issue.round}-${issue.text}`}
               textDecoration={issue.resolved ? "line-through" : "none"}
               color={issue.resolved ? "fg.muted" : "fg"}
+              lineClamp={compact ? 1 : undefined}
+              title={compact ? issue.text : undefined}
             >
               {issue.text}
               {issue.resolved && (

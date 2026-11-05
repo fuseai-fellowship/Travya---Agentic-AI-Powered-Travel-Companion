@@ -77,7 +77,7 @@ export function BookingCard({
         {booking.status === "confirmed" && booking.confirmation_code ? (
           <Text fontSize="sm">
             Code{" "}
-            <Text as="span" fontFamily="mono" fontWeight="600" letterSpacing="wider">
+            <Text as="span" fontFamily="mono" fontWeight="600">
               {booking.confirmation_code}
             </Text>
             {booking.is_simulated && (
