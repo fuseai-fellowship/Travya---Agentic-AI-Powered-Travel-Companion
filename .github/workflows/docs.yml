@@ -46,7 +46,7 @@ jobs:
           cache: pip
           cache-dependency-path: docs/requirements.txt
       - name: Install MkDocs Material
-        run: pip install -r docs/requirements.txt
+        run: pip install --no-deps --require-hashes -r docs/requirements.txt
       - name: Build the site
         run: mkdocs build --strict
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
