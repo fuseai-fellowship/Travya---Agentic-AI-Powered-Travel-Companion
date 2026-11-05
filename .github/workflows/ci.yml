@@ -324,13 +324,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Scan history of this push or pull request
+      - name: Scan the commits of this push or pull request
         env:
-          GITLEAKS_VERSION: 8.30.1
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
         run: |
-          docker run --rm -v "$PWD:/repo" -w /repo "ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}" \
-            git --redact --verbose --log-opts="${{ github.event.pull_request.base.sha || github.event.before }}..HEAD" \
-            || docker run --rm -v "$PWD:/repo" -w /repo "ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}" dir --redact /repo
+          # Findings fail the job. Only a missing base (a new branch, a force push) changes what is
+          # scanned: then the checked-out tree instead of the commit range.
+          if [ -n "$BASE" ] && git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            docker run --rm -v "$PWD:/repo" -w /repo "$GITLEAKS_IMAGE" \
+              git --redact --verbose --log-opts="${BASE}..HEAD"
+          else
+            echo "::notice::No base commit to diff against; scanning the working tree"
+            docker run --rm -v "$PWD:/repo" -w /repo "$GITLEAKS_IMAGE" dir --redact /repo
+          fi
 
   ci-ok:
     name: ci-ok
