@@ -1,7 +1,11 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.security import Principal
 from tests.api.test_planning import parse_sse
+from tests.conftest import BOB, ClientFactory
+
+GUEST = Principal(uid="uid-guest", email=None, name=None, is_anonymous=True, is_admin=False)
 
 pytestmark = pytest.mark.db
 
@@ -82,3 +86,33 @@ async def test_delete_account_removes_everything(
     # The next request re-creates an empty profile for the same Firebase user.
     assert (await alice.get("/trips")).json()["total"] == 0
     assert (await alice.get("/notes")).json()["total"] == 0
+
+
+async def test_storage_quotas(
+    alice: AsyncClient, client_for: ClientFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    pdf = {"file": ("big.pdf", b"%PDF-1.7 " + b"0" * 700_000, "application/pdf")}
+    monkeypatch.setattr(settings, "STORAGE_QUOTA_MB", 1)
+    first = await alice.post("/documents", files=pdf)
+    assert first.status_code == 201
+    over = await alice.post("/documents", files=pdf)
+    assert over.status_code == 413
+    assert over.json()["title"] == "Storage quota exceeded"
+    assert (await alice.delete(f"/documents/{first.json()['id']}")).status_code == 204
+    assert (await alice.post("/documents", files=pdf)).status_code == 201
+
+    monkeypatch.setattr(settings, "STORAGE_QUOTA_MB", 25)
+    monkeypatch.setattr(settings, "STORAGE_TOTAL_MB", 1)
+    full = await client_for(BOB).post("/documents", files=pdf)
+    assert full.status_code == 409
+    assert full.json()["title"] == "Storage full"
+
+    monkeypatch.setattr(settings, "STORAGE_TOTAL_MB", 200)
+    monkeypatch.setattr(settings, "STORAGE_QUOTA_ANONYMOUS_MB", 0)
+    guest = client_for(GUEST)
+    small = {"file": ("a.pdf", b"%PDF-1.7 tiny", "application/pdf")}
+    assert (await guest.post("/documents", files=small)).status_code == 413
+    assert (await client_for(BOB).post("/documents", files=small)).status_code == 201
+    assert (await guest.get("/documents")).json() == []

@@ -41,6 +41,21 @@ class Conflict(DomainError):
     title = "Conflict"
 
 
+class PayloadTooLarge(DomainError):
+    status = 413
+    title = "Content too large"
+
+
+class QuotaExceeded(DomainError):
+    status = 413
+    title = "Storage quota exceeded"
+
+
+class StorageFull(DomainError):
+    status = 409
+    title = "Storage full"
+
+
 class InvalidInput(DomainError):
     status = 422
     title = "Invalid input"

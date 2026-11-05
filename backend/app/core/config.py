@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_DIR: str = "./.storage"
     GCS_BUCKET: str | None = None
     MAX_UPLOAD_MB: int = 10
+    # Stored document bytes, checked before each upload (Neon's free tier holds 0.5 GB in all).
+    STORAGE_QUOTA_MB: int = 25
+    STORAGE_QUOTA_ANONYMOUS_MB: int = 5
+    STORAGE_TOTAL_MB: int = 200
 
     def gemini_api_keys(self) -> list[str]:
         """Primary key first, then backups; blanks and duplicates removed."""
