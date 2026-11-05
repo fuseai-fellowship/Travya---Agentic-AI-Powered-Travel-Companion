@@ -8,8 +8,11 @@ import type { AgentEvent } from "@/lib/sse"
 export const SCOUTS = ["weather_scout", "places_scout", "guide_scout", "offers_scout"] as const
 export type ScoutId = (typeof SCOUTS)[number]
 
-export const STAGES = ["planner", "critic", "quality_gate", "reviser"] as const
+/** `finalize`: after the agents, the server places each stop on the map (geocoding) and saves. */
+export const STAGES = ["planner", "critic", "quality_gate", "reviser", "finalize"] as const
 export type StageId = (typeof STAGES)[number]
+
+export const FINALIZE_MESSAGE = "Placing stops on the map"
 
 export const AGENT_LABELS: Record<ScoutId | StageId, string> = {
   weather_scout: "Weather",
@@ -20,6 +23,7 @@ export const AGENT_LABELS: Record<ScoutId | StageId, string> = {
   critic: "Critic",
   quality_gate: "Quality gate",
   reviser: "Reviser",
+  finalize: "Map",
 }
 
 export type StepStatus = "pending" | "running" | "done" | "error"
@@ -67,6 +71,8 @@ export interface TimelineState {
   headline: string
   error: string | null
   tripId: string | null
+  /** The latest agent event that changed a step, for the screen-reader progress line. */
+  last: { agent: ScoutId | StageId; kind: AgentEvent["kind"]; message: string } | null
 }
 
 const idleStep = (): Step => ({
@@ -95,6 +101,7 @@ export function initialTimeline(): TimelineState {
     headline: "",
     error: null,
     tripId: null,
+    last: null,
   }
 }
 
@@ -152,6 +159,12 @@ function finishRunning(steps: TimelineState["steps"], at: number, only?: readonl
 }
 
 export function reduceTimeline(state: TimelineState, event: AgentEvent, at: number): TimelineState {
+  const next = reduce(state, event, at)
+  if (next === state || !isKnown(event.agent) || next.status !== "running") return next
+  return { ...next, last: { agent: event.agent, kind: event.kind, message: event.message } }
+}
+
+function reduce(state: TimelineState, event: AgentEvent, at: number): TimelineState {
   const { agent, kind } = event
 
   if (agent === "travya") {
@@ -177,7 +190,16 @@ export function reduceTimeline(state: TimelineState, event: AgentEvent, at: numb
         error: event.message || "Planning failed.",
       }
     }
+    if (kind === "progress") return finalizing(state, event.message || FINALIZE_MESSAGE, at)
     return state
+  }
+
+  // The graph's last node ("Itinerary finalised."); the server then places the stops on the map
+  // and saves before `done`, which is what the user is waiting for.
+  if (agent === "finalize") {
+    if (kind !== "started" && kind !== "progress") return state
+    if (state.steps.finalize.status === "running") return state
+    return finalizing(state, FINALIZE_MESSAGE, at)
   }
 
   if (!isKnown(agent)) return state
@@ -228,6 +250,51 @@ export function reduceTimeline(state: TimelineState, event: AgentEvent, at: numb
     next.issues = state.issues.map((issue) => ({ ...issue, resolved: true }))
   }
   return next
+}
+
+function finalizing(state: TimelineState, message: string, at: number): TimelineState {
+  const steps = finishRunning(state.steps, at)
+  const step = state.steps.finalize
+  steps.finalize = {
+    ...step,
+    status: "running",
+    message,
+    startedAt: step.startedAt ?? at,
+    finishedAt: null,
+  }
+  return { ...state, status: "running", steps, headline: message }
+}
+
+/** One sentence for screen readers: what just happened in the run. */
+export function describeProgress(state: TimelineState): string {
+  if (state.status === "done") return state.headline || "Your itinerary is ready."
+  if (state.status === "error") return `Planning stopped. ${state.error ?? ""}`.trim()
+  if (state.status !== "running") return ""
+  const { last, steps } = state
+  if (steps.finalize.status === "running") return `${steps.finalize.message.replace(/\.$/, "")}.`
+  if (!last) return "The agents are researching your trip."
+  const started = last.kind === "started"
+  if (isScout(last.agent)) {
+    const done = SCOUTS.filter((id) => steps[id].status === "done").length
+    return done
+      ? `${done} of ${SCOUTS.length} research scouts done.`
+      : "The agents are researching your trip."
+  }
+  switch (last.agent) {
+    case "planner":
+      return started ? "The planner is drafting your days." : last.message
+    case "critic": {
+      if (started) return "The critic is reviewing the draft."
+      const open = state.issues.filter((issue) => !issue.resolved).length
+      return open
+        ? `The critic found ${open} ${open === 1 ? "issue" : "issues"}.`
+        : "The critic approved the plan."
+    }
+    case "reviser":
+      return started ? "The reviser is fixing the critic's issues." : last.message
+    default:
+      return started ? "Checking the plan." : last.message
+  }
 }
 
 /** Replays a list of `[offsetMs, event]` pairs, e.g. for the landing page demo. */

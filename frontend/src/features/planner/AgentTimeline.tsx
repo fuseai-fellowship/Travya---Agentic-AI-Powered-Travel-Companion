@@ -31,18 +31,18 @@ const SCOUT_ICONS: Record<ScoutId, IconType> = {
   offers_scout: LuTicket,
 }
 
+/** The run's steps. Announcements live in `ProgressAnnouncer`, so this never speaks by itself. */
 export function AgentTimeline({
   state,
-  live = true,
   clock,
   onRetry,
+  onStop,
 }: {
   state: TimelineState
-  /** Announce progress to screen readers (off for the landing page replay and old logs). */
-  live?: boolean
   /** Overrides the wall clock, e.g. with a replay's own time. */
   clock?: number
   onRetry?: () => void
+  onStop?: () => void
 }) {
   const running = state.status === "running"
   const wallClock = useNow(running && clock === undefined)
@@ -55,23 +55,30 @@ export function AgentTimeline({
   return (
     <Stack gap="5" aria-busy={running}>
       <HStack justify="space-between" align="baseline" gap="3">
-        <Heading as="h2" fontFamily="heading" size="lg" aria-live={live ? "polite" : "off"}>
+        <Heading as="h2" size="lg">
           {state.status === "done"
             ? state.headline
             : state.status === "error"
               ? "Planning stopped"
               : "The agents are planning"}
         </Heading>
-        {total !== null && (
-          <Text
-            fontFamily="mono"
-            fontSize="sm"
-            color="fg.muted"
-            style={{ fontVariantNumeric: "tabular-nums" }}
-          >
-            {formatElapsed(total)}
-          </Text>
-        )}
+        <HStack gap="2">
+          {total !== null && (
+            <Text
+              fontFamily="mono"
+              fontSize="sm"
+              color="fg.muted"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              {formatElapsed(total)}
+            </Text>
+          )}
+          {running && onStop && (
+            <Button size="xs" variant="outline" onClick={onStop}>
+              Stop
+            </Button>
+          )}
+        </HStack>
       </HStack>
 
       <Box>

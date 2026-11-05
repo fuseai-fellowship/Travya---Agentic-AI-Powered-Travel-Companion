@@ -82,7 +82,7 @@ export function ReplayDemo() {
         </HStack>
       </HStack>
       <Box aria-hidden={playing ? true : undefined}>
-        <AgentTimeline state={state} live={false} clock={elapsed} />
+        <AgentTimeline state={state} clock={elapsed} />
       </Box>
       <ReplayMap showPlaces={state.places.length > 0} showStops={state.status === "done"} />
     </Stack>
