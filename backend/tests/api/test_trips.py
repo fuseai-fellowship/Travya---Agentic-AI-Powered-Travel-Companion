@@ -151,3 +151,34 @@ async def test_create_keeps_the_chosen_place(
     assert response.json()["latitude"] is None
     half = await alice.post("/trips", json=TRIP | {"latitude": 1.0})
     assert half.status_code == 422
+
+
+async def test_items_sort_by_time_and_keep_pins_honest(
+    alice: AsyncClient, trip: dict[str, object]
+) -> None:
+    base = f"/trips/{trip['id']}/itinerary"
+    await alice.post(base, json={"day": "2027-03-10", "title": "Dinner", "start_time": "21:30"})
+    await alice.post(base, json={"day": "2027-03-10", "title": "Breakfast", "start_time": "07:00"})
+    await alice.post(base, json={"day": "2027-03-10", "title": "Free time"})
+    assert [i["title"] for i in (await alice.get(base)).json()] == [
+        "Breakfast",
+        "Dinner",
+        "Free time",
+    ]
+    pinned = (
+        await alice.post(
+            base,
+            json={
+                "day": "2027-03-11",
+                "title": "Temple",
+                "place_name": "Pashupatinath",
+                "latitude": 27.71,
+                "longitude": 85.35,
+            },
+        )
+    ).json()
+    kept = await alice.patch(f"{base}/{pinned['id']}", json={"title": "Temple visit"})
+    assert kept.json()["latitude"] == 27.71
+    # A new place without coordinates must not keep the old pin.
+    moved = await alice.patch(f"{base}/{pinned['id']}", json={"place_name": "Nowhere Known"})
+    assert (moved.json()["latitude"], moved.json()["longitude"]) == (None, None)

@@ -88,6 +88,11 @@ async def test_booking_needs_explicit_confirmation(
     await alice.post(f"/trips/{trip['id']}/plan", json={})
     after_replan = (await alice.get(f"/trips/{trip['id']}/bookings")).json()
     assert any(b["id"] == chosen["id"] and b["status"] == "confirmed" for b in after_replan)
+    # One confirmed stay per trip: a new quote cannot be confirmed alongside it.
+    fresh = next(b for b in after_replan if b["kind"] == "hotel" and b["status"] == "quoted")
+    second = await alice.post(f"/trips/{trip['id']}/bookings/{fresh['id']}/confirm")
+    assert second.status_code == 409
+    assert "already confirmed" in second.json()["detail"]
     titles = [i["title"] for i in (await alice.get(f"/trips/{trip['id']}/itinerary")).json()]
     assert "My own plan" in titles
     assert (await alice.get(f"/trips/{trip['id']}")).json()["status"] == "booked"

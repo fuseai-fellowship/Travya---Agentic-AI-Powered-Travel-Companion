@@ -1,5 +1,6 @@
 """Trips, itinerary, simulated bookings, photos, weather and the trip map."""
 
+import asyncio
 import math
 import secrets
 import uuid
@@ -44,6 +45,8 @@ from app.services.documents import DocumentService
 log = get_logger(__name__)
 
 WALKABLE_KM = 6.0
+PLACE_LOOKUP_S = 5.0
+NEAR_TRIP_KM = 60.0
 # Longer than any run can take (the agents have a deadline), so a run this old has died.
 PLANNING_STALE_AFTER = timedelta(minutes=10)
 
@@ -55,6 +58,24 @@ def _km(a: GeoPoint, b: GeoPoint) -> float:
         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
     )
     return 6371 * 2 * math.asin(math.sqrt(h))
+
+
+async def locate_near(
+    integrations: Integrations, trip: Trip, place_name: str
+) -> tuple[float, float] | None:
+    """A named place near the trip's destination, looked up with Photon."""
+    near = (
+        GeoPoint(lat=trip.latitude, lon=trip.longitude)
+        if trip.latitude is not None and trip.longitude is not None
+        else None
+    )
+    city = trip.destination.split(",")[0]
+    for match in await integrations.autocomplete.suggest(
+        f"{place_name}, {city}", limit=3, near=near
+    ):
+        if near is None or _km(near, GeoPoint(lat=match.lat, lon=match.lon)) <= NEAR_TRIP_KM:
+            return match.lat, match.lon
+    return None
 
 
 class TripService:
@@ -188,8 +209,8 @@ class TripService:
         return await ItineraryRepository(self.session, trip.id).all(
             order_by=[
                 col(ItineraryItem.day),
+                col(ItineraryItem.start_time).asc().nulls_last(),
                 col(ItineraryItem.position),
-                col(ItineraryItem.start_time),
             ]
         )
 
@@ -205,14 +226,15 @@ class TripService:
         if position is MISSING:
             same_day = await repo.all(col(ItineraryItem.day) == data.day)
             position = max((i.position for i in same_day), default=-1) + 1
-        item = await repo.add(
-            ItineraryItem(
-                trip_id=trip.id,
-                source="user",
-                **data.model_dump(exclude={"position"}),
-                position=position,
-            )
+        item = ItineraryItem(
+            trip_id=trip.id,
+            source="user",
+            **data.model_dump(exclude={"position"}),
+            position=position,
         )
+        if item.place_name and item.latitude is None:
+            item.latitude, item.longitude = await self._place_on_map(trip, item.place_name)
+        item = await repo.add(item)
         await self.session.commit()
         return item
 
@@ -225,9 +247,28 @@ class TripService:
         changes = data.model_dump(exclude_unset=True)
         if "day" in changes:
             self._check_day(trip, changes["day"])
+        renamed = changes.get("place_name", item.place_name) != item.place_name
+        if renamed and "latitude" not in changes and "longitude" not in changes:
+            # The old pin belongs to the old place.
+            place = changes["place_name"]
+            changes["latitude"], changes["longitude"] = (
+                await self._place_on_map(trip, place) if place else (None, None)
+            )
         item = await repo.update(item, changes)
         await self.session.commit()
         return item
+
+    async def _place_on_map(
+        self, trip: Trip, place_name: str
+    ) -> tuple[float, float] | tuple[None, None]:
+        """Best effort and quick: an item without a pin is still an item."""
+        try:
+            async with asyncio.timeout(PLACE_LOOKUP_S):
+                coords = await locate_near(self.integrations, trip, place_name)
+        except Exception as exc:
+            log.warning("item_place_lookup_failed", error=type(exc).__name__)
+            return None, None
+        return coords or (None, None)
 
     async def delete_item(self, trip_id: uuid.UUID, item_id: uuid.UUID) -> None:
         trip = await self.trips.get(trip_id)
@@ -246,12 +287,19 @@ class TripService:
     async def confirm_booking(self, trip_id: uuid.UUID, booking_id: uuid.UUID) -> Booking:
         trip = await self.trips.get(trip_id)
         repo = BookingRepository(self.session, trip.id)
+        # Lock the trip's bookings so two confirmations cannot both go through.
+        await self.session.exec(
+            select(Booking.id).where(col(Booking.trip_id) == trip.id).with_for_update()
+        )
         booking = await repo.get(booking_id)
         if booking.status != BookingStatus.quoted:
             raise Conflict(f"This booking is already {booking.status.value}")
-        for other in await repo.all(
-            col(Booking.kind) == booking.kind, col(Booking.id) != booking.id
-        ):
+        others = await repo.all(col(Booking.kind) == booking.kind, col(Booking.id) != booking.id)
+        if any(other.status == BookingStatus.confirmed for other in others):
+            raise Conflict(
+                f"A {booking.kind.value} is already confirmed for this trip. Cancel it first."
+            )
+        for other in others:
             if other.status == BookingStatus.quoted:
                 other.status = BookingStatus.cancelled
                 self.session.add(other)
@@ -307,12 +355,17 @@ class TripService:
                 if photo.url in seen:
                     continue
                 seen.add(photo.url)
+                # Commons attributions can be long; the columns are not.
+                fields = photo.model_dump(exclude={"download_location"}) | {
+                    "alt": photo.alt[:500],
+                    "author_name": photo.author_name[:200],
+                }
                 await repo.add(
                     TripPhoto(
                         trip_id=trip.id,
-                        place_name=query.split(",")[0],
+                        place_name=query.split(",")[0][:300],
                         position=position,
-                        **photo.model_dump(exclude={"download_location"}),
+                        **fields,
                     )
                 )
                 position += 1

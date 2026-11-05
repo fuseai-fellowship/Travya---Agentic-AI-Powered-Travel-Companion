@@ -27,13 +27,11 @@ from app.core.db import SessionFactory
 from app.core.errors import BudgetExhausted, Conflict
 from app.core.logging import get_logger
 from app.core.ratelimit import BUDGET_MESSAGE, Limiter
-from app.integrations.geo import haversine_m
-from app.integrations.ports import GeoPoint
 from app.integrations.registry import Integrations
 from app.models import Booking, BookingKind, ItemCategory, ItineraryItem, Trip, TripStatus, User
 from app.schemas.plan import TripPlan
 from app.services.knowledge import KnowledgeService
-from app.services.trips import PLANNING_STALE_AFTER, TripService
+from app.services.trips import PLANNING_STALE_AFTER, TripService, locate_near
 
 log = get_logger(__name__)
 
@@ -123,7 +121,6 @@ class _PlaceResolver:
     MAX_LOOKUPS = 15
     CONCURRENCY = 4
     BUDGET_S = 20.0
-    MAX_DISTANCE_KM = 60.0
 
     def __init__(
         self, integrations: Integrations, trip: Trip, places: list[dict[str, Any]]
@@ -146,12 +143,6 @@ class _PlaceResolver:
             if len(name) >= 5 and len(key) >= 5 and (name in key or key in name)
         ]
         return self.known[max(candidates, key=len)] if candidates else None
-
-    def _near_trip(self, lat: float, lon: float) -> bool:
-        if self.trip.latitude is None or self.trip.longitude is None:
-            return True
-        distance = haversine_m(lat, lon, self.trip.latitude, self.trip.longitude) / 1000
-        return distance <= self.MAX_DISTANCE_KM
 
     def locate(self, place_name: str | None) -> tuple[float | None, float | None]:
         if not place_name:
@@ -185,19 +176,7 @@ class _PlaceResolver:
             log.warning("place_lookup_budget_spent", lookups=len(pending))
 
     async def _lookup(self, place_name: str) -> tuple[float, float] | None:
-        city = self.trip.destination.split(",")[0]
-        near = (
-            GeoPoint(lat=self.trip.latitude, lon=self.trip.longitude)
-            if self.trip.latitude is not None and self.trip.longitude is not None
-            else None
-        )
-        matches = await self.integrations.autocomplete.suggest(
-            f"{place_name}, {city}", limit=3, near=near
-        )
-        for match in matches:
-            if self._near_trip(match.lat, match.lon):
-                return match.lat, match.lon
-        return None
+        return await locate_near(self.integrations, self.trip, place_name)
 
 
 def trip_context(trip: Trip, instructions: str | None) -> dict[str, Any]:
