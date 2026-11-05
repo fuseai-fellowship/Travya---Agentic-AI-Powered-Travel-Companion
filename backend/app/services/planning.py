@@ -1,9 +1,12 @@
 """Runs the planning agents for a trip, streams their activity, and persists the result."""
 
+import asyncio
 import re
 import uuid
-from collections.abc import AsyncIterator
-from datetime import date, time
+from collections.abc import AsyncGenerator, Iterable
+from contextlib import aclosing
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -13,24 +16,43 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import ValidationError
-from sqlmodel import col, update
+from sqlmodel import col, or_, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.agents.events import AGENT_LABELS, AgentEvent
 from app.agents.planning.pipeline import build_planning_pipeline
+from app.core.db import SessionFactory
+from app.core.errors import Conflict
 from app.core.logging import get_logger
 from app.core.ratelimit import Limiter
 from app.integrations.geo import haversine_m
+from app.integrations.ports import GeoPoint
 from app.integrations.registry import Integrations
 from app.models import Booking, BookingKind, ItemCategory, ItineraryItem, Trip, TripStatus, User
 from app.schemas.plan import TripPlan
 from app.services.knowledge import KnowledgeService
-from app.services.trips import TripService
+from app.services.trips import PLANNING_STALE_AFTER, TripService
 
 log = get_logger(__name__)
 
 APP_NAME = "travya-planner"
 _sessions = InMemorySessionService()  # planning runs are one-shot; nothing to resume
+
+MAX_MONEY = Decimal("9999999999.99")  # NUMERIC(12, 2)
+UNAVAILABLE = "Planning failed because an AI or data service is unavailable. Please retry shortly."
+INCOMPLETE = "The planner returned an incomplete plan. Please try again."
+
+
+class PlanningFailed(Exception):
+    """An expected failure; the message is shown to the user."""
+
+
+@dataclass(frozen=True, slots=True)
+class PlanClaim:
+    """A trip reserved for one planning run, and the status to restore if the run fails."""
+
+    trip: Trip
+    previous_status: TripStatus
 
 
 def _time(value: str | None) -> time | None:
@@ -43,12 +65,14 @@ def _time(value: str | None) -> time | None:
 
 
 def _money(value: float | None) -> Decimal | None:
+    """A non-negative amount that fits the database column, or None."""
     if value is None:
         return None
     try:
-        return Decimal(str(value)).quantize(Decimal("0.01"))
+        amount = Decimal(str(value)).quantize(Decimal("0.01"))
     except InvalidOperation:
         return None
+    return max(amount, Decimal(0)) if amount <= MAX_MONEY else None
 
 
 def _scout_preview(author: str, delta: dict[str, Any]) -> dict[str, Any] | None:
@@ -83,9 +107,15 @@ def _normalise(name: str) -> str:
 
 
 class _PlaceResolver:
-    """Finds coordinates for a planned place: research results first, then a bounded geocode."""
+    """Finds coordinates for planned places: research results first, then a few bounded lookups.
 
-    MAX_GEOCODES = 15
+    Lookups go to Photon (no per-second cap, unlike Nominatim), run a few at a time within a
+    total time budget, and a failed lookup only leaves that stop off the map.
+    """
+
+    MAX_LOOKUPS = 15
+    CONCURRENCY = 4
+    BUDGET_S = 20.0
     MAX_DISTANCE_KM = 60.0
 
     def __init__(
@@ -93,16 +123,22 @@ class _PlaceResolver:
     ) -> None:
         self.integrations = integrations
         self.trip = trip
-        self.known = {_normalise(p["name"]): (p["lat"], p["lon"]) for p in places if p.get("name")}
-        self.geocoded = 0
+        self.known: dict[str, tuple[float, float]] = {
+            _normalise(p["name"]): (p["lat"], p["lon"])
+            for p in places
+            if p.get("name") and p.get("lat") is not None and p.get("lon") is not None
+        }
 
     def _match(self, key: str) -> tuple[float, float] | None:
         if key in self.known:
             return self.known[key]
-        for name, coords in self.known.items():
-            if len(name) >= 5 and len(key) >= 5 and (name in key or key in name):
-                return coords
-        return None
+        # The most specific known name that the planned name contains (or is contained in).
+        candidates = [
+            name
+            for name in self.known
+            if len(name) >= 5 and len(key) >= 5 and (name in key or key in name)
+        ]
+        return self.known[max(candidates, key=len)] if candidates else None
 
     def _near_trip(self, lat: float, lon: float) -> bool:
         if self.trip.latitude is None or self.trip.longitude is None:
@@ -110,22 +146,51 @@ class _PlaceResolver:
         distance = haversine_m(lat, lon, self.trip.latitude, self.trip.longitude) / 1000
         return distance <= self.MAX_DISTANCE_KM
 
-    async def locate(self, place_name: str | None) -> tuple[float | None, float | None]:
+    def locate(self, place_name: str | None) -> tuple[float | None, float | None]:
         if not place_name:
             return None, None
-        key = _normalise(place_name)
-        if coords := self._match(key):
-            return coords
-        if self.geocoded >= self.MAX_GEOCODES:
-            return None, None
-        self.geocoded += 1
+        return self._match(_normalise(place_name)) or (None, None)
+
+    async def resolve(self, place_names: Iterable[str | None]) -> None:
+        """Looks up the names that research did not cover; call before `locate`."""
+        pending: dict[str, str] = {}
+        for name in place_names:
+            key = _normalise(name or "")
+            if key and key not in pending and self._match(key) is None:
+                pending[key] = name or ""
+        semaphore = asyncio.Semaphore(self.CONCURRENCY)
+
+        async def lookup(key: str, name: str) -> None:
+            async with semaphore:
+                try:
+                    coords = await self._lookup(name)
+                except Exception as exc:
+                    log.warning("place_lookup_failed", error=type(exc).__name__)
+                    return
+            if coords:
+                self.known[key] = coords
+
+        try:
+            async with asyncio.timeout(self.BUDGET_S), asyncio.TaskGroup() as group:
+                for key, name in list(pending.items())[: self.MAX_LOOKUPS]:
+                    group.create_task(lookup(key, name))
+        except TimeoutError:
+            log.warning("place_lookup_budget_spent", lookups=len(pending))
+
+    async def _lookup(self, place_name: str) -> tuple[float, float] | None:
         city = self.trip.destination.split(",")[0]
-        matches = await self.integrations.geocoder.search(f"{place_name}, {city}", limit=3)
+        near = (
+            GeoPoint(lat=self.trip.latitude, lon=self.trip.longitude)
+            if self.trip.latitude is not None and self.trip.longitude is not None
+            else None
+        )
+        matches = await self.integrations.autocomplete.suggest(
+            f"{place_name}, {city}", limit=3, near=near
+        )
         for match in matches:
             if self._near_trip(match.lat, match.lon):
-                self.known[key] = (match.lat, match.lon)
                 return match.lat, match.lon
-        return None, None
+        return None
 
 
 def trip_context(trip: Trip, instructions: str | None) -> dict[str, Any]:
@@ -157,88 +222,149 @@ class PlanningService:
         self.limiter = limiter
         self.trips = TripService(session, user, integrations)
 
-    async def start(self, trip_id: uuid.UUID) -> Trip:
-        """Validate and reserve budget before the stream opens, so errors are plain HTTP responses."""
+    async def start(self, trip_id: uuid.UUID) -> PlanClaim:
+        """Validates, reserves budget and claims the trip before the stream opens, so errors are
+        plain HTTP responses. One run per trip: another gets 409 until it ends or goes stale."""
         trip = await self.trips.get(trip_id)
-        await self.limiter.spend_llm_budget()
-        return trip
-
-    async def stream(self, trip: Trip, instructions: str | None) -> AsyncIterator[AgentEvent]:
-        trip_id, previous_status = trip.id, trip.status
-        await self.trips.trips.update(trip, {"status": TripStatus.planning})
-        await self.session.commit()
-
-        knowledge = KnowledgeService(self.session, self.integrations.guides)
-        pipeline = build_planning_pipeline(self.integrations, knowledge)
-        runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
-        adk_session = await _sessions.create_session(
-            app_name=APP_NAME,
-            user_id=str(self.user.id),
-            state={"trip": trip_context(trip, instructions)},
-        )
-        yield AgentEvent(
-            agent="travya", kind="started", message=f"Planning your trip to {trip.destination}"
-        )
-
-        seen: set[str] = set()
-        scouts_left = {"weather_scout", "places_scout", "guide_scout", "offers_scout"}
-        failure: str | None = None
+        previous = trip.status
+        now = datetime.now(UTC)
+        claimed = (
+            await self.session.exec(
+                update(Trip)
+                .where(
+                    col(Trip.id) == trip.id,
+                    col(Trip.owner_id) == self.user.id,
+                    or_(
+                        col(Trip.status) != TripStatus.planning,
+                        col(Trip.planning_started_at).is_(None),
+                        col(Trip.planning_started_at) < now - PLANNING_STALE_AFTER,
+                    ),
+                )
+                .values(status=TripStatus.planning, planning_started_at=now)
+                .returning(col(Trip.id))
+            )
+        ).first()
+        if claimed is None:
+            await self.session.rollback()
+            raise Conflict("The agents are already planning this trip. Wait for that run to end.")
         try:
-            async for event in runner.run_async(
-                user_id=str(self.user.id),
-                session_id=adk_session.id,
-                new_message=types.Content(role="user", parts=[types.Part(text="Plan this trip.")]),
-            ):
-                for out in self._translate(event, seen):
-                    yield out
-                    for following in self._next_stage(out, scouts_left, seen):
-                        yield following
+            await self.limiter.spend_llm_budget()
+        except BaseException:
+            await self.session.rollback()
+            raise
+        await self.session.commit()
+        return PlanClaim(trip=trip, previous_status=previous)
+
+    async def stream(
+        self, claim: PlanClaim, instructions: str | None
+    ) -> AsyncGenerator[AgentEvent]:
+        """Runs the agents and saves the plan. Whatever happens before the plan is saved (an
+        error, a timeout, the client going away), the trip gets its previous status back."""
+        trip = claim.trip
+        user_id = str(self.user.id)
+        adk_session_id: str | None = None
+        saved = False
+        try:
+            yield AgentEvent(
+                agent="travya", kind="started", message=f"Planning your trip to {trip.destination}"
+            )
+            knowledge = KnowledgeService(self.session, self.integrations.guides)
+            pipeline = build_planning_pipeline(self.integrations, knowledge)
+            runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
+            adk_session = await _sessions.create_session(
+                app_name=APP_NAME,
+                user_id=user_id,
+                state={"trip": trip_context(trip, instructions)},
+            )
+            adk_session_id = adk_session.id
+
+            seen: set[str] = set()
+            scouts_left = {"weather_scout", "places_scout", "guide_scout", "offers_scout"}
+            failures: list[str] = []
+            async with aclosing(
+                runner.run_async(
+                    user_id=user_id,
+                    session_id=adk_session.id,
+                    new_message=types.Content(
+                        role="user", parts=[types.Part(text="Plan this trip.")]
+                    ),
+                )
+            ) as events:
+                async for event in events:
+                    if event.error_code or event.error_message:
+                        failures.append(event.error_code or "error")
+                    for out in self._translate(event, seen):
+                        yield out
+                        for following in self._next_stage(out, scouts_left, seen):
+                            yield following
             final = await _sessions.get_session(
-                app_name=APP_NAME, user_id=str(self.user.id), session_id=adk_session.id
+                app_name=APP_NAME, user_id=user_id, session_id=adk_session.id
             )
             state = dict(final.state) if final else {}
-            plan = TripPlan.model_validate(state.get("plan"))
-        except (ValidationError, TypeError) as exc:
-            log.warning("plan_invalid", trip_id=str(trip_id), error=str(exc))
-            failure = "The planner returned an incomplete plan. Please try again."
-        except Exception:
-            log.exception("plan_failed", trip_id=str(trip_id))
-            failure = "Planning failed because an AI or data service is unavailable. Please retry shortly."
-        except BaseException:
-            # Client went away mid-stream: put the trip back before the cancellation propagates.
-            with anyio.CancelScope(shield=True):
-                await self._set_status(trip_id, previous_status)
-            raise
-        finally:
-            with anyio.CancelScope(shield=True):
-                await _sessions.delete_session(
-                    app_name=APP_NAME, user_id=str(self.user.id), session_id=adk_session.id
+            plan = self._plan(trip.id, state, failures)
+
+            yield AgentEvent(agent="travya", kind="progress", message="Placing stops on the map")
+            resolver = _PlaceResolver(self.integrations, trip, state.get("places") or [])
+            await resolver.resolve(a.place_name for d in plan.days for a in d.activities)
+            items = self._items(trip, plan, resolver)
+            quotes = self._quotes(trip, state.get("offers") or [])
+            stored_plan = plan.model_dump(mode="json") | {
+                "sources": self._sources(state),
+                "review": state.get("critique"),
+            }
+            async with SessionFactory() as session:
+                await TripService(session, self.user, self.integrations).replace_agent_output(
+                    trip.id, items, quotes, stored_plan
                 )
-        if failure:
-            await self._set_status(trip_id, previous_status)
-            yield AgentEvent(agent="travya", kind="error", message=failure)
-            return
+            saved = True
+            yield AgentEvent(
+                agent="travya",
+                kind="done",
+                message=f"Your {len(plan.days)}-day itinerary is ready.",
+                data={"trip_id": str(trip.id), "items": len(items), "quotes": len(quotes)},
+            )
+        except PlanningFailed as exc:
+            yield AgentEvent(agent="travya", kind="error", message=str(exc))
+        except Exception:
+            log.exception("plan_failed", trip_id=str(trip.id))
+            yield AgentEvent(agent="travya", kind="error", message=UNAVAILABLE)
+        finally:
+            # Shielded: this also runs when the client goes away and the stream is cancelled.
+            with anyio.CancelScope(shield=True):
+                if adk_session_id:
+                    await _sessions.delete_session(
+                        app_name=APP_NAME, user_id=user_id, session_id=adk_session_id
+                    )
+                if not saved:
+                    await self._restore(trip.id, claim.previous_status)
 
-        items = await self._items(trip, plan, state.get("places") or [])
-        quotes = self._quotes(trip, state.get("offers") or [])
-        stored_plan = plan.model_dump(mode="json") | {
-            "sources": self._sources(state),
-            "review": state.get("critique"),
-        }
-        await self.trips.replace_agent_output(trip, items, quotes, stored_plan)
-        yield AgentEvent(
-            agent="travya",
-            kind="done",
-            message=f"Your {len(plan.days)}-day itinerary is ready.",
-            data={"trip_id": str(trip.id), "items": len(items), "quotes": len(quotes)},
-        )
+    @staticmethod
+    def _plan(trip_id: uuid.UUID, state: dict[str, Any], failures: list[str]) -> TripPlan:
+        try:
+            return TripPlan.model_validate(state.get("plan"))
+        except ValidationError as exc:
+            if failures:
+                raise PlanningFailed(UNAVAILABLE) from exc
+            # Field paths only: the values are model output built from the user's trip.
+            fields = sorted({".".join(map(str, e["loc"])) for e in exc.errors()})[:10]
+            log.warning(
+                "plan_invalid", trip_id=str(trip_id), errors=exc.error_count(), fields=fields
+            )
+            raise PlanningFailed(INCOMPLETE) from exc
 
-    async def _set_status(self, trip_id: uuid.UUID, status: TripStatus) -> None:
-        await self.session.rollback()
-        await self.session.execute(
-            update(Trip).where(col(Trip.id) == trip_id).values(status=status)
-        )
-        await self.session.commit()
+    @staticmethod
+    async def _restore(trip_id: uuid.UUID, status: TripStatus) -> None:
+        """Puts the trip back unless something else already moved it out of `planning`."""
+        try:
+            async with SessionFactory() as session:
+                await session.exec(
+                    update(Trip)
+                    .where(col(Trip.id) == trip_id, col(Trip.status) == TripStatus.planning)
+                    .values(status=status, planning_started_at=None)
+                )
+                await session.commit()
+        except Exception:
+            log.exception("plan_status_not_restored", trip_id=str(trip_id))
 
     @staticmethod
     def _next_stage(out: AgentEvent, scouts_left: set[str], seen: set[str]) -> list[AgentEvent]:
@@ -273,8 +399,18 @@ class PlanningService:
         if author not in seen:
             seen.add(author)
             out.append(AgentEvent(agent=author, kind="started", message=f"{label} started"))
-        if event.error_message:
-            out.append(AgentEvent(agent=author, kind="error", message=event.error_message))
+        if event.error_code or event.error_message:
+            # The raw message can carry provider internals; the code is enough for the UI.
+            code = event.error_code or "error"
+            log.warning("agent_error", agent=author, code=code)
+            out.append(
+                AgentEvent(
+                    agent=author,
+                    kind="error",
+                    message=f"{label} could not finish.",
+                    data={"error": code},
+                )
+            )
             return out
         if not event.is_final_response() or event.partial:
             return out
@@ -313,10 +449,8 @@ class PlanningService:
                 )
         return out
 
-    async def _items(
-        self, trip: Trip, plan: TripPlan, places: list[dict[str, Any]]
-    ) -> list[ItineraryItem]:
-        resolver = _PlaceResolver(self.integrations, trip, places)
+    @staticmethod
+    def _items(trip: Trip, plan: TripPlan, resolver: _PlaceResolver) -> list[ItineraryItem]:
         items: list[ItineraryItem] = []
         for day in plan.days:
             try:
@@ -326,7 +460,8 @@ class PlanningService:
             if not trip.start_date <= day_date <= trip.end_date:
                 continue
             for position, activity in enumerate(day.activities):
-                lat, lon = await resolver.locate(activity.place_name)
+                lat, lon = resolver.locate(activity.place_name)
+                place_name = (activity.place_name or "").strip()[:300] or None
                 items.append(
                     ItineraryItem(
                         trip_id=trip.id,
@@ -334,12 +469,12 @@ class PlanningService:
                         position=position,
                         start_time=_time(activity.start_time),
                         end_time=_time(activity.end_time),
-                        title=activity.title[:200],
+                        title=activity.title.strip()[:200] or (place_name or "Activity")[:200],
                         description=(activity.description or "")[:2000] or None,
                         category=activity.category
                         if isinstance(activity.category, ItemCategory)
                         else ItemCategory.other,
-                        place_name=(activity.place_name or "")[:300] or None,
+                        place_name=place_name,
                         latitude=lat,
                         longitude=lon,
                         estimated_cost=_money(activity.estimated_cost),

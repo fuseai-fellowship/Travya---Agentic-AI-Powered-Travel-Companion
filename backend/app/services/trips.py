@@ -4,10 +4,10 @@ import math
 import secrets
 import uuid
 from collections import defaultdict
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlmodel import col
+from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.errors import Conflict, InvalidInput
@@ -42,6 +42,8 @@ from app.services.documents import DocumentService
 log = get_logger(__name__)
 
 WALKABLE_KM = 6.0
+# Longer than any run can take (the agents have a deadline), so a run this old has died.
+PLANNING_STALE_AFTER = timedelta(minutes=10)
 
 
 def _km(a: GeoPoint, b: GeoPoint) -> float:
@@ -103,7 +105,30 @@ class TripService:
         )
 
     async def get(self, trip_id: uuid.UUID) -> Trip:
-        return await self.trips.get(trip_id)
+        trip = await self.trips.get(trip_id)
+        started = trip.planning_started_at
+        if trip.status == TripStatus.planning and (
+            started is None or started < datetime.now(UTC) - PLANNING_STALE_AFTER
+        ):
+            # The run died without restoring the status (e.g. the server restarted mid-run).
+            log.warning("planning_run_stale", trip_id=str(trip.id))
+            confirmed = await self._confirmed_bookings(trip.id)
+            status = (
+                TripStatus.booked
+                if confirmed
+                else TripStatus.planned
+                if trip.plan
+                else TripStatus.draft
+            )
+            trip = await self.trips.update(trip, {"status": status, "planning_started_at": None})
+            await self.session.commit()
+        return trip
+
+    async def _confirmed_bookings(self, trip_id: uuid.UUID) -> int:
+        query = select(func.count()).where(
+            col(Booking.trip_id) == trip_id, col(Booking.status) == BookingStatus.confirmed
+        )
+        return int((await self.session.exec(query)).one())
 
     async def update(self, trip_id: uuid.UUID, data: TripUpdate) -> Trip:
         trip = await self.trips.get(trip_id)
@@ -340,24 +365,33 @@ class TripService:
         return TripMap(trip_id=trip.id, center=center, bbox=bbox, features=features)
 
     async def replace_agent_output(
-        self, trip: Trip, items: list[ItineraryItem], quotes: list[Booking], plan: dict[str, Any]
+        self,
+        trip_id: uuid.UUID,
+        items: list[ItineraryItem],
+        quotes: list[Booking],
+        plan: dict[str, Any],
     ) -> None:
-        """Persist a fresh plan: agent items and open quotes are replaced; user items and confirmed bookings stay."""
-        itinerary = ItineraryRepository(self.session, trip.id)
-        await itinerary.delete_where(col(ItineraryItem.source) == "agent")
-        bookings = BookingRepository(self.session, trip.id)
-        await bookings.delete_where(col(Booking.status) == BookingStatus.quoted)
-        for item in items:
-            await itinerary.add(item)
-        for quote in quotes:
-            await bookings.add(quote)
-        confirmed = await bookings.all(col(Booking.status) == BookingStatus.confirmed)
-        await self.trips.update(
-            trip,
-            {
-                "plan": plan,
-                "planned_at": datetime.now(UTC),
-                "status": TripStatus.booked if confirmed else TripStatus.planned,
-            },
+        """Persist a fresh plan in one transaction: agent items and open quotes are replaced;
+        user items and confirmed bookings stay."""
+        trip = await self.trips.get(trip_id)
+        await self.session.exec(
+            delete(ItineraryItem).where(
+                col(ItineraryItem.trip_id) == trip.id, col(ItineraryItem.source) == "agent"
+            )
         )
+        await self.session.exec(
+            delete(Booking).where(
+                col(Booking.trip_id) == trip.id, col(Booking.status) == BookingStatus.quoted
+            )
+        )
+        if any(i.trip_id != trip.id for i in items) or any(q.trip_id != trip.id for q in quotes):
+            raise InvalidInput("Agent output belongs to another trip")
+        self.session.add_all([*items, *quotes])
+        await self.session.flush()
+        confirmed = await self._confirmed_bookings(trip.id)
+        trip.plan = plan
+        trip.planned_at = datetime.now(UTC)
+        trip.planning_started_at = None
+        trip.status = TripStatus.booked if confirmed else TripStatus.planned
+        self.session.add(trip)
         await self.session.commit()
