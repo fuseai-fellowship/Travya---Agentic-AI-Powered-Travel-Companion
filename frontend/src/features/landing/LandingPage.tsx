@@ -11,13 +11,16 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Link } from "@tanstack/react-router"
+import { useEffect } from "react"
 import { LuArrowRight, LuGithub } from "react-icons/lu"
 import { Logo } from "@/components/Logo"
 import { ColorModeButton } from "@/components/ui/color-mode"
 import { useAuth } from "@/features/auth/AuthProvider"
 import { DemoButton } from "@/features/auth/QuickSignIn"
+import { HEALTH_URL } from "@/lib/api"
 import { REPO_URL } from "@/lib/env"
 import { useDocumentTitle } from "@/lib/hooks"
+import { warmServer } from "@/lib/wake"
 import { LandingFooter } from "./LandingFooter"
 import { PipelineDiagram } from "./PipelineDiagram"
 import { ReplayDemo } from "./ReplayDemo"
@@ -29,6 +32,8 @@ export function LandingPage() {
   useDocumentTitle("Watch AI agents plan your trip")
   const { status } = useAuth()
   const signedIn = status === "signedIn"
+  // Start waking the free API server while the visitor reads, so the demo is warm on click.
+  useEffect(() => warmServer(HEALTH_URL), [])
 
   return (
     <Box bg="bg" minH="100dvh">
