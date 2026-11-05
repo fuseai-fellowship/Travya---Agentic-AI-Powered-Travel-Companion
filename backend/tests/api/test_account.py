@@ -77,14 +77,24 @@ async def test_document_upload_validation_and_download(
 
 
 async def test_delete_account_removes_everything(
-    alice: AsyncClient, trip: dict[str, object]
+    app: Any, alice: AsyncClient, trip: dict[str, object]
 ) -> None:
     from unittest.mock import AsyncMock, patch
 
+    from app.services.chat import APP_NAME
+
     await alice.post("/notes", json={"title": "bye"})
+    user_id = (await alice.get("/me")).json()["id"]
+    conversation = (await alice.post("/conversations", json={})).json()
+    adk = app.state.adk_sessions
+    # What an online chat turn leaves behind in ADK's own tables.
+    await adk.create_session(
+        app_name=APP_NAME, user_id=user_id, session_id=conversation["id"], state={"x": 1}
+    )
     with patch("app.services.users.delete_firebase_user", AsyncMock()) as firebase_delete:
         assert (await alice.delete("/me")).status_code == 204
     firebase_delete.assert_awaited_once_with("uid-alice")
+    assert (await adk.list_sessions(app_name=APP_NAME, user_id=user_id)).sessions == []
     # The next request re-creates an empty profile for the same Firebase user.
     assert (await alice.get("/trips")).json()["total"] == 0
     assert (await alice.get("/notes")).json()["total"] == 0

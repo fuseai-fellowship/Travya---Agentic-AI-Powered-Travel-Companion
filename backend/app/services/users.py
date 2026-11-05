@@ -1,5 +1,6 @@
 """Local user profiles mirrored from Firebase, account settings and account deletion."""
 
+from google.adk.sessions import BaseSessionService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,6 +9,7 @@ from app.core.security import Principal, delete_firebase_user
 from app.integrations.ports import ObjectStorage
 from app.models import User
 from app.schemas.content import MeUpdate
+from app.services.chat import APP_NAME as CHAT_APP_NAME
 from app.services.documents import DocumentService
 
 
@@ -47,8 +49,18 @@ async def update_me(session: AsyncSession, user: User, data: MeUpdate) -> User:
     return user
 
 
-async def delete_account(session: AsyncSession, user: User, storage: ObjectStorage) -> None:
-    """Deletes files, every row the user owns (database cascades) and the Firebase account."""
+async def delete_account(
+    session: AsyncSession, user: User, storage: ObjectStorage, adk_sessions: BaseSessionService
+) -> None:
+    """Deletes chat transcripts, files, every row the user owns (database cascades) and the
+    Firebase account."""
+    # ADK keeps the model's view of each conversation in its own tables, keyed by user id
+    # without a foreign key, so the cascade does not reach them.
+    listed = await adk_sessions.list_sessions(app_name=CHAT_APP_NAME, user_id=str(user.id))
+    for adk_session in listed.sessions:
+        await adk_sessions.delete_session(
+            app_name=CHAT_APP_NAME, user_id=str(user.id), session_id=adk_session.id
+        )
     await DocumentService(session, user, storage).delete_all()
     await session.delete(user)
     await session.commit()

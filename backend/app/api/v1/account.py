@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 
 from app.api.deps import (
+    AdkSessionsDep,
     CurrentUser,
     IntegrationsDep,
     LimiterDep,
@@ -53,8 +54,13 @@ async def patch_me(
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, tags=["account"])
-async def delete_me(user: CurrentUser, session: SessionDep, integrations: IntegrationsDep) -> None:
-    await delete_account(session, user, integrations.storage)
+async def delete_me(
+    user: CurrentUser,
+    session: SessionDep,
+    integrations: IntegrationsDep,
+    adk_sessions: AdkSessionsDep,
+) -> None:
+    await delete_account(session, user, integrations.storage, adk_sessions)
 
 
 @router.get("/me/usage", response_model=UsageRead, tags=["account"])
