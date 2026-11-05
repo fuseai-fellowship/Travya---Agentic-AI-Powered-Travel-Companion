@@ -9,7 +9,10 @@ from typing import Any
 
 import anyio
 import firebase_admin
-from firebase_admin import auth
+import google.auth
+import google.auth.credentials
+import google.auth.exceptions
+from firebase_admin import auth, credentials
 
 from app.core.config import settings
 from app.core.errors import Unauthorized
@@ -27,9 +30,31 @@ class Principal:
     is_admin: bool
 
 
+class _PublicCredential(credentials.Base):  # type: ignore[misc]
+    """For hosts without Google credentials (e.g. Hugging Face Spaces).
+
+    Verifying ID tokens only needs Google's public signing certificates; admin calls such as
+    deleting a user fail softly instead (the client deletes its own Firebase user).
+    """
+
+    def get_credential(self) -> google.auth.credentials.Credentials:
+        return google.auth.credentials.AnonymousCredentials()  # type: ignore[no-untyped-call]
+
+
+def _credential() -> credentials.Base:
+    try:
+        google.auth.default()
+    except google.auth.exceptions.DefaultCredentialsError:
+        log.info("firebase_public_credential", reason="no application default credentials")
+        return _PublicCredential()
+    return credentials.ApplicationDefault()
+
+
 def init_firebase() -> None:
     if not firebase_admin._apps:
-        firebase_admin.initialize_app(options={"projectId": settings.FIREBASE_PROJECT_ID})
+        firebase_admin.initialize_app(
+            credential=_credential(), options={"projectId": settings.FIREBASE_PROJECT_ID}
+        )
 
 
 def _principal_from_claims(claims: dict[str, Any]) -> Principal:

@@ -97,7 +97,7 @@ flowchart LR
 | Auth | Firebase Authentication (email, Google, anonymous demo), firebase-admin |
 | Open data | Nominatim, Photon, Overpass, Wikipedia, OSRM / OpenRouteService, Open-Meteo, Wikivoyage, Unsplash / Wikimedia Commons |
 | Quality | pytest, respx, Ruff, mypy (strict), Vitest, Playwright, Biome |
-| Delivery | Docker, Compose, GitHub Actions, Trivy + SBOM, CodeQL, OpenSSF Scorecard, Dependabot, release-please, Terraform |
+| Delivery | Docker, Compose, GitHub Actions, Trivy + SBOM, CodeQL, OpenSSF Scorecard, release-please, Terraform |
 | Hosting | Hugging Face Spaces (or Cloud Run), Neon, Upstash, Cloudflare Pages, Firebase: free tiers, no card needed |
 
 ## Engineering highlights
