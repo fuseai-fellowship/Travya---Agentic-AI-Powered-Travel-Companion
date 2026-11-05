@@ -40,6 +40,7 @@ _KEY_REASONS = {
     "API_KEY_HTTP_REFERRER_BLOCKED",
     "API_KEY_IP_ADDRESS_BLOCKED",
     "CONSUMER_SUSPENDED",
+    "SERVICE_DISABLED",  # the API is off in the key's project; another project's key may work
 }
 _KEY_MESSAGES = ("api key not valid", "api key expired", "reported as leaked", "has been suspended")
 KEY_COOLDOWN_S = 600.0

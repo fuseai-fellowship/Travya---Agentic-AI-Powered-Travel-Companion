@@ -209,8 +209,8 @@ class PlanningService:
         self.trips = TripService(session, user, integrations)
 
     async def start(self, trip_id: uuid.UUID) -> PlanClaim:
-        """Validates, reserves budget and claims the trip before the stream opens, so errors are
-        plain HTTP responses. One run per trip: another gets 409 until it ends or goes stale."""
+        """Validates, checks the budget and claims the trip before the stream opens, so errors
+        are plain HTTP responses. One run per trip: another gets 409 until it ends or goes stale."""
         trip = await self.trips.get(trip_id)
         previous = trip.status
         now = datetime.now(UTC)

@@ -69,6 +69,7 @@ async def test_overloaded_model_falls_back_to_next_model(keys: None) -> None:
         api_error(400, "API key not valid. Please pass a valid API key.", "API_KEY_INVALID"),
         api_error(403, "Your API key was reported as leaked.", None),
         api_error(403, "Requests are blocked.", "API_KEY_SERVICE_BLOCKED"),
+        api_error(403, "Generative Language API is disabled.", "SERVICE_DISABLED"),
         api_error(401, "Unauthenticated"),
     ],
 )
