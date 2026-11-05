@@ -77,7 +77,7 @@ async def delete_trip(trip_id: uuid.UUID, service: Service) -> None:
     "/{trip_id}/plan",
     summary="Plan the trip with the agents (Server-Sent Events)",
     response_class=EventSourceResponse,
-    dependencies=[Depends(rate_limit(settings.RATE_LIMIT_PLAN, "plan"))],
+    dependencies=[Depends(rate_limit(lambda: settings.RATE_LIMIT_PLAN, "plan"))],
     responses={
         200: {"content": {"text/event-stream": {}}, "description": "Stream of AgentEvent objects"},
         409: {"description": "The trip is already being planned"},

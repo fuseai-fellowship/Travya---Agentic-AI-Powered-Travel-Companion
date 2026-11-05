@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # batches; -2 merges inputs
     EMBEDDING_DIM: int = 768
     LLM_DAILY_REQUEST_BUDGET: int = Field(
-        default=400, description="Global cap on agent runs per day"
+        default=400, description="Global cap on model calls per day (a plan takes 3-6)"
     )
 
     # Abuse controls (per user)

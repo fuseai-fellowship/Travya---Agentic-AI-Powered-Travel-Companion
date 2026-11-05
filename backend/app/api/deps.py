@@ -73,8 +73,10 @@ def get_adk_sessions(request: Request) -> BaseSessionService:
 AdkSessionsDep = Annotated[BaseSessionService, Depends(get_adk_sessions)]
 
 
-def rate_limit(limit: str, scope: str) -> Callable[..., Awaitable[None]]:
+def rate_limit(limit: str | Callable[[], str], scope: str) -> Callable[..., Awaitable[None]]:
+    """A per-user limit; pass a callable to read a setting on each request."""
+
     async def dependency(user: CurrentUser, limiter: LimiterDep) -> None:
-        await limiter.hit(limit, scope, str(user.id))
+        await limiter.hit(limit() if callable(limit) else limit, scope, str(user.id))
 
     return dependency

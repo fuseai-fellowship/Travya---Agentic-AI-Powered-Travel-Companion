@@ -60,8 +60,11 @@ async def test_llm_budget_is_global(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ratelimit.settings, "LLM_DAILY_REQUEST_BUDGET", 1)
     limiter = Limiter("async+memory://")
+    await limiter.check_llm_budget()
     await limiter.spend_llm_budget()
     assert await limiter.remaining_llm_budget() == 0
+    with pytest.raises(BudgetExhausted):
+        await limiter.check_llm_budget()
     with pytest.raises(BudgetExhausted):
         await limiter.spend_llm_budget()
 

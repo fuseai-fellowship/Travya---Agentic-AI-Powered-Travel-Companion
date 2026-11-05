@@ -186,3 +186,30 @@ def test_settings_key_list_and_models(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert s.gemini_api_keys() == ["a", "b", "c"]
     assert s.gemini_fallback_models() == ["x", "y"]
+
+
+async def test_budget_is_spent_once_per_model_call(keys: None) -> None:
+    calls: list[str] = []
+    spent: list[int] = []
+
+    async def budget() -> None:
+        spent.append(1)
+
+    llm = chain({("primary", "k0"): api_error(503)}, calls)
+    llm._budget = budget
+    assert await collect(llm) == ["ok"]
+    assert calls == ["primary/k0", "lite/k0"]
+    assert spent == [1]
+
+
+async def test_exhausted_budget_stops_before_any_request(keys: None) -> None:
+    calls: list[str] = []
+
+    async def budget() -> None:
+        raise BudgetExhausted("spent")
+
+    llm = chain({}, calls)
+    llm._budget = budget
+    with pytest.raises(BudgetExhausted):
+        await collect(llm)
+    assert calls == []

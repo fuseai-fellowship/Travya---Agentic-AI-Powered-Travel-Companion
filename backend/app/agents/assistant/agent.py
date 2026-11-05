@@ -53,6 +53,7 @@ def build_assistant(
     integrations: Integrations,
     trip_id: uuid.UUID | None,
     sessions: Callable[[], AsyncSession] = SessionFactory,
+    budget: Callable[[], Awaitable[None]] | None = None,
 ) -> LlmAgent:
     """ADK runs a turn's tool calls concurrently, so every tool opens its own short session."""
     knowledge = KnowledgeService(integrations.guides, sessions)
@@ -196,7 +197,7 @@ def build_assistant(
     return LlmAgent(
         name="assistant",
         description="Travel assistant",
-        model=agent_model(),
+        model=agent_model(budget=budget),
         instruction=f"{INSTRUCTION}\n\nToday is {date.today():%A, %d %B %Y}.{focus}",
         tools=[
             safe(t)

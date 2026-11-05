@@ -143,4 +143,8 @@ class GuideRead(ApiModel):
 
 
 class UsageRead(ApiModel):
-    llm_runs_remaining_today: int
+    llm_runs_remaining_today: int = Field(
+        description="About how many plans or chat turns the shared daily budget still allows"
+    )
+    llm_calls_remaining_today: int = Field(description="Model calls left in the daily budget")
+    llm_calls_per_day: int

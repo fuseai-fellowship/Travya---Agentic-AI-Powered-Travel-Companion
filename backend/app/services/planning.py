@@ -22,9 +22,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.agents.events import AGENT_LABELS, AgentEvent
 from app.agents.planning.pipeline import build_planning_pipeline
 from app.core.db import SessionFactory
-from app.core.errors import Conflict
+from app.core.errors import BudgetExhausted, Conflict
 from app.core.logging import get_logger
-from app.core.ratelimit import Limiter
+from app.core.ratelimit import BUDGET_MESSAGE, Limiter
 from app.integrations.geo import haversine_m
 from app.integrations.ports import GeoPoint
 from app.integrations.registry import Integrations
@@ -45,6 +45,10 @@ INCOMPLETE = "The planner returned an incomplete plan. Please try again."
 
 class PlanningFailed(Exception):
     """An expected failure; the message is shown to the user."""
+
+    def __init__(self, message: str, code: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,7 +252,7 @@ class PlanningService:
             await self.session.rollback()
             raise Conflict("The agents are already planning this trip. Wait for that run to end.")
         try:
-            await self.limiter.spend_llm_budget()
+            await self.limiter.check_llm_budget()
         except BaseException:
             await self.session.rollback()
             raise
@@ -270,7 +274,9 @@ class PlanningService:
             )
             knowledge = KnowledgeService(self.integrations.guides)
             days = (trip.end_date - trip.start_date).days + 1
-            pipeline = build_planning_pipeline(self.integrations, knowledge, days=days)
+            pipeline = build_planning_pipeline(
+                self.integrations, knowledge, days=days, budget=self.limiter.spend_llm_budget
+            )
             runner = Runner(app_name=APP_NAME, node=pipeline, session_service=_sessions)
             adk_session = await _sessions.create_session(
                 app_name=APP_NAME,
@@ -281,7 +287,7 @@ class PlanningService:
 
             seen: set[str] = set()
             scouts_left = {"weather_scout", "places_scout", "guide_scout", "offers_scout"}
-            failures: list[str] = []
+            failures: dict[str, str] = {}  # error code → message
             async with aclosing(
                 runner.run_async(
                     user_id=user_id,
@@ -293,7 +299,7 @@ class PlanningService:
             ) as events:
                 async for event in events:
                     if event.error_code or event.error_message:
-                        failures.append(event.error_code or "error")
+                        failures[event.error_code or "error"] = event.error_message or ""
                     for out in self._translate(event, seen):
                         yield out
                         for following in self._next_stage(out, scouts_left, seen):
@@ -325,7 +331,8 @@ class PlanningService:
                 data={"trip_id": str(trip.id), "items": len(items), "quotes": len(quotes)},
             )
         except PlanningFailed as exc:
-            yield AgentEvent(agent="travya", kind="error", message=str(exc))
+            data = {"error": exc.code} if exc.code else None
+            yield AgentEvent(agent="travya", kind="error", message=str(exc), data=data)
         except Exception:
             log.exception("plan_failed", trip_id=str(trip.id))
             yield AgentEvent(agent="travya", kind="error", message=UNAVAILABLE)
@@ -340,10 +347,13 @@ class PlanningService:
                     await self._restore(trip.id, claim.previous_status)
 
     @staticmethod
-    def _plan(trip_id: uuid.UUID, state: dict[str, Any], failures: list[str]) -> TripPlan:
+    def _plan(trip_id: uuid.UUID, state: dict[str, Any], failures: dict[str, str]) -> TripPlan:
         try:
             return TripPlan.model_validate(state.get("plan"))
         except ValidationError as exc:
+            budget = BudgetExhausted.__name__
+            if budget in failures:
+                raise PlanningFailed(failures[budget] or BUDGET_MESSAGE, code=budget) from exc
             if failures:
                 raise PlanningFailed(UNAVAILABLE) from exc
             # Field paths only: the values are model output built from the user's trip.

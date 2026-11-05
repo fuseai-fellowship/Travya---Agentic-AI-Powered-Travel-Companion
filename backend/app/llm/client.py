@@ -7,7 +7,7 @@ replaced by scripted fakes at the agent layer.
 import hashlib
 import math
 import time
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from functools import lru_cache
 from typing import Literal
 
@@ -151,11 +151,18 @@ class FallbackGemini(Gemini):
     """
 
     _models: list[str] = PrivateAttr(default_factory=list)
+    _budget: Callable[[], Awaitable[None]] | None = PrivateAttr(default=None)
 
     @classmethod
-    def chain(cls, models: list[str], retry: types.HttpRetryOptions) -> "FallbackGemini":
+    def chain(
+        cls,
+        models: list[str],
+        retry: types.HttpRetryOptions,
+        budget: Callable[[], Awaitable[None]] | None = None,
+    ) -> "FallbackGemini":
         llm = cls(model=models[0], retry_options=retry)
         llm._models = models
+        llm._budget = budget
         return llm
 
     def _delegate(self, model: str, index: int, key: str) -> Gemini:
@@ -170,6 +177,8 @@ class FallbackGemini(Gemini):
     async def generate_content_async(
         self, llm_request: LlmRequest, stream: bool = False
     ) -> AsyncGenerator[LlmResponse]:
+        if self._budget is not None:
+            await self._budget()  # one unit per model call, whichever model answers
         failures: list[Exception] = []
         for model in BREAKER.order(self._models or [self.model]):
             while True:
@@ -206,8 +215,14 @@ class FallbackGemini(Gemini):
         raise failures[-1]
 
 
-def agent_model(*, light: bool = False) -> FallbackGemini:
-    """The main model followed by the fallbacks, or the fallbacks alone for light tasks."""
+def agent_model(
+    *, light: bool = False, budget: Callable[[], Awaitable[None]] | None = None
+) -> FallbackGemini:
+    """The main model followed by the fallbacks, or the fallbacks alone for light tasks.
+
+    `budget` is awaited before every model call and raises BudgetExhausted when the day's
+    budget is spent.
+    """
     fallbacks = settings.gemini_fallback_models()
     models = fallbacks if light and fallbacks else [settings.GEMINI_MODEL, *fallbacks]
     return FallbackGemini.chain(
@@ -215,6 +230,7 @@ def agent_model(*, light: bool = False) -> FallbackGemini:
         types.HttpRetryOptions(
             attempts=2, initial_delay=1.0, max_delay=4.0, http_status_codes=[500, 502]
         ),
+        budget,
     )
 
 

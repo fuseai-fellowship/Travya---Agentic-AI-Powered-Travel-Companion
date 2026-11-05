@@ -17,7 +17,7 @@ Booking is not an agent decision: the offers scout only collects quotes, and the
 explicitly through the API.
 """
 
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import date
 from typing import Any
 
@@ -145,11 +145,12 @@ def _llm(
     light: bool = False,
     timeout_s: float = 90.0,
     max_output_tokens: int = MAX_OUTPUT_TOKENS,
+    budget: Callable[[], Awaitable[None]] | None = None,
 ) -> LlmAgent:
     return LlmAgent(
         name=name,
         description=description,
-        model=agent_model(light=light),
+        model=agent_model(light=light, budget=budget),
         instruction=instruction,
         output_schema=schema,
         output_key=output_key,
@@ -169,7 +170,11 @@ def planner_timeout_s(days: int) -> float:
 
 
 def build_planning_pipeline(
-    integrations: Integrations, knowledge: KnowledgeService, *, days: int = 7
+    integrations: Integrations,
+    knowledge: KnowledgeService,
+    *,
+    days: int = 7,
+    budget: Callable[[], Awaitable[None]] | None = None,
 ) -> Workflow:
     scouts = tuple(build_scouts(integrations, knowledge))
     research_done = JoinNode(name="research_done")
@@ -188,6 +193,7 @@ def build_planning_pipeline(
         "plan",
         0.6,
         timeout_s=planner_timeout_s(days),
+        budget=budget,
     )
     critic = _llm(
         "critic",
@@ -199,6 +205,7 @@ def build_planning_pipeline(
         light=True,
         timeout_s=60,
         max_output_tokens=8192,
+        budget=budget,
     )
     reviser = _llm(
         "reviser",
@@ -207,6 +214,7 @@ def build_planning_pipeline(
         PlanRevision,
         "revision",
         0.4,
+        budget=budget,
     )
     apply = ApplyRevision(name="apply_revision", description="Merges revised days into the plan")
     gate = QualityGate(name="quality_gate", description="Hard checks and routing")

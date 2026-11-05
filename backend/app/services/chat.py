@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.agents.assistant.agent import build_assistant
 from app.agents.events import AgentEvent
 from app.core.config import settings
+from app.core.errors import BudgetExhausted
 from app.core.logging import get_logger
 from app.core.ratelimit import Limiter
 from app.integrations.registry import Integrations
@@ -104,7 +105,7 @@ class ChatService:
 
     async def start(self, conversation_id: uuid.UUID, content: str) -> Conversation:
         conversation = await self.conversations.get(conversation_id)
-        await self.limiter.spend_llm_budget()
+        await self.limiter.check_llm_budget()
         messages = MessageRepository(self.session, conversation.id)
         _, count = await messages.page(limit=1)
         await messages.add(
@@ -124,7 +125,12 @@ class ChatService:
             text = OFFLINE_REPLY
             yield AgentEvent(agent="assistant", kind="token", message=text)
         else:
-            agent = build_assistant(self.user.id, self.integrations, conversation.trip_id)
+            agent = build_assistant(
+                self.user.id,
+                self.integrations,
+                conversation.trip_id,
+                budget=self.limiter.spend_llm_budget,
+            )
             runner = Runner(app_name=APP_NAME, agent=agent, session_service=self.adk_sessions)
             user_id, session_id = str(self.user.id), str(conversation.id)
             if not await self.adk_sessions.get_session(
@@ -157,6 +163,14 @@ class ChatService:
                     ):
                         text = "".join(p.text or "" for p in event.content.parts if not p.thought)
                         yield AgentEvent(agent="assistant", kind="token", message=text)
+            except BudgetExhausted as exc:
+                yield AgentEvent(
+                    agent="assistant",
+                    kind="error",
+                    message=exc.detail,
+                    data={"error": type(exc).__name__},
+                )
+                return
             except Exception as exc:
                 log.exception("chat_failed", conversation_id=str(conversation.id))
                 yield AgentEvent(

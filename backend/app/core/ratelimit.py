@@ -21,6 +21,12 @@ from app.core.logging import get_logger
 log = get_logger(__name__)
 
 STORAGE_TIMEOUT_S = 2.0
+BUDGET_MESSAGE = (
+    "The free demo has used today's AI quota. It resets daily; "
+    "cached example trips are still available."
+)
+# A plan takes three to six model calls and a chat turn one to three; used to show runs left.
+CALLS_PER_RUN = 4
 
 
 def _storage_uri() -> str:
@@ -72,12 +78,15 @@ class Limiter:
             )
 
     async def spend_llm_budget(self) -> None:
-        """One unit per agent run, shared by all users, reset daily."""
+        """One unit per model call, shared by all users, reset daily."""
         item = parse(f"{settings.LLM_DAILY_REQUEST_BUDGET}/day")
         if not await self._run(lambda windows: windows.fixed.hit(item, "llm-budget", "global")):
-            raise BudgetExhausted(
-                "The free demo has used today's AI quota. It resets daily; cached example trips are still available."
-            )
+            raise BudgetExhausted(BUDGET_MESSAGE)
+
+    async def check_llm_budget(self) -> None:
+        """Refuse to start a run when nothing is left, before a stream opens."""
+        if await self.remaining_llm_budget() <= 0:
+            raise BudgetExhausted(BUDGET_MESSAGE)
 
     async def remaining_llm_budget(self) -> int:
         item = parse(f"{settings.LLM_DAILY_REQUEST_BUDGET}/day")

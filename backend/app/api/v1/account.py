@@ -13,6 +13,8 @@ from app.api.deps import (
     SessionDep,
     rate_limit,
 )
+from app.core.config import settings
+from app.core.ratelimit import CALLS_PER_RUN
 from app.schemas.common import Page
 from app.schemas.content import (
     DocumentRead,
@@ -57,7 +59,12 @@ async def delete_me(user: CurrentUser, session: SessionDep, integrations: Integr
 
 @router.get("/me/usage", response_model=UsageRead, tags=["account"])
 async def usage(_: CurrentUser, limiter: LimiterDep) -> UsageRead:
-    return UsageRead(llm_runs_remaining_today=await limiter.remaining_llm_budget())
+    remaining = await limiter.remaining_llm_budget()
+    return UsageRead(
+        llm_runs_remaining_today=remaining // CALLS_PER_RUN,
+        llm_calls_remaining_today=remaining,
+        llm_calls_per_day=settings.LLM_DAILY_REQUEST_BUDGET,
+    )
 
 
 def note_service(session: SessionDep, user: CurrentUser) -> NoteService:

@@ -93,17 +93,41 @@ async def test_booking_needs_explicit_confirmation(
     assert (await alice.get(f"/trips/{trip['id']}")).json()["status"] == "booked"
 
 
+async def test_spent_daily_budget_blocks_new_runs(
+    alice: AsyncClient, trip: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "LLM_DAILY_REQUEST_BUDGET", 0)
+    exhausted = await alice.post(f"/trips/{trip['id']}/plan", json={})
+    assert exhausted.status_code == 503
+    assert exhausted.json()["title"] == "Demo limit reached"
+    assert (await alice.get(f"/trips/{trip['id']}")).json()["status"] == "draft"
+    conversation = (await alice.post("/conversations", json={})).json()
+    chat = await alice.post(
+        f"/conversations/{conversation['id']}/messages", json={"content": "Hello"}
+    )
+    assert chat.status_code == 503
+    assert chat.json()["title"] == "Demo limit reached"
+    usage = (await alice.get("/me/usage")).json()
+    assert usage == {
+        "llm_runs_remaining_today": 0,
+        "llm_calls_remaining_today": 0,
+        "llm_calls_per_day": 0,
+    }
+
+
 async def test_plan_rate_limit(
     alice: AsyncClient, trip: dict[str, object], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from app.core.config import settings
 
-    monkeypatch.setattr(settings, "LLM_DAILY_REQUEST_BUDGET", 1)
+    monkeypatch.setattr(settings, "RATE_LIMIT_PLAN", "1/hour")
     first = await alice.post(f"/trips/{trip['id']}/plan", json={})
-    assert first.status_code == 200
-    exhausted = await alice.post(f"/trips/{trip['id']}/plan", json={})
-    assert exhausted.status_code == 503
-    assert exhausted.json()["title"] == "Demo limit reached"
+    assert parse_sse(first.text)[-1]["kind"] == "done"
+    limited = await alice.post(f"/trips/{trip['id']}/plan", json={})
+    assert limited.status_code == 429
+    assert int(limited.headers["retry-after"]) > 0
 
 
 async def test_photos_and_weather(alice: AsyncClient, trip: dict[str, object]) -> None:
