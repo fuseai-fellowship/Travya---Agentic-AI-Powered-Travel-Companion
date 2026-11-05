@@ -75,3 +75,36 @@ async def test_no_cross_user_access(
     assert (await bob.get("/documents")).json() == []
     assert (await alice.get(f"/trips/{trip_id}")).json()["title"] == trip["title"]
     assert (await alice.get("/notes")).json()["items"][0]["title"] == "Visa"
+
+
+async def test_no_cross_user_writes_through_bookings_photos_and_links(
+    alice: AsyncClient, bob: AsyncClient, trip: dict[str, object]
+) -> None:
+    trip_id = trip["id"]
+    await alice.post(f"/trips/{trip_id}/plan", json={})
+    booking = (await alice.get(f"/trips/{trip_id}/bookings")).json()[0]
+    conversation = (await alice.post("/conversations", json={})).json()
+    await alice.post(f"/conversations/{conversation['id']}/messages", json={"content": "Hi"})
+    message = (await alice.get(f"/conversations/{conversation['id']}/messages")).json()["items"][1]
+
+    for path, body in [
+        (f"/trips/{trip_id}/bookings/{booking['id']}/confirm", None),
+        (f"/trips/{trip_id}/bookings/{booking['id']}/cancel", None),
+        (f"/trips/{trip_id}/photos/refresh", None),
+        (f"/trips/{trip_id}/itinerary", {"day": "2027-03-10", "title": "Sneaky"}),
+        ("/feedback", {"target_type": "message", "target_id": message["id"], "rating": 1}),
+    ]:
+        response = await bob.post(path, json=body)
+        assert response.status_code == 404, f"POST {path} -> {response.status_code}"
+
+    # Bob cannot link his own notes or conversations to Alice's trip.
+    note = (await bob.post("/notes", json={"title": "Mine"})).json()
+    chat = (await bob.post("/conversations", json={})).json()
+    assert (await bob.patch(f"/notes/{note['id']}", json={"trip_id": trip_id})).status_code == 404
+    linked = await bob.patch(f"/conversations/{chat['id']}", json={"trip_id": trip_id})
+    assert linked.status_code == 404
+
+    bookings = (await alice.get(f"/trips/{trip_id}/bookings")).json()
+    assert next(b for b in bookings if b["id"] == booking["id"])["status"] == "quoted"
+    titles = [i["title"] for i in (await alice.get(f"/trips/{trip_id}/itinerary")).json()]
+    assert "Sneaky" not in titles
