@@ -134,3 +134,13 @@ class KnowledgeChunk(Table, table=True):
     license: str = Field(default="CC BY-SA 4.0", max_length=64)
     embedding: list[float] = Field(sa_column=Column(Vector(EMBEDDING_DIM), nullable=False))
     created_at: datetime = created_at_field()
+
+
+class KnowledgeAlias(Table, table=True):
+    """A destination as users type it ("nyc", "paris, texas") → the guide page it resolved to."""
+
+    __tablename__ = "knowledge_aliases"
+
+    alias: str = Field(primary_key=True, max_length=200)
+    source_url: str = Field(max_length=1000, index=True)
+    created_at: datetime = created_at_field()

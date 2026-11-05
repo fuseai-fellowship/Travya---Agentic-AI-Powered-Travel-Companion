@@ -73,7 +73,8 @@ def test_guide_chunking_and_keys() -> None:
     text = "\n".join(f"Paragraph {i} " + "x" * 300 for i in range(6))
     chunks = _chunks("See", text)
     assert len(chunks) >= 2 and all(c.startswith("See: ") for c in chunks)
-    assert destination_key("  Kathmandu,  Nepal ") == "kathmandu"
+    assert destination_key("  Kathmandu,  Nepal ") == "kathmandu, nepal"
+    assert destination_key("Paris, Texas") != destination_key("Paris")
 
 
 def test_agent_event_sse_shape() -> None:

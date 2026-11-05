@@ -116,9 +116,10 @@ def build_assistant(
             destination: City or region.
             question: What the traveler wants to know, e.g. "getting around and local etiquette".
         """
-        if not await knowledge.ensure_indexed(destination):
+        guide_url = await knowledge.ensure_indexed(destination)
+        if not guide_url:
             return _fence("wikivoyage", {"error": f"No guide found for {destination}"})
-        snippets = await knowledge.search(destination, question, k=5)
+        snippets = await knowledge.search(guide_url, question, k=5)
         return _fence(
             "wikivoyage", [{"title": s.title, "text": s.text, "url": s.url} for s in snippets]
         )

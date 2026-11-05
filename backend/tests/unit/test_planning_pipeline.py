@@ -76,8 +76,8 @@ class ScriptedLlm(BaseLlm):
 
 
 class NoGuides:
-    async def ensure_indexed(self, destination: str) -> bool:
-        return False
+    async def ensure_indexed(self, destination: str) -> str | None:
+        return None
 
 
 @pytest.fixture
