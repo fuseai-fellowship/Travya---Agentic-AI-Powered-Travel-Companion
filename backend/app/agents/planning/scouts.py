@@ -24,9 +24,13 @@ from app.services.knowledge import KnowledgeService
 
 log = get_logger(__name__)
 
+# Keys match the interests the web app offers (tripSchema.ts INTERESTS), plus "photography".
 INTEREST_CATEGORIES: dict[str, list[PoiCategory]] = {
     "culture": ["museum", "attraction", "religious"],
     "history": ["museum", "attraction", "religious"],
+    "art": ["museum", "attraction"],
+    "architecture": ["attraction", "religious"],
+    "viewpoints": ["viewpoint"],
     "food": ["restaurant", "cafe"],
     "nature": ["park", "viewpoint"],
     "adventure": ["viewpoint", "park", "attraction"],
