@@ -115,7 +115,7 @@ def build_planning_pipeline(integrations: Integrations, knowledge: KnowledgeServ
     scouts = tuple(build_scouts(integrations, knowledge))
     research_done = JoinNode(name="research_done")
 
-    if settings.OFFLINE_INTEGRATIONS or settings.GEMINI_API_KEY is None:
+    if settings.OFFLINE_INTEGRATIONS or not settings.gemini_api_keys():
         from app.agents.planning.offline import ScriptedPlanner
 
         planner = ScriptedPlanner(name="planner", description="Offline planner for demos and tests")

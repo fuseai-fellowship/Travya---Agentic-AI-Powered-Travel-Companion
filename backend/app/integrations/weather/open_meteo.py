@@ -7,12 +7,19 @@ from typing import Any
 import httpx
 from cashews import cache
 
+from app.core.errors import UpstreamUnavailable
+from app.core.logging import get_logger
 from app.integrations.caching import CLIMATE_TTL, FORECAST_TTL, non_empty
 from app.integrations.http import fetch_json
 from app.integrations.ports import DailyWeather, GeoPoint
 
+log = get_logger(__name__)
+
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+# Separate host and limit; daily CMIP6 values for any date, used when the archive refuses.
+CLIMATE_URL = "https://climate-api.open-meteo.com/v1/climate"
+CLIMATE_MODEL = "EC_Earth3P_HR"
 FORECAST_DAYS = 16
 # Archive data trails real time by a few days.
 ARCHIVE_LAG_DAYS = 7
@@ -66,11 +73,13 @@ class OpenMeteoWeather:
         *,
         forecast_url: str = FORECAST_URL,
         archive_url: str = ARCHIVE_URL,
+        climate_url: str = CLIMATE_URL,
         today: Callable[[], date] = _utc_today,
     ) -> None:
         self._http = http
         self._forecast_url = forecast_url
         self._archive_url = archive_url
+        self._climate_url = climate_url
         self._today = today
 
     async def daily(self, point: GeoPoint, start: date, end: date) -> list[DailyWeather]:
@@ -100,6 +109,52 @@ class OpenMeteoWeather:
 
     @cache(ttl=CLIMATE_TTL, key="open-meteo:climate:{lat}:{lon}:{start}:{end}", condition=non_empty)
     async def _climate(self, lat: float, lon: float, start: date, end: date) -> list[DailyWeather]:
+        try:
+            return await self._same_days_last_year(lat, lon, start, end)
+        except UpstreamUnavailable as exc:
+            log.warning("weather_archive_unavailable", error=str(exc)[:120])
+            return await self._climate_model(lat, lon, start, end)
+
+    async def _climate_model(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[DailyWeather]:
+        params = _params(
+            lat, lon, start, end, "temperature_2m_max,temperature_2m_min,precipitation_sum"
+        )
+        params.pop("timezone")
+        data = await fetch_json(
+            self._http, "GET", self._climate_url, params=params | {"models": CLIMATE_MODEL}
+        )
+        daily = data.get("daily") or {}
+        days = []
+        for day, t_max, t_min, rain in zip(
+            daily.get("time") or [],
+            daily.get("temperature_2m_max") or [],
+            daily.get("temperature_2m_min") or [],
+            daily.get("precipitation_sum") or [],
+            strict=False,
+        ):
+            if t_max is None or t_min is None:
+                continue
+            code = _code_from_precipitation(rain or 0.0)
+            # Bias-corrected model series can put the daily min above the max; keep them ordered.
+            low, high = sorted((t_min, t_max))
+            days.append(
+                DailyWeather(
+                    day=date.fromisoformat(day),
+                    temp_min_c=low,
+                    temp_max_c=high,
+                    precipitation_mm=rain or 0.0,
+                    weather_code=code,
+                    summary=describe(code),
+                    is_climate_estimate=True,
+                )
+            )
+        return days
+
+    async def _same_days_last_year(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[DailyWeather]:
         latest = self._today() - timedelta(days=ARCHIVE_LAG_DAYS)
         years = 1
         while _years_back(end, years) > latest:
@@ -118,6 +173,17 @@ class OpenMeteoWeather:
             for day, source in sources.items()
             if source in observed
         ]
+
+
+def _code_from_precipitation(mm: float) -> int:
+    """Climate projections carry no weather code; approximate one from daily precipitation."""
+    if mm >= 10:
+        return 63  # moderate rain
+    if mm >= 2:
+        return 61  # slight rain
+    if mm >= 0.5:
+        return 51  # light drizzle
+    return 2  # partly cloudy
 
 
 def _params(lat: float, lon: float, start: date, end: date, daily: str) -> dict[str, Any]:

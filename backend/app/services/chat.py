@@ -120,7 +120,7 @@ class ChatService:
     async def reply(self, conversation: Conversation, content: str) -> AsyncIterator[AgentEvent]:
         text = ""
         tools_used: list[str] = []
-        if settings.OFFLINE_INTEGRATIONS or settings.GEMINI_API_KEY is None:
+        if settings.OFFLINE_INTEGRATIONS or not settings.gemini_api_keys():
             text = OFFLINE_REPLY
             yield AgentEvent(agent="assistant", kind="token", message=text)
         else:

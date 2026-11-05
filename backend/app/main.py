@@ -67,6 +67,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await engine.dispose()
 
 
+def _request_id_ok(value: str) -> bool:
+    """Accept proxy-issued IDs (e.g. Hugging Face's) as long as they are safe to log."""
+    return 8 <= len(value) <= 128 and all(c.isalnum() or c in "-_.:=" for c in value)
+
+
 def _operation_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}" if route.tags else route.name
 
@@ -107,7 +112,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID", "Retry-After"],
         max_age=600,
     )
-    app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(CorrelationIdMiddleware, validator=_request_id_ok)
     app.include_router(v1_router, prefix=settings.API_V1_PREFIX)
     return app
 

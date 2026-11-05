@@ -1,4 +1,4 @@
-"""Gemini access: the ADK model with retries and a fallback model, plus embeddings.
+"""Gemini access: the ADK model over a chain of fallback models and keys, plus embeddings.
 
 With OFFLINE_INTEGRATIONS (tests, keyless demos) embeddings are deterministic hashes, and agents are
 replaced by scripted fakes at the agent layer.
@@ -15,6 +15,7 @@ from google.adk.models import Gemini
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import Client, errors, types
+from pydantic import PrivateAttr
 
 from app.core.config import settings
 from app.core.errors import UpstreamUnavailable
@@ -22,49 +23,103 @@ from app.core.logging import get_logger
 
 log = get_logger(__name__)
 
-_RETRYABLE = {429, 500, 502, 503, 504}
+_OVERLOADED = {429, 500, 502, 503, 504}
 
 
-def _api_key() -> str | None:
-    return settings.GEMINI_API_KEY.get_secret_value() if settings.GEMINI_API_KEY else None
+def _is_bad_key(exc: Exception) -> bool:
+    """Revoked, disabled or malformed key: another key may work; another model would not."""
+    if not isinstance(exc, errors.ClientError):
+        return False
+    return exc.code in (401, 403) or (exc.code == 400 and "API key" in str(exc))
+
+
+class _KeyPool:
+    """Gemini keys in priority order; a key that fails authentication is skipped from then on."""
+
+    def __init__(self) -> None:
+        self._disabled: set[int] = set()
+
+    def active(self) -> list[tuple[int, str]]:
+        return [(i, k) for i, k in enumerate(settings.gemini_api_keys()) if i not in self._disabled]
+
+    def first(self) -> tuple[int, str]:
+        keys = self.active()
+        if not keys:
+            raise UpstreamUnavailable("No working Gemini API key is configured")
+        return keys[0]
+
+    def disable(self, index: int, exc: Exception) -> None:
+        self._disabled.add(index)
+        code = getattr(exc, "code", None)
+        log.error("gemini_key_disabled", key_index=index, code=code, remaining=len(self.active()))
+
+
+KEYS = _KeyPool()
 
 
 class FallbackGemini(Gemini):
-    """Gemini that switches to a lighter model when the primary one is overloaded."""
+    """Gemini over a chain of models and keys.
 
-    fallback_model: str | None = None
+    Overload (503/504, 429, timeouts) moves to the next model; an authentication failure moves to the
+    next key with the same model. Nothing is retried once a response has started streaming.
+    """
+
+    _models: list[str] = PrivateAttr(default_factory=list)
+    _delegates: dict[tuple[str, int], Gemini] = PrivateAttr(default_factory=dict)
+
+    @classmethod
+    def chain(cls, models: list[str], retry: types.HttpRetryOptions) -> "FallbackGemini":
+        llm = cls(model=models[0], retry_options=retry)
+        llm._models = models
+        return llm
+
+    def _delegate(self, model: str, index: int, key: str) -> Gemini:
+        if (model, index) not in self._delegates:
+            self._delegates[model, index] = Gemini(
+                model=model, client_kwargs={"api_key": key}, retry_options=self.retry_options
+            )
+        return self._delegates[model, index]
 
     async def generate_content_async(
         self, llm_request: LlmRequest, stream: bool = False
     ) -> AsyncGenerator[LlmResponse]:
-        yielded = False
-        try:
-            async for response in super().generate_content_async(llm_request, stream):
-                yielded = True
-                yield response
-        except (errors.APIError, httpx.TimeoutException) as exc:
-            code = exc.code if isinstance(exc, errors.APIError) else 504
-            if yielded or code not in _RETRYABLE or not self.fallback_model:
-                raise
-            log.warning(
-                "llm_fallback", primary=llm_request.model, fallback=self.fallback_model, code=code
-            )
-            llm_request.model = self.fallback_model
-            async for response in super().generate_content_async(llm_request, stream):
-                yield response
+        failure: Exception | None = None
+        for model in self._models or [self.model]:
+            while True:
+                index, key = KEYS.first()
+                llm_request.model = model
+                started = False
+                try:
+                    async for response in self._delegate(model, index, key).generate_content_async(
+                        llm_request, stream
+                    ):
+                        started = True
+                        yield response
+                    return
+                except (errors.APIError, httpx.TimeoutException) as exc:
+                    if started:
+                        raise
+                    if _is_bad_key(exc):
+                        KEYS.disable(index, exc)
+                        continue  # same model, next key
+                    code = exc.code if isinstance(exc, errors.APIError) else 504
+                    if code not in _OVERLOADED:
+                        raise
+                    log.warning("llm_fallback", model=model, code=code)
+                    failure = exc
+                    break  # next model
+        assert failure is not None
+        raise failure
 
 
 def agent_model(*, light: bool = False) -> FallbackGemini:
-    """The main model with the light one as fallback, or the light model alone.
-
-    An overloaded model (503) is not retried: the light model answers in about a second instead.
-    """
-    return FallbackGemini(
-        model=settings.GEMINI_FALLBACK_MODEL if light else settings.GEMINI_MODEL,
-        fallback_model=None if light else settings.GEMINI_FALLBACK_MODEL,
-        client_kwargs={"api_key": _api_key()},
-        retry_options=types.HttpRetryOptions(
-            attempts=2, initial_delay=1.0, max_delay=4.0, http_status_codes=[429, 500, 502, 504]
+    """The main model followed by the fallbacks, or the fallbacks alone for light tasks."""
+    fallbacks = settings.gemini_fallback_models()
+    models = fallbacks if light and fallbacks else [settings.GEMINI_MODEL, *fallbacks]
+    return FallbackGemini.chain(
+        list(dict.fromkeys(models)),
+        types.HttpRetryOptions(
+            attempts=2, initial_delay=1.0, max_delay=4.0, http_status_codes=[500, 502]
         ),
     )
 
@@ -87,8 +142,8 @@ SAFETY_SETTINGS = [
 
 
 @lru_cache
-def _client() -> Client:
-    return Client(api_key=_api_key())
+def _client(key: str) -> Client:
+    return Client(api_key=key)
 
 
 def _fake_embedding(text: str) -> list[float]:
@@ -105,17 +160,22 @@ def _fake_embedding(text: str) -> list[float]:
 async def _embed_batch(
     texts: list[str], task: Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
 ) -> list[list[float]]:
-    try:
-        result = await _client().aio.models.embed_content(
-            model=settings.GEMINI_EMBEDDING_MODEL,
-            contents=texts,
-            config=types.EmbedContentConfig(
-                task_type=task, output_dimensionality=settings.EMBEDDING_DIM
-            ),
-        )
-    except errors.APIError as exc:
-        raise UpstreamUnavailable("The embedding service is busy, please retry") from exc
-    return [e.values or [] for e in result.embeddings or []]
+    while True:
+        index, key = KEYS.first()
+        try:
+            result = await _client(key).aio.models.embed_content(
+                model=settings.GEMINI_EMBEDDING_MODEL,
+                contents=texts,
+                config=types.EmbedContentConfig(
+                    task_type=task, output_dimensionality=settings.EMBEDDING_DIM
+                ),
+            )
+        except errors.APIError as exc:
+            if _is_bad_key(exc):
+                KEYS.disable(index, exc)
+                continue
+            raise UpstreamUnavailable("The embedding service is busy, please retry") from exc
+        return [e.values or [] for e in result.embeddings or []]
 
 
 async def embed(
@@ -123,7 +183,7 @@ async def embed(
 ) -> list[list[float]]:
     if not texts:
         return []
-    if settings.OFFLINE_INTEGRATIONS or not _api_key():
+    if settings.OFFLINE_INTEGRATIONS or not settings.gemini_api_keys():
         return [_fake_embedding(t) for t in texts]
     vectors = await _embed_batch(list(texts), task)
     if len(vectors) != len(texts):
