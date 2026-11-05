@@ -174,7 +174,9 @@ class OffersProvider(Protocol):
         travelers: int,
         nightly_budget: Decimal | None,
         currency: str,
-    ) -> list[TravelOffer]: ...
+    ) -> list[TravelOffer]:
+        """`nightly_budget` is the whole group's lodging budget per night, all rooms together."""
+        ...
 
 
 class ObjectStorage(Protocol):
