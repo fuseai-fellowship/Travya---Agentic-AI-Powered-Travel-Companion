@@ -41,8 +41,13 @@ class Settings(BaseSettings):
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # batches; -2 merges inputs
     EMBEDDING_DIM: int = 768
     LLM_DAILY_REQUEST_BUDGET: int = Field(
-        default=400, description="Global cap on agent runs per day"
+        default=400, description="Global cap on model calls per day (a plan takes 3-6)"
     )
+
+    # Overall time for one planning run or chat turn, so a stream always ends with an answer
+    # (under Cloud Run's 300 s request timeout).
+    PLAN_DEADLINE_SECONDS: float = 240.0
+    CHAT_DEADLINE_SECONDS: float = 120.0
 
     # Abuse controls (per user)
     RATE_LIMIT_DEFAULT: str = "120/minute"
@@ -61,6 +66,10 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_DIR: str = "./.storage"
     GCS_BUCKET: str | None = None
     MAX_UPLOAD_MB: int = 10
+    # Stored document bytes, checked before each upload (Neon's free tier holds 0.5 GB in all).
+    STORAGE_QUOTA_MB: int = 25
+    STORAGE_QUOTA_ANONYMOUS_MB: int = 5
+    STORAGE_TOTAL_MB: int = 200
 
     def gemini_api_keys(self) -> list[str]:
         """Primary key first, then backups; blanks and duplicates removed."""

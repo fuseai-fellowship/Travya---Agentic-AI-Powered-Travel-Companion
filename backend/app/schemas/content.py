@@ -1,8 +1,8 @@
 import uuid
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import MISSING, Field, StringConstraints
 
 from app.models import FeedbackTarget, MessageRole
 from app.schemas.common import ApiModel
@@ -23,7 +23,7 @@ class MeRead(ApiModel):
 class MeUpdate(ApiModel):
     display_name: str | None = Field(default=None, max_length=120)
     home_city: str | None = Field(default=None, max_length=120)
-    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    currency: str | MISSING = Field(default=MISSING, pattern=r"^[A-Z]{3}$")
 
 
 class NoteCreate(ApiModel):
@@ -35,10 +35,10 @@ class NoteCreate(ApiModel):
 
 
 class NoteUpdate(ApiModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    content: str | None = Field(default=None, max_length=10_000)
-    color: NoteColor | None = None
-    is_pinned: bool | None = None
+    title: str | MISSING = Field(default=MISSING, min_length=1, max_length=200)
+    content: str | MISSING = Field(default=MISSING, max_length=10_000)
+    color: NoteColor | MISSING = MISSING
+    is_pinned: bool | MISSING = MISSING
     trip_id: uuid.UUID | None = None
 
 
@@ -59,9 +59,9 @@ class ConversationCreate(ApiModel):
 
 
 class ConversationUpdate(ApiModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    is_archived: bool | None = None
-    is_favorite: bool | None = None
+    title: str | MISSING = Field(default=MISSING, min_length=1, max_length=200)
+    is_archived: bool | MISSING = MISSING
+    is_favorite: bool | MISSING = MISSING
     trip_id: uuid.UUID | None = None
 
 
@@ -84,7 +84,7 @@ class MessageRead(ApiModel):
 
 
 class ChatRequest(ApiModel):
-    content: str = Field(min_length=1, max_length=4000)
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)]
 
 
 class DocumentRead(ApiModel):
@@ -143,4 +143,8 @@ class GuideRead(ApiModel):
 
 
 class UsageRead(ApiModel):
-    llm_runs_remaining_today: int
+    llm_runs_remaining_today: int = Field(
+        description="About how many plans or chat turns the shared daily budget still allows"
+    )
+    llm_calls_remaining_today: int = Field(description="Model calls left in the daily budget")
+    llm_calls_per_day: int

@@ -9,7 +9,8 @@ from google.api_core.exceptions import NotFound as GcsNotFound
 
 from app.core.errors import InvalidInput, NotFound
 from app.integrations.fakes import MemoryStorage
-from app.integrations.storage.gcs import GcsStorage, content_disposition
+from app.integrations.storage import content_disposition
+from app.integrations.storage.gcs import GcsStorage
 from app.integrations.storage.local import LocalStorage
 
 BAD_KEYS = [
@@ -71,6 +72,9 @@ def test_content_disposition() -> None:
         "attachment; filename=\"Kathmandu trip.pdf\"; filename*=UTF-8''Kathmandu%20trip.pdf"
     )
     assert content_disposition("Zürich.pdf").startswith('attachment; filename="Z_rich.pdf"')
+    header = content_disposition("日本.pdf")
+    assert header == "attachment; filename=\"__.pdf\"; filename*=UTF-8''%E6%97%A5%E6%9C%AC.pdf"
+    header.encode("latin-1")  # what Starlette does with header values
 
 
 class _Credentials:

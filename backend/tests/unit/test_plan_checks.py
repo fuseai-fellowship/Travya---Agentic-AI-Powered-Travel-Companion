@@ -43,3 +43,13 @@ def test_pace_and_budget_are_enforced() -> None:
 def test_empty_or_malformed_plan() -> None:
     assert check_plan(None, TRIP) == ["The planner produced no plan."]
     assert "does not match the schema" in check_plan({"summary": "x"}, TRIP)[0]
+
+
+def test_every_interest_the_web_app_offers_maps_to_places() -> None:
+    from app.agents.planning.scouts import INTEREST_CATEGORIES
+
+    offered = [
+        "culture", "food", "nature", "history", "art", "architecture",
+        "viewpoints", "nightlife", "shopping", "adventure", "relaxation", "family",
+    ]  # fmt: skip
+    assert [i for i in offered if not INTEREST_CATEGORIES.get(i)] == []

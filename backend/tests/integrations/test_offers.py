@@ -79,8 +79,10 @@ async def test_hotels_have_three_tiers_scaled_to_budget() -> None:
     assert [o.details["tier"] for o in offers] == ["budget", "comfort", "premium"]
     nightly = [Decimal(o.details["nightly_rate"]) for o in offers]
     assert nightly == sorted(nightly)
-    assert Decimal(50) <= nightly[0] <= Decimal(70)
-    assert Decimal(120) <= nightly[2] <= Decimal(145)
+    # Two rooms share the group's 100 a night.
+    assert Decimal(25) <= nightly[0] <= Decimal(35)
+    assert Decimal(59) <= nightly[2] <= Decimal(71)
+    assert offers[2].amount <= Decimal(100) * Decimal("1.3") * Decimal("1.08") * 3
     for offer, rate in zip(offers, nightly, strict=True):
         assert offer.details["nights"] == 3
         assert offer.details["rooms"] == 2

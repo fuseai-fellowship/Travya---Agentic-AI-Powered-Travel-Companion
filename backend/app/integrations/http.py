@@ -76,7 +76,15 @@ def retry_after_seconds(response: httpx.Response) -> float | None:
 
 
 def _is_retryable(response: httpx.Response | None) -> bool:
-    return response is not None and response.status_code in RETRY_STATUSES
+    if response is None or response.status_code not in RETRY_STATUSES:
+        return False
+    return not (response.status_code == 429 and quota_exhausted(response))
+
+
+def quota_exhausted(response: httpx.Response) -> bool:
+    """A daily or hourly quota (Open-Meteo's wording) will not reset within our back-off."""
+    text = response.text[:500].lower()
+    return "limit" in text and ("daily" in text or "hourly" in text)
 
 
 def _wait(state: RetryCallState) -> float:
