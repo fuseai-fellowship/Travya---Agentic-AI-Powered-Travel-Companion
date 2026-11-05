@@ -181,8 +181,8 @@ flowchart LR
 - **Docs** (`docs.yml`) build with `mkdocs build --strict` on PRs that touch them and publish to the
   `travya-docs` Cloudflare Pages project from `main`. Until the Cloudflare variables exist, the deploy
   job is skipped rather than failing; the same holds for the app deploy and release-please.
-- **Dependabot** opens grouped weekly updates against `dev`; **OpenSSF Scorecard** runs weekly and on
-  pushes to `dev`.
+- **OpenSSF Scorecard** runs weekly and on pushes to `dev`. Dependencies are upgraded deliberately
+  (`uv lock --upgrade`, `npm update`); GitHub vulnerability alerts flag known CVEs.
 
 ## Rollback
 
