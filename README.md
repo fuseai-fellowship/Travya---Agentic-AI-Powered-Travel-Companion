@@ -67,7 +67,7 @@ flowchart LR
     spa["Cloudflare Pages<br/>React SPA, MapLibre"]
     tiles["OpenFreeMap tiles"]
     firebase["Firebase Auth"]
-    api["Cloud Run<br/>FastAPI + Google ADK"]
+    api["Hugging Face Space<br/>FastAPI + Google ADK"]
     neon[("Neon<br/>Postgres + pgvector")]
     redis[("Upstash Redis<br/>limits, cache")]
     gemini["Gemini API"]
@@ -98,7 +98,7 @@ flowchart LR
 | Open data | Nominatim, Photon, Overpass, Wikipedia, OSRM / OpenRouteService, Open-Meteo, Wikivoyage, Unsplash / Wikimedia Commons |
 | Quality | pytest, respx, Ruff, mypy (strict), Vitest, Playwright, Biome |
 | Delivery | Docker, Compose, GitHub Actions, Trivy + SBOM, CodeQL, OpenSSF Scorecard, Dependabot, release-please, Terraform |
-| Hosting | Cloud Run, Neon, Upstash, Cloudflare Pages, Firebase, Cloud Storage: all free tier |
+| Hosting | Hugging Face Spaces (or Cloud Run), Neon, Upstash, Cloudflare Pages, Firebase: free tiers, no card needed |
 
 ## Engineering highlights
 
@@ -110,7 +110,7 @@ flowchart LR
 - **Ports and adapters with fakes.** Nine ports, real adapters with fallbacks, polite cached HTTP, and deterministic fakes: `OFFLINE_INTEGRATIONS=true` runs the whole flow with no keys or network, so tests and CI run offline. [`integrations/ports.py`](backend/app/integrations/ports.py)
 - **One required CI check.** `ci-ok` aggregates path-filtered jobs: lint, types, tests, an OpenAPI drift check, migrations on an empty database, Playwright on the production images, a gitleaks secret scan, Trivy and SBOMs; CodeQL and Scorecard alongside. [`ci.yml`](.github/workflows/ci.yml)
 - **Keyless deploys.** GitHub OIDC to Workload Identity Federation, limited to this repository's `main`; one image per commit runs the migration job, then serves; smoke test, then Cloudflare Pages. [`deploy.yml`](.github/workflows/deploy.yml)
-- **$0 hosting.** Cloud Run scales from zero to one instance; Neon, Upstash, Cloudflare Pages and Firebase free tiers; Terraform with a $1 budget alert. [`infra/terraform`](infra/terraform)
+- **$0 hosting, no card.** The API runs as a Docker Space on Hugging Face (built from `backend/Dockerfile`, migrations on start); Neon, Upstash, Cloudflare Pages and Firebase free tiers do the rest. A Cloud Run + Terraform route with a $1 budget alert is kept for accounts with billing. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 
 ## Run locally
 

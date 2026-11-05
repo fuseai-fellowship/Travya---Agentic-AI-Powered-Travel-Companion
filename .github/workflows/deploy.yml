@@ -5,9 +5,12 @@ name: deploy
 # Service configuration (env, secrets, scaling, probes) is owned by infra/terraform; this workflow only
 # changes the image.
 #
-# Repository/environment variables: GCP_PROJECT_ID, GCP_REGION, WIF_PROVIDER, DEPLOY_SA, CF_ACCOUNT_ID,
-#   VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, optional VITE_API_URL.
-# Secrets: CLOUDFLARE_API_TOKEN.
+# The API runs on one of two hosts, whichever is configured:
+#   - Hugging Face Spaces (no card needed): variable HF_SPACE (owner/name), secret HF_TOKEN. The Space
+#     builds backend/Dockerfile itself; its secrets and variables are set once (see docs/operations).
+#   - Cloud Run: variables GCP_PROJECT_ID, GCP_REGION, WIF_PROVIDER, DEPLOY_SA (infra/terraform).
+# Web (Cloudflare Pages): CF_ACCOUNT_ID, VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN,
+#   VITE_FIREBASE_PROJECT_ID, optional VITE_API_URL; secret CLOUDFLARE_API_TOKEN.
 
 on:
   push:
@@ -95,9 +98,72 @@ jobs:
           URL: ${{ steps.deploy.outputs.url }}
         run: curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors --max-time 20 "${URL}/api/v1/health/ready"
 
+  api-hf:
+    name: API (Hugging Face Space)
+    needs: ci
+    # Skipped (not failed) until HF_SPACE is set.
+    if: github.ref == 'refs/heads/main' && vars.HF_SPACE != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ steps.publish.outputs.url }}
+    permissions:
+      contents: read
+    outputs:
+      url: ${{ steps.publish.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Publish the backend to the Space
+        id: publish
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          stage="$RUNNER_TEMP/space"
+          rsync -a --exclude tests --exclude .venv --exclude '__pycache__' backend/ "$stage/"
+          echo "$GITHUB_SHA" > "$stage/BUILD_SHA"
+          cat > "$stage/README.md" <<'MD'
+          ---
+          title: Travya API
+          emoji: 🧭
+          colorFrom: red
+          colorTo: yellow
+          sdk: docker
+          app_port: 8000
+          short_description: API for Travya, a multi-agent AI travel planner
+          pinned: false
+          ---
+
+          Backend of [Travya](https://github.com/fuseai-fellowship/Travya---Agentic-AI-Powered-Travel-Companion),
+          deployed from `main` by GitHub Actions. Interactive docs: `/api/v1/docs`.
+          MD
+          uvx --from "huggingface_hub==2.4.0" hf upload "$HF_SPACE" "$stage" . --repo-type space \
+            --delete "*" --commit-message "Deploy ${GITHUB_SHA::7}"
+          host=$(printf '%s' "$HF_SPACE" | tr '[:upper:]' '[:lower:]' | tr '/_.' '---')
+          echo "url=https://${host}.hf.space" >> "$GITHUB_OUTPUT"
+      - name: Wait for the new revision (the Space builds the image)
+        env:
+          URL: ${{ steps.publish.outputs.url }}
+        run: |
+          for i in $(seq 1 90); do
+            build=$(curl -fsS --max-time 10 "$URL/api/v1/health/live" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("build",""))' 2>/dev/null || true)
+            if [ "$build" = "$GITHUB_SHA" ] && curl -fsS --max-time 10 "$URL/api/v1/health/ready" >/dev/null; then
+              echo "Revision ${GITHUB_SHA::7} is live and ready at $URL"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The Space did not serve ${GITHUB_SHA::7} within 15 minutes"; exit 1
+
   web:
     name: Web (Cloudflare Pages)
-    needs: api
+    needs: [api, api-hf]
+    if: >-
+      always() && vars.CF_ACCOUNT_ID != '' &&
+      (needs.api.result == 'success' || needs.api-hf.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -109,7 +175,7 @@ jobs:
       run:
         working-directory: frontend
     env:
-      API_URL: ${{ vars.VITE_API_URL || needs.api.outputs.url }}
+      API_URL: ${{ vars.VITE_API_URL || needs.api.outputs.url || needs.api-hf.outputs.url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
