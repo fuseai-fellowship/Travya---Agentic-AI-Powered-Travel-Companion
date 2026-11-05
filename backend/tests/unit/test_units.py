@@ -94,3 +94,34 @@ def test_firebase_credential_without_google_credentials(monkeypatch: pytest.Monk
     credential = security._credential()
     assert isinstance(credential, security._PublicCredential)
     assert isinstance(credential.get_credential(), google.auth.credentials.AnonymousCredentials)
+
+
+async def test_limiter_falls_back_to_memory_when_redis_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core import ratelimit
+
+    monkeypatch.setattr(ratelimit.settings, "LLM_DAILY_REQUEST_BUDGET", 5)
+    limiter = Limiter("async+redis://localhost:1")  # nothing listens there
+    await limiter.hit("1/minute", "scope", "user")
+    with pytest.raises(RateLimited):
+        await limiter.hit("1/minute", "scope", "user")
+    await limiter.spend_llm_budget()
+    assert await limiter.remaining_llm_budget() == 4
+
+
+async def test_limiter_falls_back_when_redis_stalls(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from app.core import ratelimit
+
+    async def stall(*_: object) -> bool:
+        await asyncio.sleep(5)
+        return True
+
+    monkeypatch.setattr(ratelimit, "STORAGE_TIMEOUT_S", 0.05)
+    limiter = Limiter("async+memory://")
+    monkeypatch.setattr(limiter._shared.moving, "hit", stall)
+    await limiter.hit("1/minute", "scope", "user")
+    with pytest.raises(RateLimited):
+        await limiter.hit("1/minute", "scope", "user")
