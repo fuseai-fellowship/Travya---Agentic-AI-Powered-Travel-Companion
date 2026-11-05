@@ -154,7 +154,7 @@ jobs:
           URL: ${{ steps.publish.outputs.url }}
         run: |
           for i in $(seq 1 90); do
-            build=$(curl -fsS --max-time 10 "$URL/api/v1/health/live" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("build",""))' 2>/dev/null || true)
+            build=$(curl -fsS --max-time 10 "$URL/api/v1/health/live" 2>/dev/null | jq -r '.build // ""' 2>/dev/null || true)
             if [ "$build" = "$GITHUB_SHA" ] && curl -fsS --max-time 10 "$URL/api/v1/health/ready" >/dev/null; then
               echo "Revision ${GITHUB_SHA::7} is live and ready at $URL"; exit 0
             fi

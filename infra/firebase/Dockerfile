@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 # Firebase Auth emulator for local development and e2e (project `demo-travya`: no credentials, no network).
+# firebase-tools comes from package-lock.json (npm ci), so every dependency is pinned by integrity hash.
 FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
-ARG FIREBASE_TOOLS_VERSION=15.34.2
-RUN npm install --global --no-audit --no-fund "firebase-tools@${FIREBASE_TOOLS_VERSION}" \
-    && npm cache clean --force
 WORKDIR /srv/firebase
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+ENV PATH="/srv/firebase/node_modules/.bin:${PATH}"
 # firebase-tools writes firebase-debug.log to the working directory
 COPY --chown=node:node firebase.json ./
 RUN chown node:node /srv/firebase
