@@ -27,8 +27,11 @@ interface Stored {
   created_at: string
 }
 
-/** A conversation whose API saves the user's message when the stream opens, like the backend. */
-function api(reply: (posts: number, signal: AbortSignal) => Response) {
+/**
+ * A conversation whose API behaves like the backend: it saves the user's message when the stream
+ * opens, and doesn't save it again when an unanswered question is resent.
+ */
+function api(reply: (posts: number, signal: AbortSignal, stored: Stored[]) => Response) {
   const stored: Stored[] = []
   let posts = 0
   server.use(
@@ -37,8 +40,10 @@ function api(reply: (posts: number, signal: AbortSignal) => Response) {
     http.post(`${API}/conversations/:id/messages`, async ({ request }) => {
       posts += 1
       const { content } = (await request.json()) as { content: string }
-      const response = reply(posts, request.signal)
-      if (response.headers.get("content-type")?.includes("event-stream")) {
+      const response = reply(posts, request.signal, stored)
+      const last = stored.at(-1)
+      const resent = last?.role === "user" && last.content === content
+      if (response.headers.get("content-type")?.includes("event-stream") && !resent) {
         stored.push({
           id: `u${posts}`,
           role: "user",
@@ -121,19 +126,21 @@ describe("assistant thread", () => {
   })
 
   it("renders the question once after a backend error and retries it", async () => {
-    const { posts } = api(
-      () =>
-        new HttpResponse(
-          sseBody([
-            frame({ agent: "assistant", kind: "progress", message: "Checking the weather…" }),
-            frame({
-              agent: "assistant",
-              kind: "error",
-              message: "The assistant is unavailable right now. Please try again in a moment.",
-            }),
-          ]),
-          { headers: SSE_HEADERS },
-        ),
+    const hold = deferred()
+    const { posts } = api((count) =>
+      count === 1
+        ? new HttpResponse(
+            sseBody([
+              frame({ agent: "assistant", kind: "progress", message: "Checking the weather…" }),
+              frame({
+                agent: "assistant",
+                kind: "error",
+                message: "The assistant is unavailable right now. Please try again in a moment.",
+              }),
+            ]),
+            { headers: SSE_HEADERS },
+          )
+        : new HttpResponse(sseBody([": ping\n\n"], [], hold.promise), { headers: SSE_HEADERS }),
     )
     renderWithClient(<Chat />)
     const user = await ask()
@@ -148,6 +155,39 @@ describe("assistant thread", () => {
 
     await user.click(within(alert).getByRole("button", { name: "Retry" }))
     await waitFor(() => expect(posts()).toBe(2))
+    // While the retry runs, the stored question is still shown once.
+    expect(await within(log).findByTestId("typing")).toBeInTheDocument()
+    expect(within(log).getAllByText(QUESTION)).toHaveLength(1)
+    act(() => hold.resolve())
+  })
+
+  it("shows the partial reply the API kept, once, marked as interrupted", async () => {
+    api(
+      (_count, _signal, stored) =>
+        new HttpResponse(
+          sseBody(
+            [frame({ agent: "assistant", kind: "token", message: "Day 3 looks dry, but" })],
+            [frame({ agent: "assistant", kind: "error", message: "The assistant timed out." })],
+            // The server stores the partial reply before it reports the error.
+            Promise.resolve().then(() => {
+              stored.push({
+                id: "a-partial",
+                role: "assistant",
+                content: "Day 3 looks dry, but",
+                meta: { interrupted: true },
+                created_at: "2026-11-06T10:00:30Z",
+              })
+            }),
+          ),
+          { headers: SSE_HEADERS },
+        ),
+    )
+    renderWithClient(<Chat />)
+    await ask()
+    expect(await screen.findByRole("alert")).toHaveTextContent("The assistant timed out.")
+    const log = screen.getByRole("log", { name: "Conversation" })
+    await waitFor(() => expect(within(log).getAllByText("Day 3 looks dry, but")).toHaveLength(1))
+    expect(within(log).getByText("Interrupted before it finished")).toBeInTheDocument()
   })
 
   it("keeps an unsent message with the API's reason and a retry", async () => {

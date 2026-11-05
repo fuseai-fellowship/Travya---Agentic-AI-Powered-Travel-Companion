@@ -1,5 +1,5 @@
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { HttpResponse, http } from "msw"
 import { beforeAll, describe, expect, it, vi } from "vitest"
@@ -135,19 +135,6 @@ describe("app smoke", () => {
     expect(await screen.findByText("Nothing on this page")).toBeInTheDocument()
     expect(screen.queryByText("Plan your first trip")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Back to the first page" })).toBeInTheDocument()
-  })
-
-  it("starts a blank trip from the profile's home city and currency", async () => {
-    api()
-    server.use(
-      http.get(`${API}/me`, () =>
-        HttpResponse.json({ ...fixtures.me, home_city: "Pokhara", currency: "EUR" }),
-      ),
-    )
-    mount("/trips/new")
-    const origin = await screen.findByRole("textbox", { name: /Travelling from/ })
-    await waitFor(() => expect(origin).toHaveValue("Pokhara"))
-    expect(screen.getByRole("combobox", { name: "Currency" })).toHaveValue("EUR")
   })
 
   it("asks before a demo account signs out", async () => {

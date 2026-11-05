@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { apiFetch, apiUrl } from "@/lib/api"
+import { reportDemoLimit } from "@/lib/demoLimit"
 import { ApiError, toApiError } from "@/lib/errors"
 import { notifyError, notifySuccess } from "@/lib/notify"
 import { invalidateTrip } from "@/lib/queryKeys"
@@ -56,6 +57,14 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
       if (event.agent === "travya" && event.kind === "done") {
         notifySuccess("Itinerary ready", event.message)
       }
+      // The run spent the demo's daily model budget: say so like any other demo-limit answer.
+      if (
+        event.agent === "travya" &&
+        event.kind === "error" &&
+        event.data?.error === "BudgetExhausted"
+      ) {
+        reportDemoLimit(event.message)
+      }
     },
   })
     .then(() => {
@@ -79,6 +88,12 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
     })
     .catch((caught: unknown) => {
       const error = caught instanceof ApiError ? caught : toApiError(caught, null)
+      if (error.kind === "conflict") {
+        // Another tab (or device) is already planning this trip: the page follows that run.
+        runs.delete(tripId)
+        for (const listener of listeners) listener()
+        return
+      }
       set(tripId, (run) => ({
         ...run,
         active: false,

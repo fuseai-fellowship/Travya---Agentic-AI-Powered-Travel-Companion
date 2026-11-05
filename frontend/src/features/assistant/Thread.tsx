@@ -129,6 +129,7 @@ export function Thread({
                   author={message.role}
                   content={message.content}
                   tools={Array.isArray(message.meta?.tools) ? (message.meta.tools as string[]) : []}
+                  interrupted={message.meta?.interrupted === true}
                 />
               ))}
               {turn && (

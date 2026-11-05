@@ -194,3 +194,48 @@ describe("useThrottledText", () => {
     }
   })
 })
+
+function RunProbe({ tripId }: { tripId: string }) {
+  const run = usePlanRun(tripId)
+  return <p>{run ? `run ${run.state.status}` : "no run"}</p>
+}
+
+describe("planning conflicts and budget", () => {
+  it("follows a run already going elsewhere instead of failing", async () => {
+    planApi(() =>
+      HttpResponse.json(
+        { title: "Conflict", detail: "This trip is already being planned." },
+        { status: 409, headers: { "Content-Type": "application/problem+json" } },
+      ),
+    )
+    const tripId = nextTrip()
+    const { queryClient } = renderWithClient(<RunProbe tripId={tripId} />)
+    act(() => startPlan(queryClient, tripId))
+    expect(screen.getByText("run running")).toBeInTheDocument()
+    expect(await screen.findByText("no run")).toBeInTheDocument()
+  })
+
+  it("raises the demo-limit banner when the run's budget runs out", async () => {
+    const demoLimit = await import("@/lib/demoLimit")
+    const report = vi.spyOn(demoLimit, "reportDemoLimit")
+    planApi(
+      () =>
+        new HttpResponse(
+          sseBody([
+            ev({ kind: "started", message: "Planning" }),
+            ev({
+              kind: "error",
+              message: "Today's demo budget is used up.",
+              data: { error: "BudgetExhausted" },
+            }),
+          ]),
+          { headers: SSE_HEADERS },
+        ),
+    )
+    const tripId = nextTrip()
+    const { queryClient } = renderWithClient(<Panel tripId={tripId} />)
+    act(() => startPlan(queryClient, tripId))
+    expect(await screen.findAllByText("Today's demo budget is used up.")).not.toHaveLength(0)
+    expect(report).toHaveBeenCalledWith("Today's demo budget is used up.")
+  })
+})

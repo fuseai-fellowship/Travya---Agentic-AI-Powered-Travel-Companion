@@ -31,11 +31,14 @@ export function MessageBubble({
   author,
   content,
   tools = [],
+  interrupted = false,
 }: {
   id?: string
   author: "user" | "assistant"
   content: string
   tools?: string[]
+  /** The reply was cut short (stopped, timed out or failed); the API kept what had arrived. */
+  interrupted?: boolean
 }) {
   const mine = author === "user"
   return (
@@ -53,6 +56,11 @@ export function MessageBubble({
       >
         {mine ? <Text whiteSpace="pre-wrap">{content}</Text> : <Markdown>{content}</Markdown>}
       </Box>
+      {!mine && interrupted && (
+        <Text fontSize="xs" color="fg.muted" ps="1">
+          Interrupted before it finished
+        </Text>
+      )}
       {!mine && id && <Feedback messageId={id} />}
     </Stack>
   )

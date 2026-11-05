@@ -1,7 +1,7 @@
 import { Button, Stack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { LuRoute, LuSparkles } from "react-icons/lu"
+import { LuRoute } from "react-icons/lu"
 import { tripsListItineraryOptions } from "@/client/@tanstack/react-query.gen"
 import type { TripDetail } from "@/client/types.gen"
 import { Empty, ErrorState, ListSkeleton } from "@/components/States"
@@ -47,6 +47,9 @@ export function ItineraryTab({
       />
     )
 
+  // Just after a plan finishes, the cached empty list is refetching: don't flash "No itinerary".
+  if (!query.data.length && query.isFetching) return <ListSkeleton rows={4} />
+
   if (!query.data.length && !planning) {
     return (
       <Empty
@@ -55,7 +58,7 @@ export function ItineraryTab({
         description="Let the agents research and draft the days, or add your own items."
       >
         <Button colorPalette="brand" onClick={onPlan}>
-          <LuSparkles /> Plan with agents
+          Plan with agents
         </Button>
         {groups[0] && (
           <DaySection

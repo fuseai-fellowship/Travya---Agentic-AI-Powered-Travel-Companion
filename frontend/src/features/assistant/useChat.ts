@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { apiFetch, apiUrl } from "@/lib/api"
 import { reportDemoLimit } from "@/lib/demoLimit"
 import { ApiError, errorMessage } from "@/lib/errors"
@@ -48,10 +48,19 @@ export function useChat() {
   const stream = useEventStream(apiFetch)
   const [pending, setPending] = useState<PendingTurn | null>(null)
   const [announcement, setAnnouncement] = useState("")
+  const latest = useRef<PendingTurn | null>(null)
+  latest.current = pending
 
   const send = useCallback(
     async (conversationId: string, content: string) => {
       setAnnouncement("")
+      // Retrying a question the API already stored: it doesn't store it twice, so neither do we.
+      const previous = latest.current
+      const retrying =
+        previous?.conversationId === conversationId &&
+        previous.user === content &&
+        previous.saved &&
+        (previous.phase === "error" || previous.phase === "stopped")
       setPending({
         conversationId,
         user: content,
@@ -60,7 +69,7 @@ export function useChat() {
         phase: "sending",
         startedAt: Date.now(),
         error: null,
-        saved: false,
+        saved: retrying,
       })
       const update = (change: (turn: PendingTurn) => PendingTurn) =>
         setPending((turn) => (turn && turn.conversationId === conversationId ? change(turn) : turn))
@@ -94,13 +103,16 @@ export function useChat() {
         },
       )
 
+      // Once the stream was open, the API also stores a partial reply (meta.interrupted) when the
+      // turn is cut short, so the refetched thread shows it; the pending copy is dropped.
       if (outcome instanceof ApiError) {
         if (outcome.kind === "demo_limit") reportDemoLimit(outcome.detail)
         if (run.opened) await refetch()
         update((turn) => ({
           ...turn,
           phase: "error",
-          saved: run.opened,
+          saved: turn.saved || run.opened,
+          reply: run.opened ? "" : turn.reply,
           error: run.opened ? DROPPED : errorMessage(outcome),
         }))
         return
@@ -108,13 +120,17 @@ export function useChat() {
 
       await refetch()
       if (outcome === "aborted") {
-        update((turn) => ({ ...turn, phase: "stopped", saved: run.opened }))
         setAnnouncement("Stopped.")
+        if (run.opened && run.reply) {
+          setPending((turn) => (turn && turn.conversationId === conversationId ? null : turn))
+          return
+        }
+        update((turn) => ({ ...turn, phase: "stopped", saved: turn.saved || run.opened }))
         return
       }
       if (run.failure) {
         const error = run.failure
-        update((turn) => ({ ...turn, phase: "error", saved: true, error }))
+        update((turn) => ({ ...turn, phase: "error", saved: true, reply: "", error }))
         return
       }
       setPending((turn) => (turn && turn.conversationId === conversationId ? null : turn))
