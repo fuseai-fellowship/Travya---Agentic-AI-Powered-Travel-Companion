@@ -9,12 +9,11 @@ from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.core.errors import InvalidInput, QuotaExceeded, StorageFull
+from app.core.errors import InvalidInput, PayloadTooLarge, QuotaExceeded, StorageFull
+from app.core.limits import MB
 from app.integrations.ports import ObjectStorage
 from app.models import Document, User
 from app.repositories import DocumentRepository, TripRepository, newest_first
-
-MB = 1024 * 1024
 
 # Allowed types are checked against the file's leading bytes, not the client-supplied header.
 SIGNATURES: dict[str, tuple[bytes, ...]] = {
@@ -51,8 +50,8 @@ class DocumentService:
         return await self.documents.all(*where, order_by=[newest_first(Document)])
 
     async def upload(self, filename: str, data: bytes, trip_id: uuid.UUID | None) -> Document:
-        if len(data) > settings.MAX_UPLOAD_MB * 1024 * 1024:
-            raise InvalidInput(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
+        if len(data) > settings.MAX_UPLOAD_MB * MB:
+            raise PayloadTooLarge(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
         content_type = sniff_content_type(data)
         if content_type is None:
             raise InvalidInput("Only PDF, PNG, JPEG and WebP files are accepted")

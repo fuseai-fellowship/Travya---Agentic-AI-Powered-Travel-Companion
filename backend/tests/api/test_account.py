@@ -187,3 +187,20 @@ async def test_resending_an_unanswered_message_does_not_duplicate_it(
     assert [m["role"] for m in messages] == ["user", "assistant"]
     assert messages[1]["meta"] == {"tools": []}
     assert (await alice.post(url, json={"content": "   "})).status_code == 422
+
+
+async def test_oversized_requests_are_refused(
+    alice: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "MAX_UPLOAD_MB", 1)
+    big = {"file": ("big.pdf", b"%PDF-1.7 " + b"0" * 1_500_000, "application/pdf")}
+    upload = await alice.post("/documents", files=big)
+    assert upload.status_code == 413
+    assert "at most 1 MB" in upload.json()["detail"]
+    huge = {"file": ("huge.pdf", b"%PDF-1.7 " + b"0" * 2_500_000, "application/pdf")}
+    assert (await alice.post("/documents", files=huge)).status_code == 413
+    assert (await alice.get("/documents")).json() == []
+    notes = await alice.post("/notes", json={"title": "x", "content": "y" * 2_000_000})
+    assert notes.status_code == 413

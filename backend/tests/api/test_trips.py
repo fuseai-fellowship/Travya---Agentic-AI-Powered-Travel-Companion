@@ -36,6 +36,7 @@ async def test_create_geocodes_and_lists(alice: AsyncClient, trip: dict[str, obj
         ({"end_date": "2027-05-30"}, "at most 21 days"),
         ({"currency": "usd"}, "String should match pattern"),
         ({"travelers": 0}, "greater than or equal to 1"),
+        ({"interests": ["x" * 41]}, "at most 40 characters"),
     ],
 )
 async def test_validation_errors(

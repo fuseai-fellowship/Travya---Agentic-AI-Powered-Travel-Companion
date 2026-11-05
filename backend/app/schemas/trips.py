@@ -1,14 +1,16 @@
 import uuid
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
-from pydantic import MISSING, Field, model_validator
+from pydantic import MISSING, Field, StringConstraints, model_validator
 
 from app.models import BookingKind, BookingStatus, ItemCategory, TripPace, TripStatus
 from app.schemas.common import ApiModel
 
 MAX_TRIP_DAYS = 21
+# Interests go into every prompt: short labels only.
+Interest = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
 
 
 class TripBase(ApiModel):
@@ -21,7 +23,7 @@ class TripBase(ApiModel):
     budget: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     currency: str = Field(default="USD", pattern=r"^[A-Z]{3}$")
     pace: TripPace = TripPace.balanced
-    interests: list[str] = Field(default_factory=list, max_length=10)
+    interests: list[Interest] = Field(default_factory=list, max_length=10)
     notes: str | None = Field(default=None, max_length=2000)
 
 
@@ -53,7 +55,7 @@ class TripUpdate(ApiModel):
     budget: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     currency: str | MISSING = Field(default=MISSING, pattern=r"^[A-Z]{3}$")
     pace: TripPace | MISSING = MISSING
-    interests: list[str] | MISSING = Field(default=MISSING, max_length=10)
+    interests: list[Interest] | MISSING = Field(default=MISSING, max_length=10)
     notes: str | None = Field(default=None, max_length=2000)
     status: TripStatus | MISSING = Field(
         default=MISSING, description="Any status but `planning`, which only the agents set"

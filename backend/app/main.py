@@ -12,11 +12,13 @@ from fastapi.routing import APIRoute
 from google.adk.sessions import DatabaseSessionService
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sqlalchemy import text
+from starlette.types import Scope
 
 from app.api.v1 import router as v1_router
 from app.core.config import settings
 from app.core.db import engine
 from app.core.errors import install_error_handlers
+from app.core.limits import MB, BodySizeLimit
 from app.core.logging import configure_logging, get_logger
 from app.core.ratelimit import Limiter
 from app.core.security import init_firebase
@@ -86,6 +88,13 @@ def _request_id_ok(value: str) -> bool:
     return 8 <= len(value) <= 128 and all(c.isalnum() or c in "-_.:=" for c in value)
 
 
+def _body_limit(scope: Scope) -> int:
+    """Uploads may carry a whole document; everything else is small JSON."""
+    if scope["method"] == "POST" and scope["path"] == f"{settings.API_V1_PREFIX}/documents":
+        return (settings.MAX_UPLOAD_MB + 1) * MB  # multipart framing and the form fields
+    return MB
+
+
 def _operation_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}" if route.tags else route.name
 
@@ -102,6 +111,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     install_error_handlers(app, cors_origins=settings.FRONTEND_ORIGINS)
+    app.add_middleware(BodySizeLimit, limit_for=_body_limit)
 
     @app.middleware("http")
     async def security_headers(

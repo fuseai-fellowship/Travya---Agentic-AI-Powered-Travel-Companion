@@ -15,6 +15,8 @@ from app.api.deps import (
     rate_limit,
 )
 from app.core.config import settings
+from app.core.errors import PayloadTooLarge
+from app.core.limits import MB
 from app.core.ratelimit import CALLS_PER_RUN
 from app.integrations.storage import content_disposition
 from app.schemas.common import Page
@@ -131,13 +133,20 @@ async def list_documents(
     status_code=status.HTTP_201_CREATED,
     tags=["documents"],
     dependencies=[Depends(rate_limit("30/hour", "upload"))],
+    responses={
+        409: {"description": "The demo's shared storage is full"},
+        413: {"description": "The file is too large or the user's storage quota is used up"},
+    },
 )
 async def upload_document(
     documents: Documents,
     file: Annotated[UploadFile, File(description="PDF, PNG, JPEG or WebP")],
     trip_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> DocumentRead:
-    data = await file.read()
+    limit = settings.MAX_UPLOAD_MB * MB
+    if file.size is not None and file.size > limit:
+        raise PayloadTooLarge(f"Files can be at most {settings.MAX_UPLOAD_MB} MB")
+    data = await file.read(limit + 1)  # one byte more is enough to know it is too large
     return DocumentRead.model_validate(
         await documents.upload(file.filename or "document", data, trip_id)
     )
