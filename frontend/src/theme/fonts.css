@@ -1,0 +1,27 @@
+/*
+ * Metric-matched stand-in for Overpass while the web font loads, so the swap does not move the
+ * layout (no CLS on the landing page H1). Measured in Chrome: Overpass at 100px has ascent 88,
+ * descent 38 and a pangram 0.33% wider than Arial.
+ */
+@font-face {
+  font-family: "Overpass Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Helvetica"), local("Roboto");
+  size-adjust: 100.3%;
+  ascent-override: 87.7%;
+  descent-override: 37.9%;
+  line-gap-override: 0%;
+}
+
+/*
+ * Overpass's middle dot (U+00B7) has zero advance width, so "a · b" renders as "a ·b". Take that
+ * one glyph from Overpass Mono; declared after Overpass, so it wins for this code point.
+ */
+@font-face {
+  font-family: "Overpass Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../../node_modules/@fontsource-variable/overpass-mono/files/overpass-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range: U+00B7;
+}

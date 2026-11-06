@@ -1,0 +1,817 @@
+{
+  "destination": "Kyoto",
+  "days": 6,
+  "travelers": 1,
+  "pace": "balanced",
+  "interests": ["culture", "nature", "food"],
+  "recordedAt": "2026-11-05T19:07:17Z",
+  "durationMs": 47372,
+  "events": [
+    [
+      16,
+      {
+        "agent": "travya",
+        "kind": "started",
+        "message": "Planning your trip to Kyoto",
+        "data": null
+      }
+    ],
+    [
+      16,
+      {
+        "agent": "weather_scout",
+        "kind": "started",
+        "message": "Weather scout started",
+        "data": null
+      }
+    ],
+    [
+      16,
+      {
+        "agent": "places_scout",
+        "kind": "started",
+        "message": "Places scout started",
+        "data": null
+      }
+    ],
+    [
+      16,
+      {
+        "agent": "guide_scout",
+        "kind": "started",
+        "message": "Guide researcher started",
+        "data": null
+      }
+    ],
+    [
+      16,
+      {
+        "agent": "offers_scout",
+        "kind": "started",
+        "message": "Booking scout started",
+        "data": null
+      }
+    ],
+    [
+      16,
+      {
+        "agent": "offers_scout",
+        "kind": "progress",
+        "message": "Found 3 stays (sample fares). Add a starting city for flight quotes.",
+        "data": { "offers": 3 }
+      }
+    ],
+    [
+      508,
+      {
+        "agent": "weather_scout",
+        "kind": "progress",
+        "message": "Weather climate averages: -2–15°C, 0 rainy day(s).",
+        "data": {
+          "weather": [
+            {
+              "day": "2026-12-06",
+              "summary": "Overcast",
+              "temp_min_c": -1.7,
+              "temp_max_c": 9.8,
+              "weather_code": 3
+            },
+            {
+              "day": "2026-12-07",
+              "summary": "Mainly clear",
+              "temp_min_c": 0.7,
+              "temp_max_c": 14.5,
+              "weather_code": 1
+            },
+            {
+              "day": "2026-12-08",
+              "summary": "Drizzle",
+              "temp_min_c": 3.9,
+              "temp_max_c": 15.3,
+              "weather_code": 53
+            },
+            {
+              "day": "2026-12-09",
+              "summary": "Overcast",
+              "temp_min_c": 1.5,
+              "temp_max_c": 10.8,
+              "weather_code": 3
+            },
+            {
+              "day": "2026-12-10",
+              "summary": "Overcast",
+              "temp_min_c": -0.2,
+              "temp_max_c": 12.7,
+              "weather_code": 3
+            },
+            {
+              "day": "2026-12-11",
+              "summary": "Drizzle",
+              "temp_min_c": 2.3,
+              "temp_max_c": 13.9,
+              "weather_code": 53
+            }
+          ]
+        }
+      }
+    ],
+    [
+      1298,
+      {
+        "agent": "guide_scout",
+        "kind": "progress",
+        "message": "Read 8 relevant passages from Wikivoyage.",
+        "data": { "sources": ["https://en.wikivoyage.org/wiki/Kyoto"] }
+      }
+    ],
+    [
+      12000,
+      {
+        "agent": "places_scout",
+        "kind": "progress",
+        "message": "Found 45 places on Wikipedia.",
+        "data": {
+          "places": [
+            { "name": "Kyoto", "category": "attraction", "lat": 35.01161, "lon": 135.76811 },
+            {
+              "name": "Siege of Sanjō Palace",
+              "category": "attraction",
+              "lat": 35.0116,
+              "lon": 135.768
+            },
+            {
+              "name": "Battle of Toba–Fushimi",
+              "category": "attraction",
+              "lat": 35.0117,
+              "lon": 135.7681
+            },
+            { "name": "Hōgen rebellion", "category": "attraction", "lat": 35.0117, "lon": 135.768 },
+            {
+              "name": "Timeline of Kyoto",
+              "category": "attraction",
+              "lat": 35.011667,
+              "lon": 135.768333
+            },
+            {
+              "name": "Yōwa famine",
+              "category": "attraction",
+              "lat": 35.011667,
+              "lon": 135.768333
+            },
+            {
+              "name": "Kanki famine",
+              "category": "attraction",
+              "lat": 35.011667,
+              "lon": 135.768333
+            },
+            {
+              "name": "Kyoto Shiyakusho-mae Station",
+              "category": "attraction",
+              "lat": 35.01111111111111,
+              "lon": 135.7688888888889
+            },
+            {
+              "name": "Kyoto City Fire Department",
+              "category": "attraction",
+              "lat": 35.01241666666667,
+              "lon": 135.76836111111112
+            },
+            { "name": "Honnō-ji", "category": "attraction", "lat": 35.010294, "lon": 135.768281 },
+            {
+              "name": "Diocese of Kyoto (Catholic)",
+              "category": "attraction",
+              "lat": 35.00972222222222,
+              "lon": 135.76916666666668
+            },
+            {
+              "name": "St. Francis Xavier Cathedral, Kyoto",
+              "category": "attraction",
+              "lat": 35.0097,
+              "lon": 135.7694
+            },
+            {
+              "name": "Ikedaya incident",
+              "category": "attraction",
+              "lat": 35.008944444444445,
+              "lon": 135.76988888888891
+            },
+            {
+              "name": "Sanjō Ōhashi",
+              "category": "attraction",
+              "lat": 35.00907222222222,
+              "lon": 135.77173611111112
+            },
+            {
+              "name": "Sanjō Station (Kyoto)",
+              "category": "attraction",
+              "lat": 35.009166666666665,
+              "lon": 135.77222222222224
+            },
+            { "name": "Ponto-chō", "category": "attraction", "lat": 35.007969, "lon": 135.771111 },
+            {
+              "name": "Gyōgan-ji",
+              "category": "attraction",
+              "lat": 35.0163,
+              "lon": 135.76776111111113
+            },
+            {
+              "name": "Sanjō Keihan Station",
+              "category": "attraction",
+              "lat": 35.009166666666665,
+              "lon": 135.77361111111114
+            },
+            {
+              "name": "Museum of Kyoto",
+              "category": "attraction",
+              "lat": 35.009388888888886,
+              "lon": 135.76233333333334
+            },
+            {
+              "name": "Teramachi Street",
+              "category": "attraction",
+              "lat": 35.006388888888885,
+              "lon": 135.7668888888889
+            },
+            {
+              "name": "Nishiki Tenmangū",
+              "category": "attraction",
+              "lat": 35.00502,
+              "lon": 135.76739
+            },
+            {
+              "name": "Nishiki Market",
+              "category": "attraction",
+              "lat": 35.00502777777778,
+              "lon": 135.7661388888889
+            },
+            {
+              "name": "Karasuma Oike Station",
+              "category": "attraction",
+              "lat": 35.0104,
+              "lon": 135.7598
+            },
+            {
+              "name": "Jingū-Marutamachi Station",
+              "category": "attraction",
+              "lat": 35.017669444444444,
+              "lon": 135.77216111111113
+            },
+            {
+              "name": "Kyoto International Manga Museum",
+              "category": "attraction",
+              "lat": 35.011649,
+              "lon": 135.759243
+            },
+            {
+              "name": "Rokkaku-dō",
+              "category": "attraction",
+              "lat": 35.00766111111111,
+              "lon": 135.7602361111111
+            },
+            {
+              "name": "Kyoto City Library of Historical Documents",
+              "category": "attraction",
+              "lat": 35.019166,
+              "lon": 135.767666
+            },
+            {
+              "name": "Shijō Kawaramachi",
+              "category": "attraction",
+              "lat": 35.00377777777778,
+              "lon": 135.7692777777778
+            },
+            {
+              "name": "Kyoto-kawaramachi Station",
+              "category": "attraction",
+              "lat": 35.00375,
+              "lon": 135.76930555555558
+            },
+            {
+              "name": "Chisō Gallery",
+              "category": "attraction",
+              "lat": 35.008321,
+              "lon": 135.758947
+            },
+            {
+              "name": "Itsukushima Shrine (Kyoto)",
+              "category": "attraction",
+              "lat": 35.01812,
+              "lon": 135.76205
+            },
+            {
+              "name": "Gion-Shijō Station",
+              "category": "attraction",
+              "lat": 35.00380555555556,
+              "lon": 135.7720277777778
+            },
+            {
+              "name": "Marutamachi Station",
+              "category": "attraction",
+              "lat": 35.0165,
+              "lon": 135.7597
+            },
+            {
+              "name": "Salon de thé François",
+              "category": "attraction",
+              "lat": 35.00333333333333,
+              "lon": 135.77027777777778
+            },
+            {
+              "name": "Hosomi Museum",
+              "category": "attraction",
+              "lat": 35.0138,
+              "lon": 135.779649
+            },
+            {
+              "name": "Higashiyama Station (Kyoto)",
+              "category": "attraction",
+              "lat": 35.00944444444445,
+              "lon": 135.77972222222223
+            },
+            {
+              "name": "Ichiriki Chaya",
+              "category": "attraction",
+              "lat": 35.003496,
+              "lon": 135.775051
+            },
+            { "name": "Gion", "category": "attraction", "lat": 35.003496, "lon": 135.775051 },
+            {
+              "name": "Kyoto Art Center",
+              "category": "attraction",
+              "lat": 35.00541666666667,
+              "lon": 135.75833333333333
+            },
+            {
+              "name": "Karasuma Station",
+              "category": "attraction",
+              "lat": 35.00361111111111,
+              "lon": 135.7602777777778
+            }
+          ]
+        }
+      }
+    ],
+    [
+      12000,
+      {
+        "agent": "planner",
+        "kind": "started",
+        "message": "Itinerary planner started",
+        "data": null
+      }
+    ],
+    [
+      17858,
+      {
+        "agent": "planner",
+        "kind": "result",
+        "message": "Drafted 6 days with 13 activities.",
+        "data": null
+      }
+    ],
+    [17858, { "agent": "critic", "kind": "started", "message": "Critic started", "data": null }],
+    [
+      20067,
+      {
+        "agent": "critic",
+        "kind": "result",
+        "message": "Found 5 thing(s) to improve.",
+        "data": {
+          "issues": [
+            "Nishiki Market shops generally do not open until 10:00 or 11:00, making an 08:00 visit ineffective.",
+            "Itsukushima Shrine is located in Hiroshima, not Kyoto; please replace this with a local Kyoto shrine.",
+            "The itinerary is too sparse for a 6-day trip; consider adding more cultural sites to better utilize the time.",
+            "The gap between the morning walk and tea time on 2026-12-09 is excessive (over 3 hours of downtime).",
+            "The Museum of Kyoto and Manga Museum are very close; consider grouping them differently or adding a major temple visit to balance the cultural experience."
+          ]
+        }
+      }
+    ],
+    [
+      20067,
+      {
+        "agent": "quality_gate",
+        "kind": "started",
+        "message": "Quality gate started",
+        "data": null
+      }
+    ],
+    [
+      20087,
+      {
+        "agent": "quality_gate",
+        "kind": "progress",
+        "message": "Sending 7 issue(s) back to the planner.",
+        "data": null
+      }
+    ],
+    [20087, { "agent": "reviser", "kind": "started", "message": "Reviser started", "data": null }],
+    [
+      28849,
+      {
+        "agent": "reviser",
+        "kind": "result",
+        "message": "Revised 6 days with 18 activities.",
+        "data": null
+      }
+    ],
+    [28849, { "agent": "critic", "kind": "started", "message": "Critic started", "data": null }],
+    [
+      30007,
+      { "agent": "critic", "kind": "result", "message": "Looks good.", "data": { "issues": [] } }
+    ],
+    [
+      30007,
+      {
+        "agent": "quality_gate",
+        "kind": "started",
+        "message": "Quality gate started",
+        "data": null
+      }
+    ],
+    [
+      30063,
+      {
+        "agent": "quality_gate",
+        "kind": "progress",
+        "message": "Sending 1 issue(s) back to the planner.",
+        "data": null
+      }
+    ],
+    [30063, { "agent": "reviser", "kind": "started", "message": "Reviser started", "data": null }],
+    [
+      44872,
+      {
+        "agent": "reviser",
+        "kind": "result",
+        "message": "Revised 6 days with 19 activities.",
+        "data": null
+      }
+    ],
+    [44872, { "agent": "critic", "kind": "started", "message": "Critic started", "data": null }],
+    [
+      46556,
+      { "agent": "critic", "kind": "result", "message": "Looks good.", "data": { "issues": [] } }
+    ],
+    [
+      46556,
+      {
+        "agent": "quality_gate",
+        "kind": "started",
+        "message": "Quality gate started",
+        "data": null
+      }
+    ],
+    [
+      46573,
+      { "agent": "quality_gate", "kind": "progress", "message": "Plan approved.", "data": null }
+    ],
+    [
+      46573,
+      { "agent": "finalize", "kind": "started", "message": "finalize started", "data": null }
+    ],
+    [
+      46573,
+      { "agent": "finalize", "kind": "progress", "message": "Itinerary finalised.", "data": null }
+    ],
+    [
+      47372,
+      {
+        "agent": "travya",
+        "kind": "done",
+        "message": "Your 6-day itinerary is ready.",
+        "data": { "items": 19, "quotes": 3 }
+      }
+    ]
+  ],
+  "map": {
+    "width": 480,
+    "height": 640,
+    "places": [
+      [226, 313],
+      [224, 313],
+      [226, 312],
+      [224, 312],
+      [229, 312],
+      [229, 312],
+      [229, 312],
+      [238, 323],
+      [230, 298],
+      [228, 338],
+      [242, 349],
+      [246, 349],
+      [253, 364],
+      [282, 361],
+      [290, 359],
+      [272, 382],
+      [220, 224],
+      [311, 359],
+      [136, 355],
+      [207, 412],
+      [215, 438],
+      [195, 438],
+      [97, 336],
+      [289, 198],
+      [88, 312],
+      [104, 388],
+      [219, 170],
+      [244, 462],
+      [244, 462],
+      [84, 376],
+      [132, 190],
+      [287, 461],
+      [95, 221],
+      [260, 470],
+      [405, 272],
+      [406, 354],
+      [334, 467],
+      [334, 467],
+      [74, 430],
+      [104, 465]
+    ],
+    "stops": [
+      { "day": 1, "title": "Historical Exploration", "place": "Honnō-ji", "x": 228.4, "y": 338.2 },
+      { "day": 2, "title": "Temple Visit", "place": "Rokkaku-dō", "x": 103.7, "y": 388 },
+      {
+        "day": 2,
+        "title": "Lunch and Market Visit",
+        "place": "Nishiki Market",
+        "x": 195.2,
+        "y": 437.8
+      },
+      { "day": 2, "title": "Shrine Visit", "place": "Nishiki Tenmangū", "x": 214.6, "y": 438 },
+      { "day": 3, "title": "Museum Visit", "place": "Museum of Kyoto", "x": 136.1, "y": 355.2 },
+      {
+        "day": 3,
+        "title": "Manga Exploration",
+        "place": "Kyoto International Manga Museum",
+        "x": 88.2,
+        "y": 312.4
+      },
+      { "day": 4, "title": "Morning Walk", "place": "Ponto-chō", "x": 272.3, "y": 382.1 },
+      { "day": 4, "title": "Art Appreciation", "place": "Chisō Gallery", "x": 83.7, "y": 375.5 },
+      { "day": 4, "title": "Tea Time", "place": "Salon de thé François", "x": 259.5, "y": 470 },
+      { "day": 5, "title": "Art Museum", "place": "Hosomi Museum", "x": 404.8, "y": 271.7 },
+      { "day": 5, "title": "Temple Visit", "place": "Gyōgan-ji", "x": 220.4, "y": 224.4 },
+      {
+        "day": 6,
+        "title": "Breakfast and Shopping",
+        "place": "Teramachi Street",
+        "x": 206.9,
+        "y": 412
+      },
+      {
+        "day": 6,
+        "title": "Historical Documentation",
+        "place": "Kyoto City Library of Historical Documents",
+        "x": 219,
+        "y": 170
+      },
+      { "day": 6, "title": "Final Shrine Visit", "place": "Nishiki Tenmangū", "x": 214.6, "y": 438 }
+    ],
+    "routes": [
+      {
+        "day": 2,
+        "points": [
+          [101.7, 388],
+          [101.7, 390.3],
+          [104.2, 391.4],
+          [106.8, 391.4],
+          [107.4, 394.2],
+          [116, 394.1],
+          [117.1, 409.4],
+          [117.2, 415.8],
+          [120, 416.6],
+          [124.2, 416.4],
+          [139.7, 416.8],
+          [140, 437.2],
+          [150.9, 438.4],
+          [161.6, 438.4],
+          [176.2, 438],
+          [187.3, 437.8],
+          [195.2, 437.6],
+          [198.5, 437.6],
+          [205.8, 437.8],
+          [208.1, 437.8],
+          [211.5, 438],
+          [213.4, 438]
+        ]
+      },
+      {
+        "day": 3,
+        "points": [
+          [139.2, 355.2],
+          [139.1, 347.7],
+          [138, 338.2],
+          [137.7, 334],
+          [128.2, 332.3],
+          [126.2, 332.1],
+          [117.2, 331.9],
+          [117.2, 329.3],
+          [117.2, 327.2],
+          [117.2, 324.6],
+          [114.9, 324.6],
+          [104.2, 324.6],
+          [101.6, 324.6],
+          [98.8, 324.6],
+          [96.7, 324],
+          [94, 324],
+          [92.7, 312.4]
+        ]
+      },
+      {
+        "day": 4,
+        "points": [
+          [271.3, 382.1],
+          [264.3, 380.2],
+          [263.2, 375.5],
+          [260.4, 374.4],
+          [241.6, 374.9],
+          [241.5, 370.4],
+          [237.8, 370.6],
+          [237.3, 368.5],
+          [235.4, 366.6],
+          [215.4, 368.3],
+          [210.8, 368.5],
+          [200.1, 369.4],
+          [188.4, 369.4],
+          [177.1, 369.4],
+          [171.5, 369.6],
+          [162.1, 369.6],
+          [150.4, 369.8],
+          [139.4, 370],
+          [117.5, 370],
+          [115, 369.6],
+          [96.3, 369.8],
+          [93.5, 370.2],
+          [83.7, 370.4],
+          [92.2, 370.4],
+          [92.4, 392.2],
+          [92.4, 394.2],
+          [92.6, 414.9],
+          [92.6, 418.3],
+          [92.6, 437.4],
+          [92.6, 440.5],
+          [95.5, 440.5],
+          [96.7, 459.4],
+          [98, 461.7],
+          [115.4, 462],
+          [118.2, 462],
+          [138.9, 461.7],
+          [141.6, 461.7],
+          [149.8, 461.7],
+          [152, 461.7],
+          [160.8, 461.7],
+          [163.6, 461.7],
+          [175.2, 461.5],
+          [177.7, 461.5],
+          [185.2, 461.3],
+          [188.3, 461.3],
+          [197.3, 461.3],
+          [204.1, 461.3],
+          [204.1, 464.5],
+          [206.7, 464.5],
+          [210.4, 464.3],
+          [238.5, 463.4],
+          [242.6, 466.2],
+          [244.6, 466.6],
+          [246.6, 466.6],
+          [249.2, 463.2],
+          [261, 462.8],
+          [261, 464.9],
+          [260.4, 468.3],
+          [259.9, 470]
+        ]
+      },
+      {
+        "day": 5,
+        "points": [
+          [404.8, 273.2],
+          [407.1, 273.2],
+          [407.8, 252.8],
+          [407.8, 250.5],
+          [407.6, 242.2],
+          [394, 242.2],
+          [387.4, 242.2],
+          [386.8, 239.5],
+          [383.4, 239.5],
+          [381.1, 240.1],
+          [378.9, 240.1],
+          [376, 240.3],
+          [373.9, 240.5],
+          [371.8, 240.5],
+          [360.9, 240.5],
+          [339.8, 240.5],
+          [330.2, 240.5],
+          [321.1, 240.5],
+          [321.1, 235.3],
+          [321.1, 226.4],
+          [322, 220.8],
+          [317.2, 220],
+          [313.4, 219.6],
+          [308.2, 219.1],
+          [304.5, 218.5],
+          [300.6, 217.7],
+          [293.1, 217],
+          [292.8, 209.4],
+          [292.5, 204.1],
+          [289.6, 204.3],
+          [287.7, 202.4],
+          [270.3, 201.8],
+          [259.2, 201.8],
+          [253.1, 201.8],
+          [250, 201.8],
+          [246.4, 202],
+          [244.3, 203.9],
+          [241.8, 206.2],
+          [239.8, 206],
+          [237.8, 205.8],
+          [236.8, 218.9],
+          [234.8, 219.2],
+          [232.5, 219.1],
+          [228.3, 218.1],
+          [224.6, 217.9],
+          [219, 217.4],
+          [218.8, 221.1],
+          [217.9, 224.2]
+        ]
+      },
+      {
+        "day": 6,
+        "points": [
+          [206.9, 412],
+          [207.2, 404.3],
+          [207.3, 393.5],
+          [207.5, 387.1],
+          [208, 376.3],
+          [208, 371.1],
+          [209.5, 369.2],
+          [211.4, 366.6],
+          [211.4, 359.8],
+          [211.5, 351.4],
+          [211.5, 346.7],
+          [211.7, 336.3],
+          [211.8, 332.1],
+          [211.8, 328.9],
+          [211.8, 326.6],
+          [212, 324.2],
+          [212.3, 304.3],
+          [212.6, 281],
+          [212.2, 274.7],
+          [212.5, 257.9],
+          [212.5, 249.9],
+          [212.6, 238],
+          [212.9, 226.4],
+          [213.1, 219.8],
+          [213.1, 217],
+          [213.1, 214.1],
+          [213.1, 210.5],
+          [213.1, 204.9],
+          [213.6, 200.9],
+          [214.3, 196.9],
+          [214.6, 175.7],
+          [214.6, 169.6],
+          [214.6, 175.7],
+          [214.3, 196.9],
+          [214.2, 200.9],
+          [213.2, 203],
+          [213.1, 210.5],
+          [213.1, 214.1],
+          [213.1, 217],
+          [213.1, 219.8],
+          [212.9, 226.4],
+          [212.6, 238],
+          [212.5, 249.9],
+          [212.5, 257.9],
+          [212.2, 274.7],
+          [212, 279.5],
+          [212.3, 303.2],
+          [212, 324.2],
+          [211.8, 326.6],
+          [211.8, 328.9],
+          [211.8, 331.4],
+          [211.7, 336.3],
+          [211.5, 346.7],
+          [211.5, 351.4],
+          [211.4, 359.8],
+          [211.4, 366.4],
+          [209.5, 369.2],
+          [208, 371.1],
+          [208, 376.3],
+          [207.5, 387.1],
+          [207.3, 393.5],
+          [211.1, 395.4],
+          [212.8, 396.7],
+          [212.5, 404.9],
+          [212, 412.4],
+          [211.7, 415.6],
+          [211.4, 421.3],
+          [211.4, 424.4],
+          [211.4, 427.2],
+          [211.5, 438],
+          [213.4, 438]
+        ]
+      }
+    ]
+  }
+}

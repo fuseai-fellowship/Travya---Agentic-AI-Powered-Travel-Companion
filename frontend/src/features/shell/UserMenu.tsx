@@ -1,6 +1,8 @@
 import { Avatar, Button, Menu, Portal, Text } from "@chakra-ui/react"
 import { useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 import { LuLogOut, LuSettings } from "react-icons/lu"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { useAuth } from "@/features/auth/AuthProvider"
 import { signOutUser } from "@/features/auth/actions"
 
@@ -16,6 +18,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const name = displayName(user)
+  const [confirming, setConfirming] = useState(false)
 
   // Leave the signed-in area first, so the shell doesn't treat this as an expired session.
   const signOut = async () => {
@@ -55,12 +58,27 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
             <Menu.Item value="settings" onSelect={() => void navigate({ to: "/settings" })}>
               <LuSettings /> Settings
             </Menu.Item>
-            <Menu.Item value="sign-out" onSelect={() => void signOut()}>
+            <Menu.Item
+              value="sign-out"
+              onSelect={() => (user?.isAnonymous ? setConfirming(true) : void signOut())}
+            >
               <LuLogOut /> Sign out
             </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
       </Portal>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Sign out of the demo?"
+        description="A demo account can't be signed back into: its trips, notes and conversations will be out of reach. To keep them, add an email or Google sign-in in Settings first."
+        confirmLabel="Sign out anyway"
+        destructive
+        onConfirm={() => {
+          setConfirming(false)
+          void signOut()
+        }}
+      />
     </Menu.Root>
   )
 }

@@ -1,12 +1,16 @@
 import { Alert, Box, Button, Heading, Stack, Text, Wrap } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
-import { LuMessageCircle } from "react-icons/lu"
+import { LuMessageCircle, LuRefreshCw } from "react-icons/lu"
 import { chatListMessagesOptions } from "@/client/@tanstack/react-query.gen"
 import { ErrorState, ListSkeleton } from "@/components/States"
 import { Composer } from "./Composer"
 import { MessageBubble } from "./MessageBubble"
-import type { PendingTurn } from "./useChat"
+import { PendingReply } from "./PendingReply"
+import { isWorking, type PendingTurn } from "./useChat"
+
+/** The API returns messages oldest first; long threads show their latest page. */
+export const PAGE = 200
 
 export function suggestedPrompts(destination?: string): string[] {
   const place = destination ?? "Kathmandu"
@@ -17,44 +21,65 @@ export function suggestedPrompts(destination?: string): string[] {
   ]
 }
 
+function useLatestMessages(conversationId?: string) {
+  const first = useQuery({
+    ...chatListMessagesOptions({
+      path: { conversation_id: conversationId ?? "" },
+      query: { limit: PAGE },
+    }),
+    enabled: Boolean(conversationId),
+  })
+  const offset = Math.max(0, (first.data?.total ?? 0) - PAGE)
+  const latest = useQuery({
+    ...chatListMessagesOptions({
+      path: { conversation_id: conversationId ?? "" },
+      query: { limit: PAGE, offset },
+    }),
+    enabled: Boolean(conversationId) && offset > 0,
+  })
+  return offset > 0
+    ? { query: latest, items: latest.data?.items ?? [], older: offset }
+    : { query: first, items: first.data?.items ?? [], older: 0 }
+}
+
 export function Thread({
   conversationId,
   pending,
-  streaming,
+  creating = false,
+  announcement = "",
   destination,
   onSend,
   onStop,
 }: {
   conversationId?: string
   pending: PendingTurn | null
-  streaming: boolean
+  /** The conversation itself is still being created. */
+  creating?: boolean
+  /** Polite announcement of the finished reply (the log itself stays quiet while streaming). */
+  announcement?: string
   destination?: string
   onSend: (content: string) => void
   onStop: () => void
 }) {
-  const messages = useQuery({
-    ...chatListMessagesOptions({
-      path: { conversation_id: conversationId ?? "" },
-      query: { limit: 200 },
-    }),
-    enabled: Boolean(conversationId),
-  })
+  const { query: messages, items: loaded, older } = useLatestMessages(conversationId)
   const end = useRef<HTMLDivElement>(null)
   const turn =
     pending && (!conversationId || pending.conversationId === conversationId) ? pending : null
-  const items = conversationId ? (messages.data?.items ?? []) : []
+  const items = conversationId ? loaded : []
+  const working = isWorking(turn)
+  const busy = creating || working
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll as the reply streams in
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" })
-  }, [items.length, turn?.reply, turn?.tools.length])
+  }, [items.length, turn?.reply, turn?.tools.length, turn?.phase])
 
   const empty = !items.length && !turn
 
   return (
     <Stack h="full" gap="3" minH="0">
       <Box flex="1" overflowY="auto" minH="0" px={{ base: "0", md: "2" }}>
-        {conversationId && messages.isPending ? (
+        {conversationId && messages.isPending && !turn ? (
           <ListSkeleton rows={3} height="64px" />
         ) : messages.isError ? (
           <ErrorState
@@ -67,7 +92,7 @@ export function Thread({
             <Box color="brand.fg" fontSize="3xl" aria-hidden="true">
               <LuMessageCircle />
             </Box>
-            <Heading as="h2" fontFamily="heading" size="xl">
+            <Heading as="h2" size="xl">
               Ask the travel assistant
             </Heading>
             <Text color="fg.muted" maxW="md">
@@ -81,7 +106,7 @@ export function Thread({
                   size="sm"
                   variant="outline"
                   borderRadius="full"
-                  disabled={streaming}
+                  disabled={busy}
                   onClick={() => onSend(prompt)}
                 >
                   {prompt}
@@ -90,60 +115,58 @@ export function Thread({
             </Wrap>
           </Stack>
         ) : (
-          <Stack
-            as="ol"
-            gap="4"
-            py="2"
-            role="log"
-            aria-live="polite"
-            aria-relevant="additions text"
-            aria-label="Conversation"
-          >
-            {items.map((message) => (
-              <MessageBubble
-                key={message.id}
-                id={message.id}
-                author={message.role}
-                content={message.content}
-                tools={Array.isArray(message.meta?.tools) ? (message.meta.tools as string[]) : []}
-              />
-            ))}
-            {turn && (
-              <>
-                <MessageBubble author="user" content={turn.user} />
-                {!turn.unsent && (turn.reply || turn.tools.length > 0 || streaming) && (
-                  <MessageBubble
-                    author="assistant"
-                    content={turn.reply}
-                    tools={turn.tools}
-                    streaming={streaming}
-                  />
-                )}
-              </>
+          <>
+            {older > 0 && (
+              <Text fontSize="xs" color="fg.muted" textAlign="center" py="2">
+                Showing the latest {PAGE} messages.
+              </Text>
             )}
-          </Stack>
+            <Stack as="ol" gap="4" py="2" role="log" aria-live="off" aria-label="Conversation">
+              {items.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  id={message.id}
+                  author={message.role}
+                  content={message.content}
+                  tools={Array.isArray(message.meta?.tools) ? (message.meta.tools as string[]) : []}
+                  interrupted={message.meta?.interrupted === true}
+                />
+              ))}
+              {turn && (
+                <>
+                  {!turn.saved && <MessageBubble author="user" content={turn.user} />}
+                  <PendingReply turn={turn} />
+                </>
+              )}
+            </Stack>
+          </>
         )}
-        {turn?.error && (
-          <Alert.Root status="error" mt="3" borderRadius="card">
+        {turn?.phase === "error" && turn.error && (
+          <Alert.Root status="error" mt="3" borderRadius="card" role="alert">
             <Alert.Indicator />
             <Alert.Content gap="2">
               <Alert.Title>{turn.error}</Alert.Title>
-              {turn.unsent && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  alignSelf="flex-start"
-                  onClick={() => onSend(turn.user)}
-                >
-                  Send again
-                </Button>
-              )}
+              <Button
+                size="xs"
+                variant="outline"
+                alignSelf="flex-start"
+                onClick={() => onSend(turn.user)}
+              >
+                <LuRefreshCw /> Retry
+              </Button>
             </Alert.Content>
           </Alert.Root>
         )}
         <div ref={end} />
       </Box>
-      <Composer streaming={streaming} onSend={onSend} onStop={onStop} />
+      <Text srOnly role="status" aria-live="polite">
+        {announcement}
+      </Text>
+      <Composer
+        state={creating ? "creating" : working ? "working" : "idle"}
+        onSend={onSend}
+        onStop={onStop}
+      />
       <Text fontSize="xs" color="fg.muted" textAlign="center">
         Answers can be wrong. Don't share personal information; the demo uses Gemini's free tier.
       </Text>

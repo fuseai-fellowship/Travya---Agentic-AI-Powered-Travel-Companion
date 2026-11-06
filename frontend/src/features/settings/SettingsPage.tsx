@@ -70,12 +70,7 @@ export function SettingsPage() {
               onRetry={() => usage.refetch()}
             />
           ) : (
-            <Text>
-              <Text as="span" fontFamily="mono" fontWeight="600">
-                {plural(usage.data.llm_runs_remaining_today, "agent run")}
-              </Text>{" "}
-              left today in the shared demo budget. It resets daily.
-            </Text>
+            <UsageLine usage={usage.data} />
           )}
         </Section>
 
@@ -109,5 +104,28 @@ export function SettingsPage() {
         </Section>
       </Stack>
     </Container>
+  )
+}
+
+/**
+ * The budget counts model calls; a plan or chat turn takes several, so runs are an estimate.
+ * (`llm_calls_*` arrive with the backend review changes; older APIs only send runs.)
+ */
+function UsageLine({ usage }: { usage: { llm_runs_remaining_today: number } }) {
+  const extra = usage as { llm_calls_remaining_today?: unknown; llm_calls_per_day?: unknown }
+  const calls =
+    typeof extra.llm_calls_remaining_today === "number" ? extra.llm_calls_remaining_today : null
+  const perDay = typeof extra.llm_calls_per_day === "number" ? extra.llm_calls_per_day : null
+  return (
+    <Text>
+      {calls !== null ? "About " : ""}
+      <Text as="span" fontWeight="700" style={{ fontVariantNumeric: "tabular-nums" }}>
+        {plural(usage.llm_runs_remaining_today, "agent run")}
+      </Text>{" "}
+      left today in the shared demo budget
+      {calls !== null &&
+        ` (${calls}${perDay !== null ? ` of ${perDay}` : ""} model calls; a plan uses several)`}
+      . It resets daily.
+    </Text>
   )
 }

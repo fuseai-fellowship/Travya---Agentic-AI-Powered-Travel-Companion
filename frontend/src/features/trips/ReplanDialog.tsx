@@ -1,6 +1,5 @@
 import { Button, CloseButton, Dialog, Field, Portal, Text, Textarea } from "@chakra-ui/react"
 import { useState } from "react"
-import { LuSparkles } from "react-icons/lu"
 
 export function ReplanDialog({
   disabled,
@@ -23,7 +22,7 @@ export function ReplanDialog({
           variant={hasPlan ? "outline" : "solid"}
           disabled={disabled}
         >
-          <LuSparkles /> {hasPlan ? "Re-plan" : "Plan with agents"}
+          {hasPlan ? "Re-plan" : "Plan with agents"}
         </Button>
       </Dialog.Trigger>
       <Portal>

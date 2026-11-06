@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { apiFetch, apiUrl } from "@/lib/api"
+import { reportDemoLimit } from "@/lib/demoLimit"
 import { ApiError, toApiError } from "@/lib/errors"
 import { notifyError, notifySuccess } from "@/lib/notify"
 import { invalidateTrip } from "@/lib/queryKeys"
@@ -15,9 +16,14 @@ export interface PlanRun {
   state: TimelineState
   error: ApiError | null
   active: boolean
+  /** Re-plan instructions of this run, reused by "Try again". */
+  instructions: string | null
 }
 
+export const STOPPED_MESSAGE = "You stopped planning. The trip keeps its previous plan."
+
 const runs = new Map<string, PlanRun>()
+const controllers = new Map<string, AbortController>()
 const listeners = new Set<() => void>()
 
 function set(tripId: string, update: (run: PlanRun) => PlanRun) {
@@ -29,14 +35,16 @@ function set(tripId: string, update: (run: PlanRun) => PlanRun) {
 
 export function startPlan(queryClient: QueryClient, tripId: string, instructions?: string | null) {
   if (runs.get(tripId)?.active) return
+  const kept = instructions?.trim() || null
   const state = { ...initialTimeline(), status: "running" as const, startedAt: Date.now() }
-  runs.set(tripId, { state, error: null, active: true })
+  runs.set(tripId, { state, error: null, active: true, instructions: kept })
   for (const listener of listeners) listener()
 
   const controller = new AbortController()
+  controllers.set(tripId, controller)
   let refreshed = false
   streamEvents(apiUrl(`/api/v1/trips/${tripId}/plan`), {
-    body: { instructions: instructions?.trim() || null },
+    body: { instructions: kept },
     signal: controller.signal,
     fetch: apiFetch,
     onEvent: (event) => {
@@ -49,9 +57,18 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
       if (event.agent === "travya" && event.kind === "done") {
         notifySuccess("Itinerary ready", event.message)
       }
+      // The run spent the demo's daily model budget: say so like any other demo-limit answer.
+      if (
+        event.agent === "travya" &&
+        event.kind === "error" &&
+        event.data?.error === "BudgetExhausted"
+      ) {
+        reportDemoLimit(event.message)
+      }
     },
   })
     .then(() => {
+      const stopped = controller.signal.aborted
       set(tripId, (run) =>
         run.state.status === "running"
           ? {
@@ -60,7 +77,10 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
               state: {
                 ...run.state,
                 status: "error",
-                error: "The planning stream ended early. Please re-plan.",
+                finishedAt: Date.now(),
+                error: stopped
+                  ? STOPPED_MESSAGE
+                  : "The planning stream ended early. Please re-plan.",
               },
             }
           : { ...run, active: false },
@@ -68,7 +88,14 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
     })
     .catch((caught: unknown) => {
       const error = caught instanceof ApiError ? caught : toApiError(caught, null)
+      if (error.kind === "conflict") {
+        // Another tab (or device) is already planning this trip: the page follows that run.
+        runs.delete(tripId)
+        for (const listener of listeners) listener()
+        return
+      }
       set(tripId, (run) => ({
+        ...run,
         active: false,
         error,
         state: { ...run.state, status: "error", error: error.detail },
@@ -76,8 +103,19 @@ export function startPlan(queryClient: QueryClient, tripId: string, instructions
       notifyError(error, "Couldn't start planning")
     })
     .finally(() => {
+      if (controllers.get(tripId) === controller) controllers.delete(tripId)
       void invalidateTrip(queryClient, tripId)
     })
+}
+
+/** Aborts this tab's run; the API puts the trip back to its previous status. */
+export function stopPlan(tripId: string) {
+  controllers.get(tripId)?.abort()
+}
+
+/** Starts the same run again, with the instructions it had. */
+export function retryPlan(queryClient: QueryClient, tripId: string) {
+  startPlan(queryClient, tripId, runs.get(tripId)?.instructions ?? null)
 }
 
 export function dismissPlan(tripId: string) {

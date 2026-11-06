@@ -15,10 +15,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { Controller, type Path, useForm } from "react-hook-form"
-import { LuSparkles } from "react-icons/lu"
 import { tripsCreateTripMutation } from "@/client/@tanstack/react-query.gen"
 import type { PlaceSuggestion } from "@/client/types.gen"
 import { startPlan } from "@/features/planner/planStore"
+import { useProfileDefaults } from "@/features/trips/useProfileDefaults"
 import { ApiError } from "@/lib/errors"
 import { addDays } from "@/lib/format"
 import { useDocumentTitle } from "@/lib/hooks"
@@ -45,6 +45,7 @@ export function NewTripPage() {
     resolver: zodResolver(tripFormSchema),
     defaultValues: sample ? sampleFormValues(sample) : emptyFormValues(),
   })
+  useProfileDefaults(form, !sample)
   const { register, control, handleSubmit, watch, setError, formState } = form
   const [place, setPlace] = useState<PlaceSuggestion | null>(null)
   const { errors } = formState
@@ -219,7 +220,7 @@ export function NewTripPage() {
                 loading={formState.isSubmitting}
                 loadingText="Creating trip…"
               >
-                <LuSparkles /> Plan my trip
+                Plan my trip
               </Button>
               <Button
                 type="button"

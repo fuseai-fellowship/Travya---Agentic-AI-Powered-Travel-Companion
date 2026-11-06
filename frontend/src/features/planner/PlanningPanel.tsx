@@ -2,6 +2,7 @@ import { Alert, Box, Button, Collapsible, HStack, Spinner, Text } from "@chakra-
 import { LuChevronDown, LuX } from "react-icons/lu"
 import { formatElapsed } from "@/lib/format"
 import { AgentTimeline } from "./AgentTimeline"
+import { ProgressAnnouncer } from "./ProgressAnnouncer"
 import { dismissPlan, type PlanRun } from "./planStore"
 
 /**
@@ -13,11 +14,13 @@ export function PlanningPanel({
   run,
   planningElsewhere,
   onRetry,
+  onStop,
 }: {
   tripId: string
   run: PlanRun | undefined
   planningElsewhere: boolean
   onRetry: () => void
+  onStop?: () => void
 }) {
   if (!run) {
     if (!planningElsewhere) return null
@@ -37,9 +40,16 @@ export function PlanningPanel({
   const { state } = run
   if (state.status !== "done") {
     return (
-      <Box p="4" borderWidth="1px" borderRadius="card" bg="bg.subtle">
-        <AgentTimeline state={state} onRetry={run.active ? undefined : onRetry} />
-      </Box>
+      <>
+        <ProgressAnnouncer state={state} />
+        <Box p="4" borderWidth="1px" borderRadius="card" bg="bg.subtle">
+          <AgentTimeline
+            state={state}
+            onRetry={run.active ? undefined : onRetry}
+            onStop={run.active ? onStop : undefined}
+          />
+        </Box>
+      </>
     )
   }
 
@@ -48,40 +58,43 @@ export function PlanningPanel({
       ? state.finishedAt - state.startedAt
       : null
   return (
-    <Collapsible.Root>
-      <Box borderWidth="1px" borderRadius="card" bg="bg.subtle">
-        <HStack justify="space-between" px="3" py="2" gap="2">
-          <Collapsible.Trigger asChild>
-            <Button variant="ghost" size="sm" flex="1" justifyContent="flex-start" minH="44px">
-              <Text as="span" fontWeight="600">
-                {state.headline}
-              </Text>
-              {total !== null && (
-                <Text as="span" color="fg.muted" fontFamily="mono" fontSize="xs">
-                  {formatElapsed(total)}
+    <>
+      <ProgressAnnouncer state={state} />
+      <Collapsible.Root>
+        <Box borderWidth="1px" borderRadius="card" bg="bg.subtle">
+          <HStack justify="space-between" px="3" py="2" gap="2">
+            <Collapsible.Trigger asChild>
+              <Button variant="ghost" size="sm" flex="1" justifyContent="flex-start" minH="44px">
+                <Text as="span" fontWeight="600">
+                  {state.headline}
                 </Text>
-              )}
-              <LuChevronDown aria-hidden="true" />
-              <Text as="span" srOnly>
-                Show the agent log
-              </Text>
+                {total !== null && (
+                  <Text as="span" color="fg.muted" fontFamily="mono" fontSize="xs">
+                    {formatElapsed(total)}
+                  </Text>
+                )}
+                <LuChevronDown aria-hidden="true" />
+                <Text as="span" srOnly>
+                  Show the agent log
+                </Text>
+              </Button>
+            </Collapsible.Trigger>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Dismiss the agent log"
+              onClick={() => dismissPlan(tripId)}
+            >
+              <LuX />
             </Button>
-          </Collapsible.Trigger>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Dismiss the agent log"
-            onClick={() => dismissPlan(tripId)}
-          >
-            <LuX />
-          </Button>
-        </HStack>
-        <Collapsible.Content>
-          <Box px="4" pb="4">
-            <AgentTimeline state={state} live={false} />
-          </Box>
-        </Collapsible.Content>
-      </Box>
-    </Collapsible.Root>
+          </HStack>
+          <Collapsible.Content>
+            <Box px="4" pb="4">
+              <AgentTimeline state={state} />
+            </Box>
+          </Collapsible.Content>
+        </Box>
+      </Collapsible.Root>
+    </>
   )
 }

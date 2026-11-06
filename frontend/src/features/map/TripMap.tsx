@@ -113,7 +113,7 @@ export default function TripMap({
             type="circle"
             paint={{
               "circle-radius": 4,
-              "circle-color": "#0E7C7B",
+              "circle-color": "#D55E00",
               "circle-opacity": stops.length ? 0.25 : 0.7,
               "circle-stroke-color": "#FFFFFF",
               "circle-stroke-width": 1,
@@ -166,7 +166,7 @@ export default function TripMap({
               borderRadius="full"
               borderWidth="2px"
               borderColor="white"
-              boxShadow={isActive ? "0 0 0 3px #1C1B19" : "0 1px 3px rgba(0,0,0,0.35)"}
+              boxShadow={isActive ? "0 0 0 3px #102030" : "0 1px 3px rgba(0,0,0,0.35)"}
               fontFamily="mono"
               fontSize="11px"
               fontWeight="700"
@@ -174,6 +174,12 @@ export default function TripMap({
               opacity={dimmed ? 0.35 : 1}
               transform={isActive ? "scale(1.15)" : "none"}
               transition="transform 150ms ease-out, opacity 200ms ease-out"
+              // The map's one motion signature: stops drop in, day by day.
+              animationName="pin-drop"
+              animationDuration="map"
+              animationTimingFunction="map"
+              animationFillMode="backwards"
+              animationDelay={`${(stop.dayIndex - 1) * 120 + stop.order * 40}ms`}
               style={{ background: stop.color, color: stop.textColor }}
             >
               <span aria-hidden="true">
@@ -197,8 +203,8 @@ export default function TripMap({
           onClose={() => onSelectItem(null)}
           maxWidth="260px"
         >
-          <Box color="#1C1B19" p="1">
-            <Text fontSize="xs" color="#6B665E">
+          <Box color="#102030" p="1">
+            <Text fontSize="xs" color="#47566A">
               Day {active.dayIndex}
               {active.startTime ? ` · ${formatTime(active.startTime)}` : ""}
             </Text>

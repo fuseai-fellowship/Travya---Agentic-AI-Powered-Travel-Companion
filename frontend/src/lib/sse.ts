@@ -44,6 +44,8 @@ export interface StreamOptions {
   signal: AbortSignal
   fetch: typeof fetch
   onEvent: (event: AgentEvent) => void
+  /** Called once the API accepted the request and the event stream is open. */
+  onOpen?: () => void
 }
 
 /**
@@ -51,9 +53,9 @@ export interface StreamOptions {
  * paid agent runs. HTTP errors before the stream opens reject with an ApiError; an abort resolves.
  */
 export async function streamEvents(url: string, options: StreamOptions): Promise<void> {
-  const { body, signal, onEvent } = options
+  const { body, signal, onEvent, onOpen } = options
   try {
-    await openStream(url, body, signal, options.fetch, onEvent)
+    await openStream(url, body, signal, options.fetch, onEvent, onOpen)
   } catch (error) {
     if (signal.aborted) return
     throw error instanceof ApiError ? error : toApiError(error, null)
@@ -66,6 +68,7 @@ function openStream(
   signal: AbortSignal,
   fetchImpl: typeof fetch,
   onEvent: (event: AgentEvent) => void,
+  onOpen?: () => void,
 ): Promise<void> {
   return fetchEventSource(url, {
     method: "POST",
@@ -76,7 +79,10 @@ function openStream(
     openWhenHidden: true,
     async onopen(response) {
       const type = response.headers.get("content-type") ?? ""
-      if (response.ok && type.includes("text/event-stream")) return
+      if (response.ok && type.includes("text/event-stream")) {
+        onOpen?.()
+        return
+      }
       let payload: unknown = null
       try {
         payload = await response.json()
@@ -106,14 +112,25 @@ export function useEventStream(fetchImpl: typeof fetch) {
   useEffect(() => () => controller.current?.abort(), [])
 
   const start = useCallback(
-    async (url: string, body: unknown, onEvent: (event: AgentEvent) => void) => {
+    async (
+      url: string,
+      body: unknown,
+      onEvent: (event: AgentEvent) => void,
+      onOpen?: () => void,
+    ) => {
       controller.current?.abort()
       const current = new AbortController()
       controller.current = current
       setStatus("streaming")
       setError(null)
       try {
-        await streamEvents(url, { body, signal: current.signal, fetch: fetchImpl, onEvent })
+        await streamEvents(url, {
+          body,
+          signal: current.signal,
+          fetch: fetchImpl,
+          onEvent,
+          onOpen,
+        })
         const outcome: StreamStatus = current.signal.aborted ? "aborted" : "done"
         if (controller.current === current) setStatus(outcome)
         return outcome

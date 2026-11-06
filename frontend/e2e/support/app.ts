@@ -4,7 +4,7 @@ import { expect, type Page } from "@playwright/test"
 /** Signs in through "Try the demo" (Firebase anonymous auth) and waits for the trips page. */
 export async function startDemo(page: Page) {
   await page.goto("/")
-  await page.getByRole("button", { name: "Try the demo — no sign-up" }).first().click()
+  await page.getByRole("button", { name: "Try the demo, no signup" }).first().click()
   await expect(page).toHaveURL(/\/trips$/)
 }
 
