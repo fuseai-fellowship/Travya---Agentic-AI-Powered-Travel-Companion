@@ -24,7 +24,16 @@ export async function downloadDocument(documentId: string, filename: string): Pr
   }
   const link = payload as { url?: unknown }
   if (typeof link?.url === "string") {
-    window.open(link.url, "_blank", "noopener,noreferrer")
+    // After an await the click no longer counts as a user gesture, so a popup would be blocked.
+    // The signed URL answers with Content-Disposition: attachment, so following it in place
+    // downloads the file without leaving the page.
+    const anchor = document.createElement("a")
+    anchor.href = link.url
+    anchor.download = filename
+    anchor.rel = "noopener"
+    document.body.append(anchor)
+    anchor.click()
+    anchor.remove()
     return
   }
   throw new Error("The download link was missing.")

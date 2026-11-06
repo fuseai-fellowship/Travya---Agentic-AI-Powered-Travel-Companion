@@ -6,6 +6,7 @@ import { BottomTabs } from "./BottomTabs"
 import { DemoLimitBanner } from "./DemoLimitBanner"
 import { MobileTopBar } from "./MobileTopBar"
 import { Sidebar } from "./Sidebar"
+import { WakeBanner } from "./WakeBanner"
 
 export function AppShell() {
   const { status } = useAuth()
@@ -36,6 +37,7 @@ export function AppShell() {
       <Sidebar />
       <Flex direction="column" flex="1" minW="0">
         <MobileTopBar />
+        <WakeBanner />
         <DemoLimitBanner />
         <Box
           as="main"

@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest"
 import { cleanup } from "@testing-library/react"
 import { afterAll, afterEach, beforeAll } from "vitest"
+import { resetWake } from "@/lib/wake"
 import { server } from "./server"
 
 // jsdom lacks these browser APIs that Chakra/Ark UI touch.
@@ -31,5 +32,6 @@ beforeAll(() => server.listen({ onUnhandledFrame: "error" }))
 afterEach(() => {
   cleanup()
   server.resetHandlers()
+  resetWake()
 })
 afterAll(() => server.close())

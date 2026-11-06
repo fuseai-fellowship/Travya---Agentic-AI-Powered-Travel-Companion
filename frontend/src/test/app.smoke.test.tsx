@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router"
 import { render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { HttpResponse, http } from "msw"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import { Providers } from "@/app/providers"
@@ -105,10 +106,14 @@ describe("app smoke", () => {
     api()
     mount("/")
     expect(
-      await screen.findByRole("heading", { level: 1, name: /team of AI agents/i }),
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "A trip plan that checks its own work.",
+      }),
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /open your trips/i })).toHaveAttribute("href", "/trips")
-    expect(screen.getByText(/Tilak Parajuli and Bigya/)).toBeInTheDocument()
+    // Signed in (the smoke user): the primary action opens the app instead of the demo.
+    expect(screen.getByRole("link", { name: "Open your trips" })).toHaveAttribute("href", "/trips")
+    expect(screen.getByRole("figure", { name: /Recorded planning run: Kyoto/ })).toBeInTheDocument()
   })
 
   it("shows sample trips when there are none", async () => {
@@ -121,6 +126,30 @@ describe("app smoke", () => {
         expect.stringContaining("sample="),
       )
     }
+  })
+
+  it("doesn't call an emptied later page 'your first trip'", async () => {
+    api()
+    server.use(
+      http.get(`${API}/trips`, () =>
+        HttpResponse.json({ items: [], total: 20, limit: 20, offset: 20 }),
+      ),
+    )
+    mount("/trips?page=2")
+    expect(await screen.findByText("Nothing on this page")).toBeInTheDocument()
+    expect(screen.queryByText("Plan your first trip")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Back to the first page" })).toBeInTheDocument()
+  })
+
+  it("asks before a demo account signs out", async () => {
+    api()
+    mount("/trips")
+    const user = userEvent.setup()
+    const [menu] = await screen.findAllByRole("button", { name: /Account menu for/ })
+    await user.click(menu as HTMLElement)
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }))
+    const dialog = await screen.findByRole("alertdialog", { name: "Sign out of the demo?" })
+    expect(dialog).toHaveTextContent("add an email or Google sign-in in Settings")
   })
 
   it("lists trips", async () => {

@@ -38,8 +38,9 @@ export function WeatherTab({ tripId, hasLocation }: { tripId: string; hasLocatio
     <Stack gap="3">
       {estimate && (
         <Text fontSize="sm" color="fg.muted">
-          Days marked <strong>climate estimate</strong> are too far ahead for a forecast; they show
-          typical weather for those dates from Open-Meteo's climate data.
+          Days marked <strong>estimate</strong> are too far ahead for a forecast. They show one
+          recent year's observed weather for those dates (or a climate-model run) from Open-Meteo,
+          not a forecast or a long-term average.
         </Text>
       )}
       <SimpleGrid as="ul" columns={{ base: 1, sm: 2 }} gap="2" listStyleType="none">
@@ -82,7 +83,7 @@ export function WeatherTab({ tripId, hasLocation }: { tripId: string; hasLocatio
                 </HStack>
                 {day.is_climate_estimate && (
                   <Badge size="sm" variant="outline">
-                    Climate estimate
+                    Estimate
                   </Badge>
                 )}
               </HStack>

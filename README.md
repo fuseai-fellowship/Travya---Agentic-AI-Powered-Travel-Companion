@@ -11,13 +11,13 @@
 
 **Live demo:** <https://travya-app.pages.dev> (coming soon) · **Docs:** <https://travya-docs.pages.dev/>
 
-![The agent timeline and live map while Travya plans a trip](docs/assets/screenshot-planning.png)
+[![A real Travya run in Kathmandu: sample stays beside a map with one route per day](docs/assets/real-run-poster.webp)](https://travya-app.pages.dev/#video)
 
-<sub>Four research scouts run in parallel while places land on the map; then the planner, critic and quality gate take over. Live run on free tiers.</sub>
+<sub>A production run on the free tier, recorded on 5 Nov 2026 and cut to 20 seconds (sped up while the model thinks): plan a trip, confirm a simulated stay, ask about the weather. Click to watch it on the landing page.</sub>
 
-| Itinerary on the map | Simulated bookings, confirmed by you |
+| The agents at work: scouts done, the quality gate sends two issues back | Day-by-day itinerary with routes on the map |
 |---|---|
-| ![Day-by-day itinerary with routes on the map](docs/assets/screenshot-itinerary.png) | ![Sample stay quotes with an explicit confirm step](docs/assets/screenshot-bookings.png) |
+| ![The agent timeline while the reviser fixes two issues from the quality gate, researched places on the map](docs/assets/screenshot-planning.webp) | ![The finished itinerary next to numbered stops and a route per day](docs/assets/screenshot-itinerary.webp) |
 
 ## What it does
 

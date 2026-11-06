@@ -14,7 +14,7 @@ import { readPlan } from "@/features/itinerary/plan"
 import { MapPanel } from "@/features/map/MapPanel"
 import { parseTripMap } from "@/features/map/mapData"
 import { PlanningPanel } from "@/features/planner/PlanningPanel"
-import { startPlan, usePlanRun } from "@/features/planner/planStore"
+import { retryPlan, startPlan, stopPlan, usePlanRun } from "@/features/planner/planStore"
 import { ApiError } from "@/lib/errors"
 import { useDocumentTitle } from "@/lib/hooks"
 import { computeBudget } from "./budget"
@@ -139,7 +139,8 @@ export function TripPage() {
           tripId={tripId}
           run={run}
           planningElsewhere={data.status === "planning"}
-          onRetry={() => replan()}
+          onRetry={() => retryPlan(queryClient, tripId)}
+          onStop={() => stopPlan(tripId)}
         />
         <TripTabs
           trip={data}

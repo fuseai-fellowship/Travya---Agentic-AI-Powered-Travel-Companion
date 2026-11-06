@@ -1,7 +1,6 @@
 import { Button, type ButtonProps, HStack, Separator, Stack, Text } from "@chakra-ui/react"
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import { LuSparkles } from "react-icons/lu"
 import { GoogleMark } from "@/components/GoogleMark"
 import { toaster } from "@/components/ui/toaster"
 import { signInDemo, signInWithGoogle } from "./actions"
@@ -41,7 +40,7 @@ export function DemoButton({ redirectTo, ...props }: ButtonProps & { redirectTo?
       onClick={run}
       {...props}
     >
-      <LuSparkles /> Try the demo — no sign-up
+      Try the demo, no signup
     </Button>
   )
 }
@@ -60,7 +59,7 @@ export function QuickSignIn({ redirectTo }: { redirectTo?: string }) {
     <Stack gap="3">
       <HStack gap="3">
         <Separator flex="1" />
-        <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider">
+        <Text fontSize="sm" color="fg.muted">
           or
         </Text>
         <Separator flex="1" />

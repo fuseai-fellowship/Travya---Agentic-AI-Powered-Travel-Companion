@@ -4,14 +4,17 @@ import { LuSend, LuSquare } from "react-icons/lu"
 
 const MAX = 4000
 
+/** idle: can send · creating: the conversation is being created (nothing to stop yet) · working: a reply is on its way and Stop aborts it. */
+export type ComposerState = "idle" | "creating" | "working"
+
 export function Composer({
   disabled,
-  streaming,
+  state,
   onSend,
   onStop,
 }: {
   disabled?: boolean
-  streaming: boolean
+  state: ComposerState
   onSend: (content: string) => void
   onStop: () => void
 }) {
@@ -20,7 +23,7 @@ export function Composer({
   const trimmed = text.trim()
 
   const submit = () => {
-    if (!trimmed || streaming || disabled) return
+    if (!trimmed || state !== "idle" || disabled) return
     onSend(trimmed)
     setText("")
   }
@@ -69,7 +72,11 @@ export function Composer({
             ? `${text.length}/${MAX}`
             : "Enter to send · Shift+Enter for a new line"}
         </Text>
-        {streaming ? (
+        {state === "creating" ? (
+          <Button size="sm" variant="outline" disabled>
+            Sending…
+          </Button>
+        ) : state === "working" ? (
           <Button size="sm" variant="outline" onClick={onStop}>
             <LuSquare /> Stop
           </Button>

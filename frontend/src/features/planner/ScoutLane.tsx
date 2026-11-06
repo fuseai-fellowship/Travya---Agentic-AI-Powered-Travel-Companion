@@ -28,24 +28,31 @@ export function ScoutLane({
   icon,
   step,
   now,
+  compact = false,
+  highlighted = false,
 }: {
   label: string
   icon: IconType
   step: Step
   now: number
+  compact?: boolean
+  highlighted?: boolean
 }) {
   const elapsed = elapsedOf(step, now)
   return (
     <Stack
       as="li"
-      gap="1.5"
-      p="3"
+      gap={compact ? "1" : "1.5"}
+      p={compact ? "2" : "3"}
       borderWidth="1px"
       borderRadius="card"
       bg={step.status === "running" ? "brand.subtle" : "bg.panel"}
-      borderColor={step.status === "running" ? "brand.emphasized" : "border"}
-      transition="background 200ms ease-out, border-color 200ms ease-out"
-      minH="92px"
+      borderColor={
+        highlighted ? "brand.focusRing" : step.status === "running" ? "brand.emphasized" : "border"
+      }
+      outline={highlighted ? "1px solid" : "none"}
+      outlineColor="brand.focusRing"
+      minH={compact ? "76px" : "92px"}
       data-status={step.status}
     >
       <HStack justify="space-between" gap="2">

@@ -144,7 +144,8 @@ export function AssistantPage() {
           <Thread
             conversationId={conversationId}
             pending={chat.pending}
-            streaming={chat.streaming || create.isPending}
+            creating={create.isPending}
+            announcement={chat.announcement}
             destination={destination}
             onSend={(content) => void send(content)}
             onStop={chat.stop}

@@ -105,7 +105,7 @@ export function TripHeader({
         open={confirming}
         onOpenChange={setConfirming}
         title="Delete this trip?"
-        description="The itinerary, quotes, bookings, photos, notes and documents for this trip are deleted. This can't be undone."
+        description="The itinerary, quotes, bookings, photos and documents for this trip are deleted. Its notes and conversations stay, no longer linked to a trip. This can't be undone."
         confirmLabel="Delete trip"
         destructive
         loading={remove.isPending}

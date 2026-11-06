@@ -53,7 +53,8 @@ export function TripsPage() {
     placeholderData: keepPreviousData,
   })
 
-  const filtered = Boolean(search.q || search.status)
+  // A later page can empty out after deletions: that is not "no trips yet".
+  const filtered = Boolean(search.q || search.status || page > 1)
   const setStatus = (status: TripStatus | undefined) =>
     navigate({ search: (prev) => ({ ...prev, status, page: undefined }) })
 
@@ -124,8 +125,12 @@ export function TripsPage() {
           filtered ? (
             <Empty
               icon={<LuSearch />}
-              title="No trips match"
-              description="Try another search or status."
+              title={search.q || search.status ? "No trips match" : "Nothing on this page"}
+              description={
+                search.q || search.status
+                  ? "Try another search or status."
+                  : `You have ${query.data.total} ${query.data.total === 1 ? "trip" : "trips"}.`
+              }
             >
               <Button
                 variant="outline"
@@ -134,7 +139,7 @@ export function TripsPage() {
                   void navigate({ search: {} })
                 }}
               >
-                Clear filters
+                {search.q || search.status ? "Clear filters" : "Back to the first page"}
               </Button>
             </Empty>
           ) : (

@@ -35,12 +35,15 @@ describe("groupByDay", () => {
     ])
   })
 
-  it("sorts by position, then start time, and drops items outside the trip", () => {
+  it("sorts by start time, untimed last, with the planner's order as tiebreak", () => {
     const groups = groupByDay(
       [
-        item("2026-12-01", 1, "09:00:00", "Second"),
-        item("2026-12-01", 0, "18:00:00", "First"),
-        item("2026-12-01", 1, "08:00:00", "Also second, earlier"),
+        item("2026-12-01", 0, "09:00:00", "Temple"),
+        item("2026-12-01", 1, "21:30:00", "Dinner"),
+        // Added by the user later (position max+1) but earliest in the day.
+        item("2026-12-01", 2, "07:00:00", "Breakfast"),
+        item("2026-12-01", 3, null, "Untimed note"),
+        item("2026-12-01", 1, "09:00:00", "Same time, later in the plan"),
         item("2026-11-30", 0, null, "Before the trip"),
       ],
       "2026-12-01",
@@ -48,9 +51,11 @@ describe("groupByDay", () => {
     )
     expect(groups).toHaveLength(1)
     expect(groups[0]?.items.map((entry) => entry.title)).toEqual([
-      "First",
-      "Also second, earlier",
-      "Second",
+      "Breakfast",
+      "Temple",
+      "Same time, later in the plan",
+      "Dinner",
+      "Untimed note",
     ])
   })
 

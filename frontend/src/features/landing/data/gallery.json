@@ -1,0 +1,1263 @@
+[
+  {
+    "id": "kathmandu",
+    "destination": "Kathmandu",
+    "destinationNe": "काठमाडौँ",
+    "countryCode": "NP",
+    "title": "Kathmandu Valley temples and food",
+    "startDate": "2026-12-06",
+    "endDate": "2026-12-10",
+    "travelers": 2,
+    "budget": "1500.00",
+    "currency": "USD",
+    "pace": "balanced",
+    "interests": ["culture", "food", "history"],
+    "recordedAt": "2026-11-05T19:03:09Z",
+    "durationMs": 118026,
+    "summary": "A 5-day cultural and historical immersion in Kathmandu, balancing iconic temple squares with local Newari culinary experiences. The itinerary includes a sunrise view over the Himalayas and explores the city's rich religious heritage. Accommodations and activities are curated to fit a balanced pace within your budget.",
+    "estimatedTotal": 1120.6,
+    "critic": { "rounds": 2, "revisions": 1, "issues": 0 },
+    "days": [
+      {
+        "day": 1,
+        "date": "2026-12-06",
+        "theme": "Arrival and Introduction",
+        "items": [
+          {
+            "time": "14:00",
+            "title": "Check-in",
+            "place": "Kathmandu Heritage Inn",
+            "category": "lodging",
+            "cost": "500.60",
+            "mapped": true
+          },
+          {
+            "time": "16:00",
+            "title": "Evening Walk at Rani Pokhari",
+            "place": "Rani Pokhari",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true,
+            "placeNe": "रानी पोखरी"
+          },
+          {
+            "time": "19:00",
+            "title": "Traditional Newari Dinner",
+            "place": null,
+            "category": "food",
+            "cost": "40.00",
+            "mapped": false
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "date": "2026-12-07",
+        "theme": "Royal History and Culture",
+        "items": [
+          {
+            "time": "10:00",
+            "title": "Palace Museum Exploration",
+            "place": "Narayanhiti Palace Museum",
+            "category": "sight",
+            "cost": "20.00",
+            "mapped": true
+          },
+          {
+            "time": "13:30",
+            "title": "Lunch in Thamel",
+            "place": null,
+            "category": "food",
+            "cost": "20.00",
+            "mapped": false
+          },
+          {
+            "time": "15:00",
+            "title": "Cultural Walk",
+            "place": "Asan, Kathmandu",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2026-12-08",
+        "theme": "Temple Squares and Traditions",
+        "items": [
+          {
+            "time": "09:30",
+            "title": "Durbar Square Visit",
+            "place": "Kathmandu",
+            "category": "sight",
+            "cost": "20.00",
+            "mapped": true
+          },
+          {
+            "time": "13:00",
+            "title": "Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "20.00",
+            "mapped": false
+          },
+          {
+            "time": "15:00",
+            "title": "Spiritual Sites Visit",
+            "place": "Sankata Temple",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "date": "2026-12-09",
+        "theme": "Mountain Views and Relaxation",
+        "items": [
+          {
+            "time": "07:00",
+            "title": "Mountain Flight",
+            "place": null,
+            "category": "activity",
+            "cost": "394.00",
+            "mapped": false
+          },
+          {
+            "time": "12:00",
+            "title": "Coffee Break",
+            "place": null,
+            "category": "food",
+            "cost": "15.00",
+            "mapped": false
+          },
+          {
+            "time": "15:00",
+            "title": "Art and History",
+            "place": "Children's Art Museum of Nepal",
+            "category": "sight",
+            "cost": "10.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "date": "2026-12-10",
+        "theme": "Final Souvenirs and Departure",
+        "items": [
+          {
+            "time": "09:00",
+            "title": "Morning Market Visit",
+            "place": "Indra Chowk",
+            "category": "activity",
+            "cost": "50.00",
+            "mapped": true,
+            "placeNe": "इन्द्रचोक"
+          },
+          {
+            "time": "11:30",
+            "title": "Final Nepali Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "25.00",
+            "mapped": false
+          },
+          {
+            "time": "13:00",
+            "title": "Visit to Historic Tower",
+            "place": "Kathmandu View Tower",
+            "category": "sight",
+            "cost": "5.00",
+            "mapped": true
+          }
+        ]
+      }
+    ],
+    "map": {
+      "width": 480,
+      "height": 300,
+      "stops": [
+        {
+          "day": 1,
+          "title": "Check-in",
+          "place": "Kathmandu Heritage Inn",
+          "x": 301.1,
+          "y": 133.2
+        },
+        {
+          "day": 1,
+          "title": "Evening Walk at Rani Pokhari",
+          "place": "Rani Pokhari",
+          "x": 234,
+          "y": 169
+        },
+        {
+          "day": 2,
+          "title": "Palace Museum Exploration",
+          "place": "Narayanhiti Palace Museum",
+          "x": 301.1,
+          "y": 40
+        },
+        { "day": 2, "title": "Cultural Walk", "place": "Asan, Kathmandu", "x": 186.2, "y": 174.8 },
+        { "day": 3, "title": "Durbar Square Visit", "place": "Kathmandu", "x": 301.1, "y": 133.2 },
+        {
+          "day": 3,
+          "title": "Spiritual Sites Visit",
+          "place": "Sankata Temple",
+          "x": 185.4,
+          "y": 260
+        },
+        {
+          "day": 4,
+          "title": "Art and History",
+          "place": "Children's Art Museum of Nepal",
+          "x": 332.2,
+          "y": 116.6
+        },
+        {
+          "day": 5,
+          "title": "Morning Market Visit",
+          "place": "Indra Chowk",
+          "x": 147.8,
+          "y": 199.8
+        },
+        {
+          "day": 5,
+          "title": "Visit to Historic Tower",
+          "place": "Kathmandu View Tower",
+          "x": 263.2,
+          "y": 232.9
+        }
+      ],
+      "routes": [
+        {
+          "day": 1,
+          "points": [
+            [300.9, 133.9],
+            [298, 133.4],
+            [294.3, 132.9],
+            [291.8, 132.5],
+            [287.4, 133],
+            [285.2, 133.4],
+            [277.3, 134.5],
+            [271.7, 134],
+            [269.4, 134.5],
+            [266.7, 135.4],
+            [264.1, 134.5],
+            [262.3, 135.4],
+            [260.3, 134.9],
+            [259.5, 138.9],
+            [258.8, 141.2],
+            [257.5, 143],
+            [252.7, 145.5],
+            [249.7, 146.7],
+            [239.9, 150.7],
+            [231.5, 153.5],
+            [225.5, 154.7],
+            [223, 155.3],
+            [220.8, 156.2],
+            [218.4, 157.7],
+            [217.2, 159.3],
+            [218.3, 156],
+            [219.3, 153.7],
+            [221.4, 154.5],
+            [222, 156.8],
+            [219.4, 158.5],
+            [218.7, 168],
+            [231.8, 169.6],
+            [232, 169.6]
+          ]
+        },
+        {
+          "day": 2,
+          "points": [
+            [300.9, 72.5],
+            [298.3, 72.5],
+            [294.1, 73],
+            [291.8, 73.6],
+            [288.3, 74.8],
+            [275.3, 78.4],
+            [271.7, 80.4],
+            [269.5, 82.8],
+            [267.9, 99.4],
+            [266.6, 110.2],
+            [266.2, 114.4],
+            [264.2, 126.9],
+            [263.8, 129.7],
+            [261.4, 129.4],
+            [260.4, 132.2],
+            [260, 134.4],
+            [259.5, 138.9],
+            [258.8, 141.2],
+            [257.5, 143],
+            [252.7, 145.5],
+            [249.7, 146.7],
+            [239.9, 150.7],
+            [231.5, 153.5],
+            [225.5, 154.7],
+            [223, 155.3],
+            [220.8, 156.2],
+            [218.4, 157.7],
+            [217.2, 159.3],
+            [213.4, 160.7],
+            [208.1, 163.2],
+            [205.3, 164.5],
+            [203.1, 165.1],
+            [201, 166.5],
+            [199.3, 167.6],
+            [197.5, 169],
+            [188.7, 174],
+            [187, 175.1],
+            [186.3, 174.6]
+          ]
+        },
+        {
+          "day": 3,
+          "points": [
+            [300.9, 133.9],
+            [298, 133.4],
+            [294.3, 132.9],
+            [291.8, 132.5],
+            [287.4, 133],
+            [285.2, 133.4],
+            [277.3, 134.5],
+            [271.7, 134],
+            [269.4, 134.5],
+            [266.7, 135.4],
+            [264.1, 134.5],
+            [262.3, 135.4],
+            [260.3, 134.9],
+            [259.5, 138.9],
+            [258.8, 141.2],
+            [257.5, 143],
+            [252.7, 145.5],
+            [249.7, 146.7],
+            [239.9, 150.7],
+            [231.5, 153.5],
+            [225.5, 154.7],
+            [223, 155.3],
+            [220.8, 156.2],
+            [218.4, 157.7],
+            [217.2, 159.3],
+            [216.1, 161.2],
+            [215.6, 168.3],
+            [215, 181],
+            [214.4, 183],
+            [214.4, 187.4],
+            [216.8, 187.6],
+            [216.1, 199.1],
+            [217.2, 203.1],
+            [217.1, 206.9],
+            [215, 209.1],
+            [214.1, 211.2],
+            [213.1, 217.2],
+            [212.5, 219.7],
+            [211.8, 223.9],
+            [209.4, 225.4],
+            [209.1, 228.5],
+            [208.4, 233.2],
+            [208.1, 238.2],
+            [208.1, 241.4],
+            [207.1, 243.4],
+            [205, 245.4],
+            [202.5, 246],
+            [196.2, 245.4],
+            [196, 253.8],
+            [192.8, 253.7],
+            [189.5, 253],
+            [187.2, 252.7],
+            [184.2, 252.7],
+            [184.2, 258.3],
+            [183.6, 260.3],
+            [185.4, 260.3]
+          ]
+        },
+        {
+          "day": 5,
+          "points": [
+            [148, 199.9],
+            [152.3, 196.8],
+            [155.7, 194.6],
+            [161.3, 191.1],
+            [166, 188.4],
+            [170.8, 185.1],
+            [175.8, 182],
+            [178.6, 180.1],
+            [180.8, 178.5],
+            [183.8, 177.1],
+            [185.9, 176.1],
+            [188.2, 176.1],
+            [190.3, 176.5],
+            [193.1, 176.8],
+            [196.2, 177.1],
+            [199.7, 177.1],
+            [202.5, 178.3],
+            [208.1, 180.3],
+            [213.1, 181.5],
+            [217.5, 181],
+            [219.4, 182.6],
+            [222, 183.6],
+            [225.6, 185.8],
+            [229.3, 187.1],
+            [232.6, 187.9],
+            [235.1, 189.4],
+            [241.3, 192.8],
+            [243.6, 196.3],
+            [247.4, 196.9],
+            [247.9, 199.6],
+            [250.2, 199.6],
+            [258.2, 200.8],
+            [257.2, 205.9],
+            [262.6, 208.1],
+            [261.6, 210.4],
+            [263.5, 211.2],
+            [266.9, 211.7],
+            [270, 212.9],
+            [273.1, 213.6],
+            [272.9, 216.2],
+            [273.4, 219.6],
+            [271.6, 226.6],
+            [270.7, 229.9],
+            [270, 231.9],
+            [269, 233.9],
+            [267.9, 235.7]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "lisbon",
+    "destination": "Lisbon",
+    "countryCode": "PT",
+    "title": "Long weekend in Lisbon",
+    "startDate": "2026-12-06",
+    "endDate": "2026-12-09",
+    "travelers": 2,
+    "budget": "1200.00",
+    "currency": "EUR",
+    "pace": "relaxed",
+    "interests": ["food", "viewpoints", "architecture"],
+    "recordedAt": "2026-11-05T19:05:55Z",
+    "durationMs": 31839,
+    "summary": "This relaxed 4-day trip to Lisbon focuses on the city's rich architectural heritage, iconic viewpoints, and traditional culinary scene. You will explore historic districts like Baixa, Alfama, and Chiado while enjoying the local atmosphere. Given the expected drizzle and heavy rain on the final day, the itinerary balances outdoor sightseeing with indoor cultural experiences.",
+    "estimatedTotal": 1110,
+    "critic": { "rounds": 1, "revisions": 0, "issues": 0 },
+    "days": [
+      {
+        "day": 1,
+        "date": "2026-12-06",
+        "theme": "Historic Baixa and Waterfront",
+        "items": [
+          {
+            "time": "09:00",
+            "title": "Breakfast at the hotel",
+            "place": null,
+            "category": "food",
+            "cost": "20.00",
+            "mapped": false
+          },
+          {
+            "time": "10:30",
+            "title": "Explore Lisbon Baixa",
+            "place": "Lisbon Baixa",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Lunch in Baixa",
+            "place": null,
+            "category": "food",
+            "cost": "50.00",
+            "mapped": false
+          },
+          {
+            "time": "14:30",
+            "title": "Visit Rua Augusta Arch and Statue of José I",
+            "place": "Rua Augusta Arch",
+            "category": "sight",
+            "cost": "10.00",
+            "mapped": true
+          },
+          {
+            "time": "19:00",
+            "title": "Dinner in Chiado",
+            "place": null,
+            "category": "food",
+            "cost": "80.00",
+            "mapped": false
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "date": "2026-12-07",
+        "theme": "Alfama's Ancient Alleys",
+        "items": [
+          {
+            "time": "10:00",
+            "title": "Lisbon Cathedral and Casa dos Bicos",
+            "place": "Lisbon Cathedral",
+            "category": "sight",
+            "cost": "15.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Lunch in Alfama",
+            "place": null,
+            "category": "food",
+            "cost": "40.00",
+            "mapped": false
+          },
+          {
+            "time": "14:30",
+            "title": "Wander through Alfama",
+            "place": null,
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": false
+          },
+          {
+            "time": "19:30",
+            "title": "Fado Dinner",
+            "place": null,
+            "category": "food",
+            "cost": "100.00",
+            "mapped": false
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2026-12-08",
+        "theme": "Chiado Culture and Views",
+        "items": [
+          {
+            "time": "10:00",
+            "title": "Livraria Bertrand and Chiado",
+            "place": "Livraria Bertrand",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Lunch in Chiado",
+            "place": null,
+            "category": "food",
+            "cost": "50.00",
+            "mapped": false
+          },
+          {
+            "time": "14:30",
+            "title": "Santa Justa Lift",
+            "place": "Santa Justa Lift",
+            "category": "sight",
+            "cost": "15.00",
+            "mapped": true
+          },
+          {
+            "time": "19:00",
+            "title": "Dinner in Bairro Alto",
+            "place": null,
+            "category": "food",
+            "cost": "70.00",
+            "mapped": false
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "date": "2026-12-09",
+        "theme": "Indoor Museums and Architecture",
+        "items": [
+          {
+            "time": "10:00",
+            "title": "Cadeia do Aljube Museum",
+            "place": "Cadeia do Aljube",
+            "category": "sight",
+            "cost": "20.00",
+            "mapped": true
+          },
+          {
+            "time": "13:00",
+            "title": "Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "40.00",
+            "mapped": false
+          },
+          {
+            "time": "15:00",
+            "title": "Teatro Nacional de São Carlos",
+            "place": "Teatro Nacional de São Carlos",
+            "category": "sight",
+            "cost": "10.00",
+            "mapped": true
+          }
+        ]
+      }
+    ],
+    "map": {
+      "width": 480,
+      "height": 300,
+      "stops": [
+        {
+          "day": 1,
+          "title": "Explore Lisbon Baixa",
+          "place": "Lisbon Baixa",
+          "x": 239.4,
+          "y": 90.5
+        },
+        {
+          "day": 1,
+          "title": "Visit Rua Augusta Arch and Statue of José I",
+          "place": "Rua Augusta Arch",
+          "x": 257.4,
+          "y": 255.3
+        },
+        {
+          "day": 2,
+          "title": "Lisbon Cathedral and Casa dos Bicos",
+          "place": "Lisbon Cathedral",
+          "x": 418.2,
+          "y": 182.5
+        },
+        {
+          "day": 3,
+          "title": "Livraria Bertrand and Chiado",
+          "place": "Livraria Bertrand",
+          "x": 70.8,
+          "y": 131.8
+        },
+        {
+          "day": 3,
+          "title": "Santa Justa Lift",
+          "place": "Santa Justa Lift",
+          "x": 143.9,
+          "y": 44.7
+        },
+        {
+          "day": 4,
+          "title": "Cadeia do Aljube Museum",
+          "place": "Cadeia do Aljube",
+          "x": 432,
+          "y": 157.7
+        },
+        {
+          "day": 4,
+          "title": "Teatro Nacional de São Carlos",
+          "place": "Teatro Nacional de São Carlos",
+          "x": 48,
+          "y": 197.9
+        }
+      ],
+      "routes": [
+        {
+          "day": 1,
+          "points": [
+            [241.9, 89.9],
+            [246.2, 103.2],
+            [257.8, 141.7],
+            [266.9, 170.9],
+            [267.3, 173.1],
+            [268.2, 175.4],
+            [268.6, 177.6],
+            [268.6, 179.8],
+            [238.1, 191.3],
+            [243.2, 207.9],
+            [244.5, 211.2],
+            [249.7, 228.8],
+            [250.5, 231],
+            [255.7, 249.2],
+            [257.4, 255.3]
+          ]
+        },
+        {
+          "day": 3,
+          "points": [
+            [70.4, 128.5],
+            [98.3, 123.5],
+            [100.5, 123],
+            [102.6, 122.4],
+            [105.2, 121.9],
+            [104.3, 119.7],
+            [104.3, 117.5],
+            [116.8, 114.7],
+            [119.8, 113.6],
+            [126.7, 112.5],
+            [132.3, 111.4],
+            [133.6, 88.3],
+            [135.7, 55.8],
+            [137.4, 51.4],
+            [145.2, 49.2]
+          ]
+        },
+        {
+          "day": 4,
+          "points": [
+            [432, 153.3],
+            [441.5, 153.3],
+            [441.9, 159.9],
+            [437.2, 162.1],
+            [417.8, 164.3],
+            [413.1, 164.9],
+            [410.5, 164.9],
+            [401.9, 160.5],
+            [396.3, 157.2],
+            [370.9, 140.1],
+            [367.5, 137.9],
+            [349.9, 125.8],
+            [348.1, 127.4],
+            [345.6, 126.3],
+            [318.9, 119.1],
+            [317.2, 118],
+            [316.8, 115.8],
+            [307.3, 88.3],
+            [306.4, 85],
+            [303.9, 86.1],
+            [301.7, 86.6],
+            [291.8, 90.5],
+            [289.7, 91.6],
+            [286.2, 92.1],
+            [284.1, 91.6],
+            [281.5, 92.1],
+            [267.7, 96.5],
+            [264.7, 97.6],
+            [251.4, 101.5],
+            [248.8, 102.6],
+            [246.2, 103.2],
+            [231.6, 107.6],
+            [217.4, 112],
+            [214.4, 113.1],
+            [211.4, 114.2],
+            [197.2, 118.6],
+            [183, 123],
+            [180, 123.5],
+            [177.9, 124.7],
+            [162.8, 129.1],
+            [162.8, 134.6],
+            [144.3, 139.5],
+            [135.3, 113.6],
+            [127.1, 115.3],
+            [122.4, 115.8],
+            [119.8, 116.4],
+            [118.5, 118.6],
+            [105.2, 121.9],
+            [102.6, 122.4],
+            [100.5, 123],
+            [98.3, 123.5],
+            [66.9, 129.6],
+            [66.1, 126.9],
+            [49.3, 130.2],
+            [48, 131.8],
+            [51.4, 164.3],
+            [52.3, 166.5],
+            [53.2, 178.7],
+            [53.6, 182.5],
+            [54.9, 196.8]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "kyoto",
+    "destination": "Kyoto",
+    "countryCode": "JP",
+    "title": "Kyoto gardens and shrines",
+    "startDate": "2026-12-06",
+    "endDate": "2026-12-11",
+    "travelers": 1,
+    "budget": "250000.00",
+    "currency": "JPY",
+    "pace": "balanced",
+    "interests": ["culture", "nature", "food"],
+    "recordedAt": "2026-11-05T19:07:17Z",
+    "durationMs": 47372,
+    "summary": "A 6-day cultural immersion in Kyoto, balancing historic temple visits with local culinary experiences. The itinerary focuses on early starts to beat the crowds and utilizes public transport for seamless exploration. This budget-conscious trip maximizes the experience while staying well within the 250,000 JPY limit.",
+    "estimatedTotal": 120000,
+    "critic": { "rounds": 3, "revisions": 2, "issues": 5 },
+    "days": [
+      {
+        "day": 1,
+        "date": "2026-12-06",
+        "theme": "Arrival and Central Kyoto",
+        "items": [
+          {
+            "time": "14:00",
+            "title": "Check-in",
+            "place": null,
+            "category": "lodging",
+            "cost": "16776.00",
+            "mapped": false
+          },
+          {
+            "time": "15:30",
+            "title": "Historical Exploration",
+            "place": "Honnō-ji",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          },
+          {
+            "time": "18:30",
+            "title": "Dinner at Kyoto Station",
+            "place": null,
+            "category": "food",
+            "cost": "2500.00",
+            "mapped": false
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "date": "2026-12-07",
+        "theme": "Temples and Markets",
+        "items": [
+          {
+            "time": "09:00",
+            "title": "Temple Visit",
+            "place": "Rokkaku-dō",
+            "category": "sight",
+            "cost": "500.00",
+            "mapped": true
+          },
+          {
+            "time": "11:00",
+            "title": "Lunch and Market Visit",
+            "place": "Nishiki Market",
+            "category": "food",
+            "cost": "3000.00",
+            "mapped": true
+          },
+          {
+            "time": "14:00",
+            "title": "Shrine Visit",
+            "place": "Nishiki Tenmangū",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2026-12-08",
+        "theme": "Museums and Indoor Culture",
+        "items": [
+          {
+            "time": "09:30",
+            "title": "Museum Visit",
+            "place": "Museum of Kyoto",
+            "category": "sight",
+            "cost": "800.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "1500.00",
+            "mapped": false
+          },
+          {
+            "time": "14:30",
+            "title": "Manga Exploration",
+            "place": "Kyoto International Manga Museum",
+            "category": "sight",
+            "cost": "900.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "date": "2026-12-09",
+        "theme": "Gion and Traditional Tea",
+        "items": [
+          {
+            "time": "09:00",
+            "title": "Morning Walk",
+            "place": "Ponto-chō",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          },
+          {
+            "time": "11:30",
+            "title": "Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "2000.00",
+            "mapped": false
+          },
+          {
+            "time": "14:00",
+            "title": "Art Appreciation",
+            "place": "Chisō Gallery",
+            "category": "sight",
+            "cost": "500.00",
+            "mapped": true
+          },
+          {
+            "time": "16:30",
+            "title": "Tea Time",
+            "place": "Salon de thé François",
+            "category": "food",
+            "cost": "1500.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "date": "2026-12-10",
+        "theme": "Art and Architecture",
+        "items": [
+          {
+            "time": "09:00",
+            "title": "Art Museum",
+            "place": "Hosomi Museum",
+            "category": "sight",
+            "cost": "1200.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Lunch",
+            "place": null,
+            "category": "food",
+            "cost": "1500.00",
+            "mapped": false
+          },
+          {
+            "time": "14:30",
+            "title": "Temple Visit",
+            "place": "Gyōgan-ji",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          }
+        ]
+      },
+      {
+        "day": 6,
+        "date": "2026-12-11",
+        "theme": "Departure",
+        "items": [
+          {
+            "time": "08:30",
+            "title": "Breakfast and Shopping",
+            "place": "Teramachi Street",
+            "category": "food",
+            "cost": "1500.00",
+            "mapped": true
+          },
+          {
+            "time": "10:30",
+            "title": "Historical Documentation",
+            "place": "Kyoto City Library of Historical Documents",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          },
+          {
+            "time": "12:30",
+            "title": "Final Shrine Visit",
+            "place": "Nishiki Tenmangū",
+            "category": "sight",
+            "cost": "0.00",
+            "mapped": true
+          }
+        ]
+      }
+    ],
+    "map": {
+      "width": 480,
+      "height": 300,
+      "stops": [
+        {
+          "day": 1,
+          "title": "Historical Exploration",
+          "place": "Honnō-ji",
+          "x": 228.4,
+          "y": 163.3
+        },
+        { "day": 2, "title": "Temple Visit", "place": "Rokkaku-dō", "x": 136.9, "y": 199.9 },
+        {
+          "day": 2,
+          "title": "Lunch and Market Visit",
+          "place": "Nishiki Market",
+          "x": 204.1,
+          "y": 236.4
+        },
+        { "day": 2, "title": "Shrine Visit", "place": "Nishiki Tenmangū", "x": 218.3, "y": 236.5 },
+        { "day": 3, "title": "Museum Visit", "place": "Museum of Kyoto", "x": 160.7, "y": 175.8 },
+        {
+          "day": 3,
+          "title": "Manga Exploration",
+          "place": "Kyoto International Manga Museum",
+          "x": 125.6,
+          "y": 144.4
+        },
+        { "day": 4, "title": "Morning Walk", "place": "Ponto-chō", "x": 260.6, "y": 195.6 },
+        { "day": 4, "title": "Art Appreciation", "place": "Chisō Gallery", "x": 122.3, "y": 190.7 },
+        { "day": 4, "title": "Tea Time", "place": "Salon de thé François", "x": 251.1, "y": 260 },
+        { "day": 5, "title": "Art Museum", "place": "Hosomi Museum", "x": 357.7, "y": 114.6 },
+        { "day": 5, "title": "Temple Visit", "place": "Gyōgan-ji", "x": 222.5, "y": 79.9 },
+        {
+          "day": 6,
+          "title": "Breakfast and Shopping",
+          "place": "Teramachi Street",
+          "x": 212.6,
+          "y": 217.5
+        },
+        {
+          "day": 6,
+          "title": "Historical Documentation",
+          "place": "Kyoto City Library of Historical Documents",
+          "x": 221.5,
+          "y": 40
+        },
+        {
+          "day": 6,
+          "title": "Final Shrine Visit",
+          "place": "Nishiki Tenmangū",
+          "x": 218.3,
+          "y": 236.5
+        }
+      ],
+      "routes": [
+        {
+          "day": 2,
+          "points": [
+            [135.5, 199.9],
+            [136.3, 201.9],
+            [138.6, 202.4],
+            [139.7, 204.4],
+            [145.9, 204.3],
+            [146.7, 215.6],
+            [146.8, 220.3],
+            [148.9, 220.8],
+            [152, 220.7],
+            [163.3, 221],
+            [163.6, 236],
+            [171.5, 236.8],
+            [179.4, 236.8],
+            [190.1, 236.5],
+            [198.3, 236.4],
+            [204.1, 236.3],
+            [206.4, 236.3],
+            [211.8, 236.4],
+            [216, 236.5],
+            [217.4, 236.5]
+          ]
+        },
+        {
+          "day": 3,
+          "points": [
+            [163, 175.8],
+            [162.9, 170.3],
+            [162.1, 163.3],
+            [161.8, 160.3],
+            [154.9, 159],
+            [146.8, 158.8],
+            [146.8, 156.8],
+            [146.8, 153.3],
+            [144.8, 153.3],
+            [137.3, 153.3],
+            [135.3, 153.3],
+            [133.3, 153.3],
+            [130.7, 152.9],
+            [128.7, 152.9],
+            [128.9, 144.4]
+          ]
+        },
+        {
+          "day": 4,
+          "points": [
+            [259.8, 195.6],
+            [254.7, 194.2],
+            [253.9, 190.7],
+            [251.8, 189.9],
+            [238.1, 190.3],
+            [238, 186.9],
+            [235.2, 187.1],
+            [234.4, 185.1],
+            [218.8, 185.4],
+            [215.4, 185.6],
+            [207.6, 186.3],
+            [199, 186.3],
+            [190.7, 186.3],
+            [186.6, 186.4],
+            [179.7, 186.4],
+            [171.2, 186.5],
+            [163.1, 186.7],
+            [147.1, 186.7],
+            [131.5, 186.5],
+            [129.4, 186.8],
+            [122.3, 186.9],
+            [128.5, 186.9],
+            [128.6, 202.9],
+            [128.6, 205.7],
+            [128.7, 219.6],
+            [128.7, 222.1],
+            [128.7, 236.1],
+            [128.7, 238.3],
+            [130.9, 238.3],
+            [131.8, 252.2],
+            [133.6, 254],
+            [145.5, 254.2],
+            [147.5, 254.2],
+            [162.8, 253.9],
+            [170.7, 253.9],
+            [178.8, 253.9],
+            [180.8, 253.9],
+            [189.4, 253.8],
+            [196.7, 253.6],
+            [198.9, 253.6],
+            [205.5, 253.6],
+            [210.5, 253.6],
+            [210.5, 256],
+            [212.5, 256],
+            [215.2, 255.8],
+            [235.8, 255.1],
+            [238.7, 257.2],
+            [240.7, 257.5],
+            [243.6, 255],
+            [252.3, 254.7],
+            [251.8, 258.8],
+            [251.5, 260]
+          ]
+        },
+        {
+          "day": 5,
+          "points": [
+            [357.7, 115.7],
+            [359.8, 115.7],
+            [359.9, 100.7],
+            [359.8, 92.9],
+            [349.8, 92.9],
+            [345, 92.9],
+            [343.2, 91],
+            [340.3, 91.4],
+            [338.2, 91.4],
+            [335.8, 91.7],
+            [333.5, 91.7],
+            [325.5, 91.7],
+            [310.1, 91.7],
+            [303, 91.7],
+            [296.3, 91.7],
+            [296.3, 87.9],
+            [296.3, 81.4],
+            [297, 77.2],
+            [293.5, 76.7],
+            [290.7, 76.4],
+            [286.9, 76],
+            [284.1, 75.6],
+            [281.3, 75],
+            [275.8, 74.4],
+            [275.6, 68.9],
+            [275.4, 65],
+            [273.2, 65.1],
+            [271.4, 63.6],
+            [259.1, 63.3],
+            [250.9, 63.3],
+            [246.5, 63.3],
+            [244.2, 63.3],
+            [241.6, 63.5],
+            [240, 64.9],
+            [238.2, 66.5],
+            [235.4, 66.3],
+            [234.5, 75.8],
+            [231.4, 76],
+            [228.3, 75.3],
+            [225.6, 75.1],
+            [221.5, 74.7],
+            [221.3, 77.5],
+            [220.7, 79.7]
+          ]
+        },
+        {
+          "day": 6,
+          "points": [
+            [212.6, 217.5],
+            [212.8, 211.8],
+            [212.9, 203.9],
+            [213, 199.2],
+            [213.4, 191.3],
+            [213.4, 187.5],
+            [215.9, 184.2],
+            [215.9, 179.2],
+            [216, 173.1],
+            [216, 169.6],
+            [216.1, 161.9],
+            [216.2, 158.9],
+            [216.2, 156.5],
+            [216.3, 153.1],
+            [216.6, 138.5],
+            [216.8, 121.4],
+            [216.5, 116.8],
+            [216.7, 104.4],
+            [216.7, 98.6],
+            [216.8, 89.9],
+            [217, 81.4],
+            [217.1, 76.5],
+            [217.1, 74.4],
+            [217.1, 72.4],
+            [217.1, 69.7],
+            [217.1, 65.6],
+            [217.5, 62.6],
+            [218, 59.7],
+            [218.3, 44.2],
+            [218.3, 39.7],
+            [218.3, 44.2],
+            [218, 59.7],
+            [217.9, 62.6],
+            [217.1, 65.6],
+            [217.1, 69.7],
+            [217.1, 72.4],
+            [217.1, 74.4],
+            [217.1, 76.5],
+            [217, 81.4],
+            [216.8, 89.9],
+            [216.7, 98.6],
+            [216.7, 104.4],
+            [216.5, 116.8],
+            [216.3, 120.3],
+            [216.6, 137.6],
+            [216.3, 153.1],
+            [216.2, 156.5],
+            [216.2, 158.9],
+            [216.1, 161.9],
+            [216, 169.6],
+            [216, 173.1],
+            [215.9, 179.2],
+            [215.9, 184],
+            [214.5, 186.1],
+            [213.4, 191.3],
+            [213, 199.2],
+            [212.9, 203.9],
+            [215.7, 205.3],
+            [216.7, 212.2],
+            [216.3, 217.8],
+            [216.1, 220.1],
+            [215.9, 224.3],
+            [215.9, 226.5],
+            [215.9, 228.6],
+            [216, 236.5],
+            [217.4, 236.5]
+          ]
+        }
+      ]
+    }
+  }
+]
